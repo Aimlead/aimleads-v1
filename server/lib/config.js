@@ -1,5 +1,11 @@
 const nodeEnv = process.env.NODE_ENV || 'development';
 const isProduction = nodeEnv === 'production';
+const demoBootstrapEnabled = (() => {
+  const raw = String(process.env.ENABLE_DEMO_BOOTSTRAP || '').trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(raw)) return true;
+  if (['0', 'false', 'no', 'off'].includes(raw)) return false;
+  return !isProduction;
+})();
 
 const dataProvider = String(process.env.DATA_PROVIDER || 'local').trim().toLowerCase();
 const authProvider = String(process.env.AUTH_PROVIDER || (dataProvider === 'supabase' ? 'supabase' : 'legacy'))
@@ -31,6 +37,7 @@ export const getRuntimeConfig = () => {
   return {
     nodeEnv,
     isProduction,
+    demoBootstrapEnabled,
     dataProvider,
     authProvider,
     sessionSecret: getSessionSecret(),

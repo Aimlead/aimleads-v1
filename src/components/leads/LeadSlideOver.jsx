@@ -81,6 +81,13 @@ const createInternetSignalDraft = () => ({
   confidence: 80,
 });
 
+const normalizeInternetSignalConfidence = (value, fallback = 80) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  const percentage = parsed <= 1 ? parsed * 100 : parsed;
+  return Math.max(0, Math.min(100, Math.round(percentage)));
+};
+
 const toSignalArray = (value) => {
   if (!value) return [];
   if (Array.isArray(value)) return value.map((entry) => String(entry || '').trim()).filter(Boolean);
@@ -116,7 +123,7 @@ const getInternetSignalsFromLead = (lead) => {
     .map((entry) => ({
       key: String(entry?.key || '').trim(),
       evidence: String(entry?.evidence || entry?.url || '').trim(),
-      confidence: Number.isFinite(Number(entry?.confidence)) ? Number(entry.confidence) : 80,
+      confidence: normalizeInternetSignalConfidence(entry?.confidence),
       found_at: entry?.found_at || entry?.foundAt || undefined,
     }))
     .filter((entry) => Boolean(entry.key));
@@ -268,8 +275,14 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
 
   const runSignalDiscovery = async ({ reanalyze = false } = {}) => {
     await persistLeadEdits();
-    const response = await dataClient.leads.discoverSignals(lead.id, { reanalyze });
+    const response = await dataClient.leads.discoverSignals(lead.id, {
+      reanalyze,
+      replace: true,
+      signals: internetSignals,
+      intent_signals: intentSignals,
+    });
     if (response?.lead) {
+      setIntentSignals(getIntentSignalsFromLead(response.lead));
       setInternetSignals(getInternetSignalsFromLead(response.lead));
     }
     onLeadUpdated?.();
@@ -705,8 +718,6 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
     </>
   );
 }
-
-
 
 
 

@@ -13,7 +13,7 @@ function Topbar({ ctx }) {
           </svg>
           Connexion
         </button>
-        <AnimatedBtn variant="sky" size="sm" onClick={ctx.openBooking}>Demander un accès</AnimatedBtn>
+        <AnimatedBtn variant="sky" size="sm" onClick={ctx.goToApp}>Créer un compte</AnimatedBtn>
       </div>
     </div>
   );
@@ -50,7 +50,7 @@ export default function PageLead({ ctx }) {
               les prospects à fort potentiel — en temps réel.
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <AnimatedBtn variant="sky" size="lg" onClick={ctx.openBooking}>Accès démo</AnimatedBtn>
+              <AnimatedBtn variant="sky" size="lg" onClick={ctx.goToApp}>Démarrer gratuitement</AnimatedBtn>
               <AnimatedBtn variant="ghost-white" onClick={() => document.getElementById('lead-features')?.scrollIntoView({ behavior: 'smooth' })}>Voir les fonctionnalités</AnimatedBtn>
             </div>
           </div>
@@ -205,11 +205,11 @@ export default function PageLead({ ctx }) {
         {/* CTA band */}
         <div className="cta-band rv">
           <div>
-            <h3>Testez le Lead-Scoreur gratuitement</h3>
-            <p>14 jours d'accès complet, 50 leads à scorer. Pas de CB requise — juste votre email pro.</p>
+            <h3>Essayez le Lead-Scoreur dans l'app</h3>
+            <p>Créez votre espace, importez vos premiers leads et testez le scoring directement depuis l'application.</p>
           </div>
           <div className="cta-band-btns">
-            <AnimatedBtn variant="white" onClick={ctx.openBooking}>Démarrer l'essai gratuit</AnimatedBtn>
+            <AnimatedBtn variant="white" onClick={ctx.goToApp}>Créer mon compte</AnimatedBtn>
             <AnimatedBtn variant="ghost-white" onClick={() => ctx.setActivePage('bdr')}>Découvrir le BDR →</AnimatedBtn>
           </div>
         </div>

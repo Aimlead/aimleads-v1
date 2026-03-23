@@ -27,6 +27,20 @@ create table if not exists workspace_members (
   primary key (workspace_id, user_id)
 );
 
+create table if not exists workspace_invites (
+  id text primary key,
+  workspace_id text not null references workspaces(id) on delete cascade,
+  email text not null,
+  role text not null default 'member',
+  invited_by_user_id text,
+  created_at timestamptz not null default now(),
+  accepted_at timestamptz,
+  accepted_by_user_id text,
+  revoked_at timestamptz
+);
+
+alter table workspace_invites add column if not exists invited_by_user_id text;
+
 create table if not exists icp_profiles (
   id text primary key,
   workspace_id text not null references workspaces(id) on delete cascade,
@@ -58,6 +72,7 @@ create table if not exists leads (
   analysis_summary text,
   generated_icebreaker text,
   generated_icebreakers jsonb,
+  intent_signals jsonb,
   signals jsonb,
   score_details jsonb,
   internet_signals jsonb,
@@ -86,6 +101,9 @@ create table if not exists leads (
 create index if not exists idx_users_workspace on users(workspace_id);
 create index if not exists idx_users_supabase_auth_id on users(supabase_auth_id);
 create index if not exists idx_workspace_members_user on workspace_members(user_id);
+create index if not exists idx_workspace_invites_workspace on workspace_invites(workspace_id, created_at desc);
+create unique index if not exists idx_workspace_invites_active_email on workspace_invites(lower(email))
+  where accepted_at is null and revoked_at is null;
 create index if not exists idx_icp_workspace_active on icp_profiles(workspace_id, is_active);
 create index if not exists idx_leads_workspace_created on leads(workspace_id, created_date desc);
 create index if not exists idx_leads_workspace_status on leads(workspace_id, status);
@@ -133,6 +151,7 @@ create trigger leads_updated_at
 alter table workspaces enable row level security;
 alter table users enable row level security;
 alter table workspace_members enable row level security;
+alter table workspace_invites enable row level security;
 alter table icp_profiles enable row level security;
 alter table leads enable row level security;
 
@@ -194,6 +213,38 @@ for select using (
     select 1
     from workspace_members wm
     where wm.workspace_id = workspace_members.workspace_id
+      and wm.user_id = auth.uid()::text
+      and wm.role in ('owner', 'admin')
+  )
+);
+
+drop policy if exists workspace_invites_select on workspace_invites;
+create policy workspace_invites_select on workspace_invites
+for select using (
+  exists (
+    select 1
+    from workspace_members wm
+    where wm.workspace_id = workspace_invites.workspace_id
+      and wm.user_id = auth.uid()::text
+      and wm.role in ('owner', 'admin')
+  )
+);
+
+drop policy if exists workspace_invites_manage on workspace_invites;
+create policy workspace_invites_manage on workspace_invites
+for all using (
+  exists (
+    select 1
+    from workspace_members wm
+    where wm.workspace_id = workspace_invites.workspace_id
+      and wm.user_id = auth.uid()::text
+      and wm.role in ('owner', 'admin')
+  )
+) with check (
+  exists (
+    select 1
+    from workspace_members wm
+    where wm.workspace_id = workspace_invites.workspace_id
       and wm.user_id = auth.uid()::text
       and wm.role in ('owner', 'admin')
   )

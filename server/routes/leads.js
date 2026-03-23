@@ -118,11 +118,16 @@ const normalizeSignalPayload = (item, lead) => {
   }
 
   const confidence = Number(item.confidence);
+  const normalizedConfidence = Number.isFinite(confidence)
+    ? confidence <= 1
+      ? confidence * 100
+      : confidence
+    : 80;
 
   return {
     key,
     evidence: String(item.evidence || item.url || item.source_url || '').trim(),
-    confidence: Number.isFinite(confidence) ? Math.max(0, Math.min(100, confidence)) : 80,
+    confidence: Math.max(0, Math.min(100, Math.round(normalizedConfidence))),
     source_type: String(item.source_type || item.sourceType || '').trim() || undefined,
     found_at: String(item.found_at || item.foundAt || item.published_at || '').trim() || new Date().toISOString(),
   };
@@ -165,6 +170,12 @@ const normalizeLeadForResponse = (lead) => {
   }
 
   return lead;
+};
+
+const sanitizeSpreadsheetCell = (value) => {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+  return /^[\t\r ]*[=+\-@]/.test(str) ? `'${str}` : str;
 };
 
 const applyAnalysisIfPossible = async ({ user, leadId, lead, internetSignals, shouldReanalyze = true, skipLlm = false }) => {
@@ -300,6 +311,43 @@ router.post('/', validateBody(schemas.leadCreateSchema), async (req, res) => {
   return res.status(201).json({ data: normalizeLeadForResponse(lead) });
 });
 
+router.get('/export', async (req, res) => {
+  const all = await dataStore.listLeads(req.user, '-created_date');
+  const leads = (all || []).map(normalizeLeadForResponse);
+
+  const CSV_FIELDS = [
+    'id', 'company_name', 'website_url', 'industry', 'company_size', 'country',
+    'contact_name', 'contact_role', 'contact_email', 'source_list',
+    'status', 'follow_up_status', 'icp_score', 'ai_score', 'final_score',
+    'icp_category', 'final_category', 'final_status', 'final_recommended_action',
+    'notes', 'created_date', 'last_analyzed_at',
+  ];
+
+  const escape = (val) => {
+    const str = sanitizeSpreadsheetCell(val).replace(/"/g, '""');
+    return str.includes(',') || str.includes('"') || str.includes('\n') ? `"${str}"` : str;
+  };
+
+  const header = CSV_FIELDS.join(',');
+  const rows = leads.map((lead) => CSV_FIELDS.map((f) => escape(lead[f])).join(','));
+  const csv = [header, ...rows].join('\n');
+
+  const filename = `leads-export-${new Date().toISOString().slice(0, 10)}.csv`;
+  await writeAuditLog({
+    user: req.user,
+    action: 'export',
+    resourceType: 'lead_export',
+    resourceId: filename,
+    changes: {
+      exported_count: leads.length,
+      fields: CSV_FIELDS.length,
+    },
+  });
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  return res.send(csv);
+});
+
 router.get('/:leadId', async (req, res) => {
   const lead = await dataStore.getLeadById(req.user, req.params.leadId);
 
@@ -406,6 +454,10 @@ router.post('/:leadId/discover-signals', discoverLimiter, async (req, res) => {
 
   const incomingSignalsInput = Array.isArray(req.body?.signals) ? req.body.signals : [];
   const incomingFindingsInput = Array.isArray(req.body?.findings) ? req.body.findings : [];
+  const nextIntentSignals =
+    req.body?.intent_signals && typeof req.body.intent_signals === 'object'
+      ? req.body.intent_signals
+      : lead.intent_signals;
   const replace = Boolean(req.body?.replace);
   const shouldReanalyze = req.body?.reanalyze !== false;
   const requestedMaxPages = Number(req.body?.max_pages || req.body?.maxPages);
@@ -463,6 +515,7 @@ router.post('/:leadId/discover-signals', discoverLimiter, async (req, res) => {
 
   let updatedLead = await dataStore.updateLead(req.user, lead.id, {
     ...leadEmailPatch,
+    ...(nextIntentSignals ? { intent_signals: nextIntentSignals } : {}),
     internet_signals: nextSignals,
     auto_signal_metadata: {
       last_discovery_at: new Date().toISOString(),
@@ -479,7 +532,7 @@ router.post('/:leadId/discover-signals', discoverLimiter, async (req, res) => {
   const { lead: analyzedLead, analysis, reanalyzed } = await applyAnalysisIfPossible({
     user: req.user,
     leadId: lead.id,
-    lead: { ...lead, ...updatedLead },
+    lead: { ...lead, ...updatedLead, ...(nextIntentSignals ? { intent_signals: nextIntentSignals } : {}) },
     internetSignals: nextSignals,
     shouldReanalyze,
   });
@@ -575,33 +628,6 @@ router.post('/bulk-delete', validateBody(schemas.bulkDeleteSchema), async (req, 
   });
 });
 
-router.get('/export', async (req, res) => {
-  const all = await dataStore.listLeads(req.user, '-created_date');
-  const leads = (all || []).map(normalizeLeadForResponse);
-
-  const CSV_FIELDS = [
-    'id', 'company_name', 'website_url', 'industry', 'company_size', 'country',
-    'contact_name', 'contact_role', 'contact_email', 'source_list',
-    'status', 'follow_up_status', 'icp_score', 'ai_score', 'final_score',
-    'icp_category', 'final_category', 'final_status', 'final_recommended_action',
-    'notes', 'created_date', 'last_analyzed_at',
-  ];
-
-  const escape = (val) => {
-    const str = String(val ?? '').replace(/"/g, '""');
-    return str.includes(',') || str.includes('"') || str.includes('\n') ? `"${str}"` : str;
-  };
-
-  const header = CSV_FIELDS.join(',');
-  const rows = leads.map((lead) => CSV_FIELDS.map((f) => escape(lead[f])).join(','));
-  const csv = [header, ...rows].join('\n');
-
-  const filename = `leads-export-${new Date().toISOString().slice(0, 10)}.csv`;
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-  return res.send(csv);
-});
-
 // ─── AI: Generate multi-touch outreach sequence ───────────────────────────────
 
 router.post('/:leadId/sequence', sequenceLimiter, async (req, res) => {
@@ -634,7 +660,3 @@ router.post('/:leadId/sequence', sequenceLimiter, async (req, res) => {
 });
 
 export default router;
-
-
-
-

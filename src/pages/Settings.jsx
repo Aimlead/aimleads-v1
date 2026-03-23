@@ -152,6 +152,13 @@ export default function Settings() {
   const [isSavingScoring, setIsSavingScoring] = useState(false);
   const [scoringDirty, setScoringDirty] = useState(false);
   const [scoringForm, setScoringForm] = useState(DEFAULT_SCORING_SETTINGS);
+  const showDeveloperTools = useMemo(() => {
+    if (import.meta.env.DEV) return true;
+    if (typeof window === 'undefined') return false;
+
+    const hostname = String(window.location.hostname || '').trim().toLowerCase();
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.local');
+  }, []);
 
   const { data: icpProfiles = [] } = useQuery({
     queryKey: ['icpConfig'],
@@ -466,7 +473,7 @@ export default function Settings() {
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-slate-500">Ready for backend wiring: invite flow, role matrix, and seat limits.</p>
+            <p className="text-sm text-slate-500">Invite flow and role changes now live from the Team page. Seat limits and safe offboarding still need a dedicated platform flow.</p>
           </CardContent>
         </Card>
 
@@ -626,7 +633,8 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      <Card className="mt-6 border-brand-sky/20 bg-brand-sky/5/40">
+      {showDeveloperTools ? (
+        <Card className="mt-6 border-brand-sky/20 bg-brand-sky/5/40">
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-brand-sky/10 to-brand-sky/20 flex items-center justify-center">
@@ -772,12 +780,11 @@ export default function Settings() {
             Available only outside production. Actions apply to the currently logged-in workspace.
           </p>
         </CardContent>
-      </Card>
+        </Card>
+      ) : null}
     </div>
   );
 }
-
-
 
 
 

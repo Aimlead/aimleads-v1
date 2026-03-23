@@ -179,6 +179,50 @@ test('external findings are extracted and trigger re-analysis', async () => {
   assert.equal(typeof updatedLead.final_recommended_action, 'string');
 });
 
+test('external signals accept both percentage and fractional confidence inputs', async () => {
+  const user = await registerAndGetCookie('signals-confidence');
+
+  const createdLead = await request('/leads', {
+    method: 'POST',
+    cookie: user.cookie,
+    body: {
+      company_name: 'Confidence Labs',
+      website_url: 'confidence.example',
+      industry: 'Software Development',
+      contact_name: 'Alex Martin',
+      contact_role: 'CTO',
+      company_size: 75,
+      country: 'France',
+      client_type: 'B2B',
+    },
+  });
+
+  assert.equal(createdLead.response.status, 201);
+  const leadId = createdLead.payload?.data?.id;
+  assert.ok(leadId, 'lead id missing');
+
+  const enrich = await request(`/leads/${leadId}/external-signals`, {
+    method: 'POST',
+    cookie: user.cookie,
+    body: {
+      replace: true,
+      reanalyze: false,
+      signals: [
+        { key: 'recent_funding', confidence: 92, evidence: 'https://news.example/confidence-series-a' },
+        { key: 'active_rfp', confidence: 0.95, evidence: 'https://confidence.example/rfp' },
+      ],
+    },
+  });
+
+  assert.equal(enrich.response.status, 200);
+  const storedSignals = enrich.payload?.data?.lead?.internet_signals || [];
+  assert.equal(storedSignals.length, 2);
+
+  const byKey = Object.fromEntries(storedSignals.map((signal) => [signal.key, signal]));
+  assert.equal(byKey.recent_funding?.confidence, 92);
+  assert.equal(byKey.active_rfp?.confidence, 95);
+});
+
 test.after(async () => {
   await new Promise((resolve) => server.close(resolve));
   await fs.rm(tmpDir, { recursive: true, force: true });

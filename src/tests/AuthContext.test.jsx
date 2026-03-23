@@ -15,12 +15,13 @@ vi.mock('@/services/dataClient', () => ({
       login: vi.fn(),
       register: vi.fn(),
       logout: vi.fn(),
+      redirectToLogin: vi.fn(),
     },
   },
 }));
 
 const TestConsumer = () => {
-  const { user, isAuthenticated, isLoadingAuth, login, logout } = useAuth();
+  const { user, isAuthenticated, isLoadingAuth, login, logout, refreshUser } = useAuth();
   return (
     <div>
       <span data-testid="loading">{String(isLoadingAuth)}</span>
@@ -28,6 +29,7 @@ const TestConsumer = () => {
       <span data-testid="user">{user?.email ?? 'none'}</span>
       <button onClick={() => login({ email: 'test@test.com', password: 'Test1234' })}>Login</button>
       <button onClick={() => logout()}>Logout</button>
+      <button onClick={() => refreshUser()}>Refresh</button>
     </div>
   );
 };
@@ -108,5 +110,26 @@ describe('AuthContext', () => {
 
     expect(screen.getByTestId('authenticated').textContent).toBe('false');
     expect(screen.getByTestId('user').textContent).toBe('none');
+  });
+
+  it('refreshUser reloads the current user', async () => {
+    dataClient.auth.isAuthenticated.mockResolvedValue(true);
+    dataClient.auth.getCurrentUser
+      .mockResolvedValueOnce({ email: 'before@test.com', id: '123' })
+      .mockResolvedValueOnce({ email: 'after@test.com', id: '123' });
+
+    render(
+      <AuthProvider>
+        <TestConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('user').textContent).toBe('before@test.com'));
+
+    await act(async () => {
+      await userEvent.click(screen.getByText('Refresh'));
+    });
+
+    await waitFor(() => expect(screen.getByTestId('user').textContent).toBe('after@test.com'));
   });
 });

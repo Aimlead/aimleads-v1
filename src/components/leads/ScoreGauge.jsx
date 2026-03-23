@@ -25,7 +25,7 @@ export default function ScoreGauge({ score, size = 'large', label = 'Score' }) {
     <div className="flex flex-col items-center gap-3">
       <div className={cn('relative', dimensions)}>
         <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="45" fill="none" className="stroke-slate-100 dark:stroke-slate-700" strokeWidth="8" />
+          <circle cx="50" cy="50" r="45" fill="none" className="stroke-slate-100" strokeWidth="8" />
           <circle
             cx="50"
             cy="50"

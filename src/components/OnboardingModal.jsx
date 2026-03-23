@@ -23,7 +23,7 @@ const STEPS = [
     color: 'from-blue-500 to-sky-600',
     title: 'Import your leads',
     description: 'Upload a CSV with your prospects. AimLeads will score each lead against your ICP instantly.',
-    action: { label: 'Go to Dashboard →', href: ROUTES.dashboard },
+    action: { label: 'Open Import →', href: `${ROUTES.dashboard}?openImport=1` },
   },
   {
     icon: Sparkles,

@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/routes';
 import {
-  BarChart3, ClipboardList, FileText, Kanban,
-  LayoutDashboard, Settings, Sparkles, Tag, Target, Users,
+  BarChart3, BookOpen, ClipboardList, FileText, Kanban,
+  LayoutDashboard, LifeBuoy, Settings, Sparkles, Tag, Target, Users,
 } from 'lucide-react';
 import BrandLogo from '@/components/brand/BrandLogo';
 
@@ -15,9 +15,11 @@ export const sidebarNavigation = [
   { name: 'Analytics', href: ROUTES.analytics, icon: BarChart3, group: 'main', shortcut: '3' },
   { name: 'Reports', href: ROUTES.reports, icon: FileText, group: 'main', shortcut: '4' },
   { name: 'Segments', href: ROUTES.segments, icon: Tag, group: 'main' },
+  { name: 'Outreach', href: ROUTES.outreach, icon: BookOpen, group: 'main' },
   { name: 'ICP Profile', href: ROUTES.icp, icon: Target, group: 'config' },
   { name: 'Team', href: ROUTES.team, icon: Users, group: 'config' },
   { name: 'Audit Log', href: ROUTES.auditLog, icon: ClipboardList, group: 'config' },
+  { name: 'Help Center', href: ROUTES.help, icon: LifeBuoy, group: 'config' },
   { name: 'Settings', href: ROUTES.settings, icon: Settings, group: 'config' },
 ];
 

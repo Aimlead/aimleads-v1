@@ -2,13 +2,10 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/constants/routes';
-import { useTheme } from '@/lib/useTheme';
-import { Menu, Moon, Search, Sun, UserCog } from 'lucide-react';
+import { CircleHelp, Menu, Search, UserCog } from 'lucide-react';
 import NotificationsPanel from '@/components/layout/NotificationsPanel';
 
 export default function Header({ user, onSignOut, onOpenMobileNav, onOpenPalette }) {
-  const { toggle, isDark } = useTheme();
-
   return (
     <header className="fixed top-0 left-0 md:left-64 right-0 h-16 backdrop-blur-xl border-b border-white/8 z-40" style={{ background: 'rgba(0,31,77,.92)' }}>
       <div className="h-full px-4 md:px-6 flex items-center justify-between gap-3">
@@ -42,16 +39,17 @@ export default function Header({ user, onSignOut, onOpenMobileNav, onOpenPalette
 
           <NotificationsPanel />
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggle}
-            title={isDark ? 'Light mode' : 'Dark mode'}
-            aria-label="Toggle dark mode"
-            className="w-9 h-9 rounded-xl text-white/40 hover:text-white/80"
-          >
-            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </Button>
+          <Link to={ROUTES.help}>
+            <Button
+              variant="ghost"
+              size="icon"
+              title="Help Center"
+              aria-label="Help Center"
+              className="w-9 h-9 rounded-xl text-white/40 hover:text-white/80"
+            >
+              <CircleHelp className="w-4 h-4" />
+            </Button>
+          </Link>
 
           <Link to={ROUTES.accountSettings}>
             <Button

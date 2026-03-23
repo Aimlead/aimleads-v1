@@ -23,9 +23,98 @@ const pickCanonicalUser = (users = []) => {
   return sortedUsers[0];
 };
 
+const WORKSPACE_ROLES = new Set(['owner', 'admin', 'member']);
+
+const normalizeWorkspaceRole = (value, fallback = 'member') => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (WORKSPACE_ROLES.has(normalized)) {
+    return normalized;
+  }
+  return fallback;
+};
+
+const getMembershipUserId = (user) => String(user?.supabase_auth_id || user?.id || '').trim();
+
+const createStatusError = (status, message) => {
+  const error = new Error(message);
+  error.status = status;
+  return error;
+};
+
+const isPendingInvite = (invite) => Boolean(invite && !invite.accepted_at && !invite.revoked_at);
+
+const sortByCreatedAtAsc = (items = []) =>
+  [...items].sort((left, right) => {
+    const byCreatedAt = toTimestamp(left?.created_at) - toTimestamp(right?.created_at);
+    if (byCreatedAt !== 0) return byCreatedAt;
+    return String(left?.id || '').localeCompare(String(right?.id || ''));
+  });
+
+const sortByCreatedAtDesc = (items = []) =>
+  [...items].sort((left, right) => {
+    const byCreatedAt = toTimestamp(right?.created_at) - toTimestamp(left?.created_at);
+    if (byCreatedAt !== 0) return byCreatedAt;
+    return String(left?.id || '').localeCompare(String(right?.id || ''));
+  });
+
+const isCurrentWorkspaceMember = (member, user) => {
+  const currentEmail = normalizeEmail(user?.email);
+  const memberEmail = normalizeEmail(member?.email);
+  const memberUserId = String(member?.user_id || '').trim();
+  const memberAppUserId = String(member?.app_user_id || '').trim();
+  const currentMemberUserId = getMembershipUserId(user);
+
+  return (
+    (currentMemberUserId && memberUserId === currentMemberUserId) ||
+    (user?.id && memberAppUserId === String(user.id)) ||
+    (currentEmail && memberEmail === currentEmail)
+  );
+};
+
+const toWorkspaceMemberView = (member, users = [], currentUser = null) => {
+  const matchedUser =
+    users.find(
+      (candidate) =>
+        String(candidate?.supabase_auth_id || '').trim() === String(member?.user_id || '').trim() ||
+        String(candidate?.id || '').trim() === String(member?.user_id || '').trim()
+    ) || null;
+
+  return {
+    user_id: String(member?.user_id || '').trim(),
+    app_user_id: matchedUser?.id || null,
+    workspace_id: member?.workspace_id || matchedUser?.workspace_id || '',
+    email: matchedUser?.email || member?.email || '',
+    full_name: matchedUser?.full_name || member?.full_name || '',
+    role: normalizeWorkspaceRole(member?.role),
+    created_at: member?.created_at || matchedUser?.created_at || new Date().toISOString(),
+    is_current_user: currentUser ? isCurrentWorkspaceMember({
+      ...member,
+      app_user_id: matchedUser?.id || member?.app_user_id || null,
+      email: matchedUser?.email || member?.email || '',
+    }, currentUser) : false,
+  };
+};
+
+const toWorkspaceInviteView = (invite) => ({
+  id: invite?.id,
+  workspace_id: invite?.workspace_id || '',
+  email: normalizeEmail(invite?.email || ''),
+  role: normalizeWorkspaceRole(invite?.role),
+  invited_by_user_id: invite?.invited_by_user_id || invite?.invited_by || null,
+  created_at: invite?.created_at || new Date().toISOString(),
+  accepted_at: invite?.accepted_at || null,
+  revoked_at: invite?.revoked_at || null,
+  status: isPendingInvite(invite) ? 'pending' : invite?.accepted_at ? 'accepted' : 'revoked',
+});
+
 const matchWhere = (record, where = {}) => {
   return Object.entries(where).every(([key, value]) => record[key] === value);
 };
+
+const mapWorkspaceMember = (member, users = [], currentUser = null) =>
+  toWorkspaceMemberView(member, users, currentUser);
+
+const isActiveWorkspaceInvite = (invite) => isPendingInvite(invite);
 
 const LEAD_WRITABLE_COLUMNS = new Set([
   'id',
@@ -47,6 +136,7 @@ const LEAD_WRITABLE_COLUMNS = new Set([
   'analysis_summary',
   'generated_icebreaker',
   'generated_icebreakers',
+  'intent_signals',
   'signals',
   'score_details',
   'internet_signals',
@@ -180,10 +270,51 @@ const localStore = {
   },
 
   async createUser(payload) {
+    const workspaceRole = normalizeWorkspaceRole(payload.workspace_role, 'owner');
     const user = {
       ...payload,
       id: payload.id || createId('user'),
       workspace_id: payload.workspace_id || createId('ws'),
+      created_at: payload.created_at || new Date().toISOString(),
+    };
+    delete user.workspace_role;
+
+    const membership = {
+      workspace_id: user.workspace_id,
+      user_id: getMembershipUserId(user),
+      app_user_id: user.id,
+      role: workspaceRole,
+      created_at: user.created_at,
+    };
+
+    await withDb((current) => ({
+      ...current,
+      workspaces: (current.workspaces || []).some((workspace) => workspace.id === user.workspace_id)
+        ? current.workspaces || []
+        : [
+            {
+              id: user.workspace_id,
+              name: `${user.full_name || 'New User'} Workspace`,
+              created_at: user.created_at,
+            },
+            ...(current.workspaces || []),
+          ],
+      users: [user, ...(current.users || [])],
+      workspaceMembers: [
+        membership,
+        ...(current.workspaceMembers || []).filter(
+          (entry) => !(entry.workspace_id === membership.workspace_id && entry.user_id === membership.user_id)
+        ),
+      ],
+    }));
+
+    return user;
+  },
+
+  async createUserInWorkspace(payload) {
+    const user = {
+      ...payload,
+      id: payload.id || createId('user'),
       created_at: payload.created_at || new Date().toISOString(),
     };
 
@@ -193,6 +324,41 @@ const localStore = {
     }));
 
     return user;
+  },
+
+  async upsertWorkspaceMembership(payload) {
+    const workspaceId = String(payload?.workspace_id || '').trim();
+    const memberUserId = String(payload?.user_id || '').trim();
+    if (!workspaceId || !memberUserId) return null;
+
+    let nextMembership = null;
+
+    await withDb((current) => {
+      const existingMembers = current.workspaceMembers || [];
+      const existing = existingMembers.find(
+        (entry) => entry.workspace_id === workspaceId && String(entry.user_id || '').trim() === memberUserId
+      );
+
+      nextMembership = {
+        workspace_id: workspaceId,
+        user_id: memberUserId,
+        app_user_id: payload?.app_user_id || existing?.app_user_id || null,
+        role: normalizeWorkspaceRole(payload?.role, existing?.role || 'member'),
+        created_at: existing?.created_at || payload?.created_at || new Date().toISOString(),
+      };
+
+      return {
+        ...current,
+        workspaceMembers: [
+          nextMembership,
+          ...existingMembers.filter(
+            (entry) => !(entry.workspace_id === workspaceId && String(entry.user_id || '').trim() === memberUserId)
+          ),
+        ],
+      };
+    });
+
+    return nextMembership;
   },
 
   async deleteUser(userId) {
@@ -213,6 +379,21 @@ const localStore = {
     return deleted;
   },
 
+  async deleteWorkspaceMembership(user, memberUserId) {
+    const workspaceId = getUserWorkspaceId(user);
+    const normalizedMemberUserId = String(memberUserId || '').trim();
+    if (!workspaceId || !normalizedMemberUserId) return null;
+
+    await withDb((current) => ({
+      ...current,
+      workspaceMembers: (current.workspaceMembers || []).filter(
+        (entry) => !(entry.workspace_id === workspaceId && String(entry.user_id || '').trim() === normalizedMemberUserId)
+      ),
+    }));
+
+    return { workspace_id: workspaceId, user_id: normalizedMemberUserId };
+  },
+
   async listLeads(user, sort = '-created_date') {
     let leads = filterByUserScope((await readDb()).leads || [], user).filter((l) => !l.deleted_at);
     if (sort === '-created_date') {
@@ -222,17 +403,180 @@ const localStore = {
   },
 
   async listWorkspaceMembers(user) {
-    // In local mode, only the current user exists
-    return [
-      {
-        user_id: user.id,
-        workspace_id: user.workspace_id,
-        email: user.email,
-        full_name: user.full_name,
-        role: 'owner',
-        created_at: user.created_at,
-      },
-    ];
+    const workspaceId = getUserWorkspaceId(user);
+    const db = await readDb();
+    const members = (db.workspaceMembers || []).filter((entry) => entry.workspace_id === workspaceId);
+
+    if (members.length === 0) {
+      return [];
+    }
+
+    return members.map((member) => mapWorkspaceMember(member, db.users || [], user));
+  },
+
+  async listWorkspaceInvites(user) {
+    const workspaceId = getUserWorkspaceId(user);
+    const db = await readDb();
+    return (db.workspaceInvites || [])
+      .filter((invite) => invite.workspace_id === workspaceId && isActiveWorkspaceInvite(invite))
+      .sort((left, right) => toTimestamp(right.created_at) - toTimestamp(left.created_at))
+      .map((invite) => toWorkspaceInviteView(invite));
+  },
+
+  async findActiveWorkspaceInviteByEmail(email) {
+    const db = await readDb();
+    const normalizedEmail = normalizeEmail(email);
+    const invite =
+      (db.workspaceInvites || [])
+        .filter((inviteRow) => normalizeEmail(inviteRow.email) === normalizedEmail && isActiveWorkspaceInvite(inviteRow))
+        .sort((left, right) => toTimestamp(right.created_at) - toTimestamp(left.created_at))[0] || null;
+    return invite ? toWorkspaceInviteView(invite) : null;
+  },
+
+  async createWorkspaceInvite(user, payload) {
+    const workspaceId = getUserWorkspaceId(user);
+    const normalizedEmail = normalizeEmail(payload.email);
+    const role = normalizeWorkspaceRole(payload.role, 'member');
+    const createdAt = new Date().toISOString();
+    let createdInvite = null;
+
+    await withDb((current) => {
+      const users = current.users || [];
+      const invites = current.workspaceInvites || [];
+      const existingUser = users.find((entry) => normalizeEmail(entry.email) === normalizedEmail);
+
+      if (existingUser?.workspace_id === workspaceId) {
+        const error = new Error('This user is already a member of your workspace.');
+        error.status = 409;
+        throw error;
+      }
+
+      if (existingUser && existingUser.workspace_id !== workspaceId) {
+        const error = new Error('This email already belongs to another workspace account.');
+        error.status = 409;
+        throw error;
+      }
+
+      const existingInvite = invites.find(
+        (invite) => normalizeEmail(invite.email) === normalizedEmail && isActiveWorkspaceInvite(invite)
+      );
+
+      if (existingInvite && existingInvite.workspace_id !== workspaceId) {
+        const error = new Error('This email already has a pending invite in another workspace.');
+        error.status = 409;
+        throw error;
+      }
+
+      if (existingInvite) {
+        createdInvite = {
+          ...existingInvite,
+          role,
+          invited_by_user_id: user.id,
+        };
+
+        return {
+          ...current,
+          workspaceInvites: invites.map((invite) => (invite.id === existingInvite.id ? createdInvite : invite)),
+        };
+      }
+
+      createdInvite = {
+        id: createId('invite'),
+        workspace_id: workspaceId,
+        email: normalizedEmail,
+        role,
+        invited_by_user_id: user.id,
+        created_at: createdAt,
+        accepted_at: null,
+        accepted_by_user_id: null,
+        revoked_at: null,
+      };
+
+      return {
+        ...current,
+        workspaceInvites: [createdInvite, ...invites],
+      };
+    });
+
+    return toWorkspaceInviteView(createdInvite);
+  },
+
+  async revokeWorkspaceInvite(user, inviteId) {
+    const workspaceId = getUserWorkspaceId(user);
+    const normalizedInviteId = String(inviteId || '').trim();
+    let revokedInvite = null;
+
+    await withDb((current) => {
+      const invites = current.workspaceInvites || [];
+      const nextInvites = invites.map((invite) => {
+        if (invite.id !== normalizedInviteId || invite.workspace_id !== workspaceId || !isActiveWorkspaceInvite(invite)) {
+          return invite;
+        }
+
+        revokedInvite = {
+          ...invite,
+          revoked_at: new Date().toISOString(),
+        };
+        return revokedInvite;
+      });
+
+      return {
+        ...current,
+        workspaceInvites: nextInvites,
+      };
+    });
+
+    return revokedInvite ? toWorkspaceInviteView(revokedInvite) : null;
+  },
+
+  async consumeWorkspaceInviteByEmail(email, { accepted_by_user_id } = {}) {
+    const normalizedEmail = normalizeEmail(email);
+    let acceptedInvite = null;
+
+    await withDb((current) => ({
+      ...current,
+      workspaceInvites: (current.workspaceInvites || []).map((invite) => {
+        if (normalizeEmail(invite.email) !== normalizedEmail || !isActiveWorkspaceInvite(invite)) {
+          return invite;
+        }
+
+        acceptedInvite = {
+          ...invite,
+          accepted_at: new Date().toISOString(),
+          accepted_by_user_id: accepted_by_user_id || invite.accepted_by_user_id || null,
+        };
+        return acceptedInvite;
+      }),
+    }));
+
+    return acceptedInvite ? toWorkspaceInviteView(acceptedInvite) : null;
+  },
+
+  async updateWorkspaceMemberRole(user, memberUserId, role) {
+    const workspaceId = getUserWorkspaceId(user);
+    const normalizedMemberUserId = String(memberUserId || '').trim();
+    const nextRole = normalizeWorkspaceRole(role, 'member');
+    let updatedMember = null;
+
+    await withDb((current) => ({
+      ...current,
+      workspaceMembers: (current.workspaceMembers || []).map((entry) => {
+        if (entry.workspace_id !== workspaceId || String(entry.user_id || '').trim() !== normalizedMemberUserId) {
+          return entry;
+        }
+
+        updatedMember = {
+          ...entry,
+          role: nextRole,
+        };
+        return updatedMember;
+      }),
+    }));
+
+    if (!updatedMember) return null;
+
+    const db = await readDb();
+    return mapWorkspaceMember(updatedMember, db.users || []);
   },
 
   async filterLeads(user, where = {}) {
@@ -742,7 +1086,28 @@ const createSupabaseClient = () => {
       return existing;
     },
 
+    async deleteWorkspaceMembership(user, memberUserId) {
+      const workspaceId = getUserWorkspaceId(user);
+      const normalizedMemberUserId = String(memberUserId || '').trim();
+      if (!workspaceId || !normalizedMemberUserId) return null;
+
+      await request('workspace_members', {
+        method: 'DELETE',
+        query: {
+          workspace_id: `eq.${workspaceId}`,
+          user_id: `eq.${normalizedMemberUserId}`,
+        },
+        returnRepresentation: false,
+      });
+
+      return {
+        workspace_id: workspaceId,
+        user_id: normalizedMemberUserId,
+      };
+    },
+
     async createUser(payload) {
+      const workspaceRole = normalizeWorkspaceRole(payload.workspace_role, 'owner');
       const user = {
         ...payload,
         id: payload.id || createId('user'),
@@ -750,6 +1115,7 @@ const createSupabaseClient = () => {
         password_hash: payload.password_hash || '__supabase_auth__',
         created_at: payload.created_at || new Date().toISOString(),
       };
+      delete user.workspace_role;
 
       const workspace = {
         id: user.workspace_id,
@@ -778,8 +1144,8 @@ const createSupabaseClient = () => {
           method: 'POST',
           body: {
             workspace_id: user.workspace_id,
-            user_id: user.supabase_auth_id || user.id,
-            role: 'owner',
+            user_id: getMembershipUserId(user),
+            role: workspaceRole,
             created_at: user.created_at,
           },
           returnRepresentation: false,
@@ -791,6 +1157,68 @@ const createSupabaseClient = () => {
       }
 
       return firstOrNull(rows) || user;
+    },
+
+    async createUserInWorkspace(payload) {
+      const user = {
+        ...payload,
+        id: payload.id || createId('user'),
+        password_hash: payload.password_hash || '__supabase_auth__',
+        created_at: payload.created_at || new Date().toISOString(),
+      };
+
+      const rows = await requestUsersWithSchemaFallback({
+        method: 'POST',
+        body: user,
+      });
+
+      return firstOrNull(rows) || user;
+    },
+
+    async upsertWorkspaceMembership(payload) {
+      const workspaceId = String(payload?.workspace_id || '').trim();
+      const memberUserId = String(payload?.user_id || '').trim();
+      if (!workspaceId || !memberUserId) return null;
+
+      const existingRows = await request('workspace_members', {
+        method: 'GET',
+        query: {
+          workspace_id: `eq.${workspaceId}`,
+          user_id: `eq.${memberUserId}`,
+          limit: '1',
+        },
+      });
+
+      const existing = firstOrNull(existingRows);
+
+      if (existing) {
+        const rows = await request('workspace_members', {
+          method: 'PATCH',
+          query: {
+            workspace_id: `eq.${workspaceId}`,
+            user_id: `eq.${memberUserId}`,
+          },
+          body: {
+            role: normalizeWorkspaceRole(payload?.role, existing.role || 'member'),
+          },
+        });
+
+        return firstOrNull(rows) || { ...existing, role: normalizeWorkspaceRole(payload?.role, existing.role || 'member') };
+      }
+
+      const membership = {
+        workspace_id: workspaceId,
+        user_id: memberUserId,
+        role: normalizeWorkspaceRole(payload?.role),
+        created_at: payload?.created_at || new Date().toISOString(),
+      };
+
+      const rows = await request('workspace_members', {
+        method: 'POST',
+        body: membership,
+      });
+
+      return firstOrNull(rows) || membership;
     },
 
     async listLeads(user, sort = '-created_date') {
@@ -810,31 +1238,190 @@ const createSupabaseClient = () => {
     async listWorkspaceMembers(user) {
       const workspaceId = getUserWorkspaceId(user);
       try {
-        const rows = await request('workspace_members', {
+        const memberRows = await request('workspace_members', {
           method: 'GET',
-          query: { workspace_id: `eq.${workspaceId}`, select: '*,users(email,full_name)' },
-        });
-        if (!Array.isArray(rows) || rows.length === 0) throw new Error('empty');
-        return rows.map((row) => ({
-          user_id: row.user_id,
-          workspace_id: row.workspace_id,
-          email: row.users?.email || row.email,
-          full_name: row.users?.full_name || row.full_name,
-          role: row.role,
-          created_at: row.created_at,
-        }));
-      } catch {
-        return [
-          {
-            user_id: user.id,
-            workspace_id: workspaceId,
-            email: user.email,
-            full_name: user.full_name,
-            role: 'owner',
-            created_at: user.created_at,
+          query: {
+            workspace_id: `eq.${workspaceId}`,
+            order: 'created_at.asc',
           },
-        ];
+        });
+        if (!Array.isArray(memberRows) || memberRows.length === 0) {
+          return [];
+        }
+
+        const users = await request('users', {
+          method: 'GET',
+          query: {
+            workspace_id: `eq.${workspaceId}`,
+            order: 'created_at.asc',
+          },
+        });
+
+        return memberRows.map((row) => mapWorkspaceMember(row, Array.isArray(users) ? users : [], user));
+      } catch {
+        return [];
       }
+    },
+
+    async listWorkspaceInvites(user) {
+      const workspaceId = getUserWorkspaceId(user);
+      const rows = await request('workspace_invites', {
+        method: 'GET',
+        query: {
+          workspace_id: `eq.${workspaceId}`,
+          accepted_at: 'is.null',
+          revoked_at: 'is.null',
+          order: 'created_at.desc',
+        },
+      });
+
+      return Array.isArray(rows) ? rows.map((row) => toWorkspaceInviteView(row)) : [];
+    },
+
+    async findActiveWorkspaceInviteByEmail(email) {
+      const normalizedEmail = normalizeEmail(email);
+      const rows = await request('workspace_invites', {
+        method: 'GET',
+        query: {
+          email: `eq.${normalizedEmail}`,
+          accepted_at: 'is.null',
+          revoked_at: 'is.null',
+          order: 'created_at.desc',
+          limit: '1',
+        },
+      });
+
+      const invite = firstOrNull(rows);
+      return invite ? toWorkspaceInviteView(invite) : null;
+    },
+
+    async createWorkspaceInvite(user, payload) {
+      const workspaceId = getUserWorkspaceId(user);
+      const normalizedEmail = normalizeEmail(payload.email);
+      const role = normalizeWorkspaceRole(payload.role, 'member');
+      const existingUser = await this.findUserByEmail(normalizedEmail);
+
+      if (existingUser?.workspace_id === workspaceId) {
+        const error = new Error('This user is already a member of your workspace.');
+        error.status = 409;
+        throw error;
+      }
+
+      if (existingUser && existingUser.workspace_id !== workspaceId) {
+        const error = new Error('This email already belongs to another workspace account.');
+        error.status = 409;
+        throw error;
+      }
+
+      const existingInvite = await this.findActiveWorkspaceInviteByEmail(normalizedEmail);
+      if (existingInvite && existingInvite.workspace_id !== workspaceId) {
+        const error = new Error('This email already has a pending invite in another workspace.');
+        error.status = 409;
+        throw error;
+      }
+
+      if (existingInvite) {
+        const rows = await request('workspace_invites', {
+          method: 'PATCH',
+          query: {
+            id: `eq.${existingInvite.id}`,
+            workspace_id: `eq.${workspaceId}`,
+          },
+          body: {
+            role,
+            invited_by_user_id: user.id,
+          },
+        });
+
+        return toWorkspaceInviteView(firstOrNull(rows) || { ...existingInvite, role, invited_by_user_id: user.id });
+      }
+
+      const invite = {
+        id: createId('invite'),
+        workspace_id: workspaceId,
+        email: normalizedEmail,
+        role,
+        invited_by_user_id: user.id,
+        created_at: new Date().toISOString(),
+        accepted_at: null,
+        accepted_by_user_id: null,
+        revoked_at: null,
+      };
+
+      const rows = await request('workspace_invites', {
+        method: 'POST',
+        body: invite,
+      });
+
+      return toWorkspaceInviteView(firstOrNull(rows) || invite);
+    },
+
+    async revokeWorkspaceInvite(user, inviteId) {
+      const workspaceId = getUserWorkspaceId(user);
+      const normalizedInviteId = String(inviteId || '').trim();
+      const rows = await request('workspace_invites', {
+        method: 'PATCH',
+        query: {
+          id: `eq.${normalizedInviteId}`,
+          workspace_id: `eq.${workspaceId}`,
+          accepted_at: 'is.null',
+          revoked_at: 'is.null',
+        },
+        body: {
+          revoked_at: new Date().toISOString(),
+        },
+      });
+
+      const invite = firstOrNull(rows);
+      return invite ? toWorkspaceInviteView(invite) : null;
+    },
+
+    async consumeWorkspaceInviteByEmail(email, { accepted_by_user_id } = {}) {
+      const normalizedEmail = normalizeEmail(email);
+      const rows = await request('workspace_invites', {
+        method: 'PATCH',
+        query: {
+          email: `eq.${normalizedEmail}`,
+          accepted_at: 'is.null',
+          revoked_at: 'is.null',
+        },
+        body: {
+          accepted_at: new Date().toISOString(),
+          accepted_by_user_id: accepted_by_user_id || null,
+        },
+      });
+
+      const invite = firstOrNull(rows);
+      return invite ? toWorkspaceInviteView(invite) : null;
+    },
+
+    async updateWorkspaceMemberRole(user, memberUserId, role) {
+      const workspaceId = getUserWorkspaceId(user);
+      const normalizedMemberUserId = String(memberUserId || '').trim();
+      const nextRole = normalizeWorkspaceRole(role, 'member');
+      const rows = await request('workspace_members', {
+        method: 'PATCH',
+        query: {
+          workspace_id: `eq.${workspaceId}`,
+          user_id: `eq.${normalizedMemberUserId}`,
+        },
+        body: {
+          role: nextRole,
+        },
+      });
+
+      const updated = firstOrNull(rows);
+      if (!updated) return null;
+
+      const users = await request('users', {
+        method: 'GET',
+        query: {
+          workspace_id: `eq.${workspaceId}`,
+          order: 'created_at.asc',
+        },
+      });
+
+      return mapWorkspaceMember(updated, Array.isArray(users) ? users : [], user);
     },
 
     async filterLeads(user, where = {}) {
@@ -1154,6 +1741,12 @@ const createSupabaseClient = () => {
 
       await probeColumn({
         table: 'leads',
+        column: 'intent_signals',
+        unsupportedSet: unsupportedLeadColumns,
+      });
+
+      await probeColumn({
+        table: 'leads',
         column: 'internet_signals',
         unsupportedSet: unsupportedLeadColumns,
       });
@@ -1263,6 +1856,3 @@ const provider =
 
 export const dataStore = provider;
 export const getDataStoreRuntime = () => ({ ...dataStoreRuntime });
-
-
-

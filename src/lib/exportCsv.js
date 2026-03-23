@@ -3,6 +3,20 @@
  * @param {Array<Object>} leads
  * @param {string} [filename]
  */
+export const sanitizeSpreadsheetCell = (value) => {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+  return /^[\t\r ]*[=+\-@]/.test(str) ? `'${str}` : str;
+};
+
+export const escapeCsvValue = (value) => {
+  const str = sanitizeSpreadsheetCell(value);
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+};
+
 export function exportLeadsToCsv(leads, filename = 'leads-export.csv') {
   if (!leads || leads.length === 0) return;
 
@@ -27,17 +41,8 @@ export function exportLeadsToCsv(leads, filename = 'leads-export.csv') {
     { key: 'last_analyzed_at', label: 'Last Analyzed' },
   ];
 
-  const escape = (value) => {
-    if (value === null || value === undefined) return '';
-    const str = String(value);
-    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-      return `"${str.replace(/"/g, '""')}"`;
-    }
-    return str;
-  };
-
-  const header = COLUMNS.map((col) => escape(col.label)).join(',');
-  const rows = leads.map((lead) => COLUMNS.map((col) => escape(lead[col.key])).join(','));
+  const header = COLUMNS.map((col) => escapeCsvValue(col.label)).join(',');
+  const rows = leads.map((lead) => COLUMNS.map((col) => escapeCsvValue(lead[col.key])).join(','));
 
   const csv = [header, ...rows].join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });

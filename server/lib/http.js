@@ -13,6 +13,11 @@ export const getCookieOptions = (overrides = {}) => {
   };
 };
 
+export const getClearCookieOptions = (overrides = {}) => {
+  const { maxAge: _maxAge, ...options } = getCookieOptions(overrides);
+  return options;
+};
+
 const originMatchesPattern = (origin, pattern) => {
   if (!pattern.includes('*')) return origin === pattern;
   const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*');

@@ -1,11 +1,12 @@
 import React, { useRef, useState } from 'react';
-import { AlertCircle, CheckCircle2, FileText, Loader2, Upload, XCircle } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle2, FileText, Loader2, Sparkles, Target, Upload, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { dataClient } from '@/services/dataClient';
+import { ACTIVATION_ANALYZE_BATCH_SIZE } from '@/constants/activation';
 
 // ─── Parsers ──────────────────────────────────────────────────────────────────
 
@@ -141,12 +142,21 @@ const normalizeRow = (row) => {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function ImportCSVDialog({ open, onOpenChange, onImportSuccess }) {
+export default function ImportCSVDialog({
+  open,
+  onOpenChange,
+  onImportSuccess,
+  hasActiveIcp = false,
+  onReviewIcp,
+  onFocusImportedLeads,
+  onAnalyzeImportedLeads,
+}) {
   const [preview, setPreview] = useState([]);
   const [allRows, setAllRows] = useState([]);
   const [importing, setImporting] = useState(false);
   const [imported, setImported] = useState(false);
   const [importResult, setImportResult] = useState(null);
+  const [handoffAction, setHandoffAction] = useState(null);
   const [error, setError] = useState(null);
   const [fileName, setFileName] = useState('');
   const fileInputRef = useRef(null);
@@ -156,6 +166,7 @@ export default function ImportCSVDialog({ open, onOpenChange, onImportSuccess })
     setAllRows([]);
     setImported(false);
     setImportResult(null);
+    setHandoffAction(null);
     setError(null);
     setImporting(false);
     setFileName('');
@@ -225,7 +236,7 @@ export default function ImportCSVDialog({ open, onOpenChange, onImportSuccess })
 
       const created = await dataClient.leads.bulkCreate(validRows);
 
-      const result = { created: created.length, skipped: skippedRows.length, skippedRows };
+      const result = { created: created.length, skipped: skippedRows.length, skippedRows, createdLeads: created };
       setImportResult(result);
       setImported(true);
 
@@ -235,7 +246,7 @@ export default function ImportCSVDialog({ open, onOpenChange, onImportSuccess })
         toast.success(`${created.length} leads imported successfully.`);
       }
 
-      onImportSuccess?.();
+      onImportSuccess?.(result);
     } catch (err) {
       console.warn('Import failed', err);
       toast.error('Import failed. Check the file format and try again.');
@@ -248,6 +259,16 @@ export default function ImportCSVDialog({ open, onOpenChange, onImportSuccess })
   const previewHeaders = preview.length > 0
     ? PREVIEW_COLS.filter((col) => preview.some((row) => row[col]))
     : [];
+
+  const handleHandoff = async (action, callback) => {
+    if (!callback || !importResult) return;
+    setHandoffAction(action);
+    try {
+      await callback(importResult);
+    } finally {
+      setHandoffAction(null);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -351,6 +372,15 @@ export default function ImportCSVDialog({ open, onOpenChange, onImportSuccess })
                 </p>
               </div>
 
+              <div className="rounded-2xl border border-sky-100 bg-sky-50/70 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">Next best step</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  {hasActiveIcp
+                    ? `Analyze the first ${Math.min(importResult?.created ?? 0, ACTIVATION_ANALYZE_BATCH_SIZE)} imported lead(s) to generate scores and outreach-ready copy.`
+                    : 'Set an active ICP first so the imported leads can be scored against the right profile.'}
+                </p>
+              </div>
+
               {importResult?.skippedRows?.length > 0 && (
                 <div className="border border-amber-200 rounded-xl bg-amber-50 p-3">
                   <div className="flex items-center gap-2 text-xs font-semibold text-amber-700 mb-2">
@@ -368,8 +398,36 @@ export default function ImportCSVDialog({ open, onOpenChange, onImportSuccess })
                 </div>
               )}
 
-              <Button onClick={() => handleOpenChange(false)} className="w-full bg-gradient-to-r from-brand-sky to-brand-sky-2">
-                Done
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handleHandoff('focus', onFocusImportedLeads)}
+                  disabled={handoffAction !== null}
+                  className="gap-2"
+                >
+                  {handoffAction === 'focus' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+                  Review imported leads
+                </Button>
+                <Button
+                  onClick={() => handleHandoff(hasActiveIcp ? 'analyze' : 'icp', hasActiveIcp ? onAnalyzeImportedLeads : onReviewIcp)}
+                  disabled={handoffAction !== null}
+                  className="gap-2 bg-gradient-to-r from-brand-sky to-brand-sky-2"
+                >
+                  {handoffAction === 'analyze' || handoffAction === 'icp' ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : hasActiveIcp ? (
+                    <Sparkles className="w-4 h-4" />
+                  ) : (
+                    <Target className="w-4 h-4" />
+                  )}
+                  {hasActiveIcp
+                    ? `Analyze first ${Math.min(importResult?.created ?? 0, ACTIVATION_ANALYZE_BATCH_SIZE)}`
+                    : 'Set ICP before analysis'}
+                </Button>
+              </div>
+
+              <Button variant="ghost" onClick={() => handleOpenChange(false)} className="w-full">
+                I&apos;ll do this later
               </Button>
             </div>
           )}

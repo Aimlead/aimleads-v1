@@ -18,6 +18,12 @@ const defaultDb = {
   users: [],
   leads: [],
   icpProfiles: [],
+  workspaces: [],
+  workspaceMembers: [],
+  workspaceInvites: [],
+  auditLog: [],
+  demoRequests: [],
+  productEvents: [],
 };
 
 let dbQueue = Promise.resolve();
@@ -28,6 +34,12 @@ const normalizeDb = (parsed = {}) => ({
   users: Array.isArray(parsed.users) ? parsed.users : [],
   leads: Array.isArray(parsed.leads) ? parsed.leads : [],
   icpProfiles: Array.isArray(parsed.icpProfiles) ? parsed.icpProfiles : [],
+  workspaces: Array.isArray(parsed.workspaces) ? parsed.workspaces : [],
+  workspaceMembers: Array.isArray(parsed.workspaceMembers) ? parsed.workspaceMembers : [],
+  workspaceInvites: Array.isArray(parsed.workspaceInvites) ? parsed.workspaceInvites : [],
+  auditLog: Array.isArray(parsed.auditLog) ? parsed.auditLog : [],
+  demoRequests: Array.isArray(parsed.demoRequests) ? parsed.demoRequests : [],
+  productEvents: Array.isArray(parsed.productEvents) ? parsed.productEvents : [],
 });
 
 const parseJson = (value) => {

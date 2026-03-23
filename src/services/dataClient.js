@@ -51,7 +51,7 @@ const apiRequest = async (path, { method = 'GET', body, headers = {} } = {}) => 
       'X-Requested-With': 'XMLHttpRequest',
       ...headers,
     },
-    body: body ? JSON.stringify(body) : undefined,
+    body: body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body),
   });
 
   let payload = null;
@@ -154,6 +154,13 @@ const leadsMockApi = {
     const next = leads.map((lead) => (lead.id === id ? { ...lead, ...payload } : lead));
     mockDb.setLeads(next);
     return next.find((lead) => lead.id === id) || null;
+  },
+
+  async delete(id) {
+    const leads = mockDb.getLeads();
+    const next = leads.filter((lead) => lead.id !== id);
+    mockDb.setLeads(next);
+    return { deleted_count: leads.length === next.length ? 0 : 1 };
   },
 
   async bulkCreate(rows) {
@@ -282,6 +289,14 @@ const apiClient = {
   analyze: (payload) => apiRequest('/analyze', { method: 'POST', body: payload }),
   workspace: {
     listMembers: () => apiRequest('/workspace/members'),
+    listInvites: () => apiRequest('/workspace/invites'),
+    inviteMember: (payload) => apiRequest('/workspace/invites', { method: 'POST', body: payload }),
+    revokeInvite: (inviteId) => apiRequest(`/workspace/invites/${encodeURIComponent(inviteId)}`, { method: 'DELETE' }),
+    updateMemberRole: (memberUserId, payload) =>
+      apiRequest(`/workspace/members/${encodeURIComponent(memberUserId)}/role`, { method: 'PATCH', body: payload }),
+    transferOwnership: (memberUserId) =>
+      apiRequest(`/workspace/members/${encodeURIComponent(memberUserId)}/transfer-ownership`, { method: 'POST' }),
+    removeMember: (memberUserId) => apiRequest(`/workspace/members/${encodeURIComponent(memberUserId)}`, { method: 'DELETE' }),
     getIntegrationStatus: () => apiRequest('/workspace/integration-status'),
   },
   dev: {
@@ -354,8 +369,16 @@ export const dataClient = {
     async resetPassword(email) {
       return runWithMode({
         operationName: 'auth.resetPassword',
-        apiCall: () => apiRequest('/auth/reset-password', { method: 'POST', body: JSON.stringify({ email }) }),
+        apiCall: () => apiRequest('/auth/reset-password', { method: 'POST', body: { email } }),
         fallbackCall: async () => ({ ok: true }),
+      });
+    },
+
+    async completePasswordRecovery(payload) {
+      return runWithMode({
+        operationName: 'auth.completePasswordRecovery',
+        apiCall: () => apiRequest('/auth/reset-password/complete', { method: 'POST', body: payload }),
+        fallbackCall: mockUnsupported,
       });
     },
 
@@ -375,6 +398,16 @@ export const dataClient = {
       }
 
       return undefined;
+    },
+  },
+
+  public: {
+    async submitDemoRequest(payload) {
+      return apiRequest('/public/demo-requests', { method: 'POST', body: payload });
+    },
+
+    async trackEvent(payload) {
+      return apiRequest('/public/analytics-events', { method: 'POST', body: payload });
     },
   },
 
@@ -420,6 +453,15 @@ export const dataClient = {
         operationName: 'leads.update',
         apiCall: () => apiClient.leads.update(id, payload),
         fallbackCall: () => leadsMockApi.update(id, payload),
+        passAuthErrors: true,
+      });
+    },
+
+    async delete(id) {
+      return runWithMode({
+        operationName: 'leads.delete',
+        apiCall: () => apiClient.leads.delete(id),
+        fallbackCall: () => leadsMockApi.delete(id),
         passAuthErrors: true,
       });
     },
@@ -564,7 +606,71 @@ export const dataClient = {
       return runWithMode({
         operationName: 'workspace.listMembers',
         apiCall: () => apiClient.workspace.listMembers(),
+        fallbackCall: async () => {
+          const user = mockDb.getUser();
+          return user
+            ? [
+                {
+                  user_id: user.id,
+                  app_user_id: user.id,
+                  workspace_id: user.workspace_id,
+                  email: user.email,
+                  full_name: user.full_name,
+                  role: 'owner',
+                  created_at: user.created_at,
+                  is_current_user: true,
+                },
+              ]
+            : [];
+        },
+        passAuthErrors: true,
+      });
+    },
+    async listInvites() {
+      return runWithMode({
+        operationName: 'workspace.listInvites',
+        apiCall: () => apiClient.workspace.listInvites(),
         fallbackCall: async () => [],
+        passAuthErrors: true,
+      });
+    },
+    async inviteMember(payload) {
+      return runWithMode({
+        operationName: 'workspace.inviteMember',
+        apiCall: () => apiClient.workspace.inviteMember(payload),
+        fallbackCall: mockUnsupported,
+        passAuthErrors: true,
+      });
+    },
+    async revokeInvite(inviteId) {
+      return runWithMode({
+        operationName: 'workspace.revokeInvite',
+        apiCall: () => apiClient.workspace.revokeInvite(inviteId),
+        fallbackCall: mockUnsupported,
+        passAuthErrors: true,
+      });
+    },
+    async updateMemberRole(memberUserId, payload) {
+      return runWithMode({
+        operationName: 'workspace.updateMemberRole',
+        apiCall: () => apiClient.workspace.updateMemberRole(memberUserId, payload),
+        fallbackCall: mockUnsupported,
+        passAuthErrors: true,
+      });
+    },
+    async transferOwnership(memberUserId) {
+      return runWithMode({
+        operationName: 'workspace.transferOwnership',
+        apiCall: () => apiClient.workspace.transferOwnership(memberUserId),
+        fallbackCall: mockUnsupported,
+        passAuthErrors: true,
+      });
+    },
+    async removeMember(memberUserId) {
+      return runWithMode({
+        operationName: 'workspace.removeMember',
+        apiCall: () => apiClient.workspace.removeMember(memberUserId),
+        fallbackCall: mockUnsupported,
         passAuthErrors: true,
       });
     },
@@ -608,12 +714,5 @@ export const dataClient = {
       }),
   },
 };
-
-
-
-
-
-
-
 
 

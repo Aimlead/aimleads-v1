@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart3, FileText, Kanban, LayoutDashboard, LogOut, Search,
-  Settings, Sparkles, Target, Users, Zap, BookOpen, Tag, ClipboardList,
+  Settings, Sparkles, Target, Users, BookOpen, Tag, ClipboardList, Upload, LifeBuoy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/routes';
@@ -21,7 +21,16 @@ const NAV_ITEMS = [
   { id: 'nav-segments', label: 'Segments', icon: Tag, href: ROUTES.segments, group: 'Navigate' },
   { id: 'nav-team', label: 'Team', icon: Users, href: ROUTES.team, group: 'Navigate' },
   { id: 'nav-audit', label: 'Audit Log', icon: ClipboardList, href: ROUTES.auditLog, group: 'Navigate' },
+  { id: 'nav-help', label: 'Help Center', icon: LifeBuoy, href: ROUTES.help, group: 'Navigate' },
   { id: 'nav-settings', label: 'Settings', icon: Settings, href: ROUTES.settings, group: 'Navigate' },
+];
+
+const ACTION_ITEMS = [
+  { id: 'action-import', label: 'Import CSV', icon: Upload, href: `${ROUTES.dashboard}?openImport=1`, group: 'Actions' },
+  { id: 'action-icp', label: 'Configure ICP', icon: Target, href: ROUTES.icp, group: 'Actions' },
+  { id: 'action-outreach', label: 'Open Outreach', icon: BookOpen, href: ROUTES.outreach, group: 'Actions' },
+  { id: 'action-audit', label: 'View audit log', icon: ClipboardList, href: ROUTES.auditLog, group: 'Actions' },
+  { id: 'action-help', label: 'Open help center', icon: LifeBuoy, href: ROUTES.help, group: 'Actions' },
 ];
 
 function highlight(text, query) {
@@ -64,6 +73,10 @@ export default function CommandPalette({ open, onClose }) {
     item.label.toLowerCase().includes(query.toLowerCase())
   );
 
+  const filteredActions = ACTION_ITEMS.filter((item) =>
+    item.label.toLowerCase().includes(query.toLowerCase())
+  );
+
   const filteredLeads = query.length >= 2
     ? leads
         .filter((l) =>
@@ -82,6 +95,7 @@ export default function CommandPalette({ open, onClose }) {
     : [];
 
   const items = [
+    ...filteredActions,
     ...filteredNav,
     ...filteredLeads,
     ...(query === '' ? [{ id: 'action-signout', label: 'Sign out', icon: LogOut, action: logout, group: 'Account' }] : []),

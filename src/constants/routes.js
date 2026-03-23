@@ -15,7 +15,9 @@ export const ROUTES = {
   auditLog: '/audit',
   outreach: '/outreach',
   segments: '/segments',
+  help: '/help',
   forgotPassword: '/forgot-password',
+  resetPassword: '/reset-password',
 };
 
 export const PAGE_ROUTE_MAP = {
@@ -30,4 +32,5 @@ export const PAGE_ROUTE_MAP = {
   AuditLog: ROUTES.auditLog,
   Outreach: ROUTES.outreach,
   Segments: ROUTES.segments,
+  Help: ROUTES.help,
 };

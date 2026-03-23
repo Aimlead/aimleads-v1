@@ -158,6 +158,36 @@ test('PATCH /leads/:id — updates a lead', async () => {
   assert.equal(payload?.data?.follow_up_status, 'Called');
 });
 
+test('PATCH /leads/:id — persists manual intent and internet signals', async () => {
+  const user = await registerAndGetCookie('signal-editor');
+  const created = await createLead(user.cookie);
+  const leadId = created.payload?.data?.id;
+
+  const { response, payload } = await request(`/leads/${leadId}`, {
+    method: 'PATCH',
+    cookie: user.cookie,
+    body: {
+      intent_signals: {
+        pre_call: ['recent_funding'],
+        post_contact: ['budget_available'],
+        negative: ['no_budget'],
+      },
+      internet_signals: [
+        {
+          key: 'active_rfp',
+          evidence: 'https://signal-editor.example/rfp',
+          confidence: 93,
+        },
+      ],
+    },
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(payload?.data?.intent_signals?.pre_call, ['recent_funding']);
+  assert.equal(payload?.data?.internet_signals?.[0]?.key, 'active_rfp');
+  assert.equal(payload?.data?.internet_signals?.[0]?.confidence, 93);
+});
+
 test('DELETE /leads/:id — deletes a lead', async () => {
   const user = await registerAndGetCookie('deleter');
   const created = await createLead(user.cookie);
@@ -194,6 +224,30 @@ test('GET /leads/search — requires q param', async () => {
   const user = await registerAndGetCookie('search-empty');
   const { response } = await request('/leads/search', { cookie: user.cookie });
   assert.equal(response.status, 400);
+});
+
+test('GET /leads/export — returns csv instead of matching a lead id route', async () => {
+  const user = await registerAndGetCookie('export-user');
+  await createLead(user.cookie, { company_name: 'Export Ready Corp' });
+
+  const { response, payload } = await request('/leads/export', { cookie: user.cookie });
+  assert.equal(response.status, 200);
+  assert.match(String(response.headers.get('content-type')), /text\/csv/i);
+  assert.match(payload?.raw || '', /company_name/);
+  assert.match(payload?.raw || '', /Export Ready Corp/);
+});
+
+test('GET /leads/export — neutralizes spreadsheet formulas in exported cells', async () => {
+  const user = await registerAndGetCookie('export-safe');
+  await createLead(user.cookie, {
+    company_name: '=SUM(A1:A2)',
+    notes: ' @malicious',
+  });
+
+  const { response, payload } = await request('/leads/export', { cookie: user.cookie });
+  assert.equal(response.status, 200);
+  assert.match(payload?.raw || '', /'=SUM\(A1:A2\)/);
+  assert.match(payload?.raw || '', /' @malicious/);
 });
 
 test('GET /leads/search — returns results with pagination meta', async () => {

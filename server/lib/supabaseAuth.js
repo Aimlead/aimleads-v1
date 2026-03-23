@@ -1,5 +1,5 @@
 import { getRuntimeConfig } from './config.js';
-import { getCookieOptions } from './http.js';
+import { getClearCookieOptions, getCookieOptions } from './http.js';
 
 export const SUPABASE_ACCESS_COOKIE_NAME = 'aimleads_sb_access_token';
 export const SUPABASE_REFRESH_COOKIE_NAME = 'aimleads_sb_refresh_token';
@@ -121,8 +121,8 @@ export const setSupabaseAuthCookies = (res, session) => {
 };
 
 export const clearSupabaseAuthCookies = (res) => {
-  res.clearCookie(SUPABASE_ACCESS_COOKIE_NAME, getCookieOptions());
-  res.clearCookie(SUPABASE_REFRESH_COOKIE_NAME, getCookieOptions());
+  res.clearCookie(SUPABASE_ACCESS_COOKIE_NAME, getClearCookieOptions());
+  res.clearCookie(SUPABASE_REFRESH_COOKIE_NAME, getClearCookieOptions());
 };
 
 export const getSupabaseAuthCookies = (req) => {
@@ -182,6 +182,20 @@ export const getAuthUserFromAccessToken = async (accessToken) => {
   return payload && typeof payload === 'object' ? payload : null;
 };
 
+export const updateAuthUserPassword = async ({ accessToken, password }) => {
+  if (!accessToken) return null;
+
+  const payload = await requestSupabaseAuth('/user', {
+    method: 'PUT',
+    accessToken,
+    body: {
+      password: String(password || ''),
+    },
+  });
+
+  return payload && typeof payload === 'object' ? payload : null;
+};
+
 export const signOutSupabaseSession = async (accessToken) => {
   if (!accessToken) return;
 
@@ -222,6 +236,17 @@ export const adminUpdateAuthUser = async (authUserId, updates = {}) => {
   });
 
   return payload?.user || payload || null;
+};
+
+export const adminDeleteAuthUser = async (authUserId) => {
+  if (!authUserId) return null;
+
+  await requestSupabaseAuth(`/admin/users/${encodeURIComponent(String(authUserId))}`, {
+    method: 'DELETE',
+    useServiceRole: true,
+  });
+
+  return { id: authUserId };
 };
 
 export const adminFindAuthUserByEmail = async (email) => {

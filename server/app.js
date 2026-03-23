@@ -12,6 +12,7 @@ import auditRoutes from './routes/audit.js';
 import workspaceRoutes from './routes/workspace.js';
 import analyticsInsightsRoutes from './routes/analyticsInsights.js';
 import devRoutes from './routes/dev.js';
+import publicRoutes from './routes/public.js';
 import { getCorsOptions } from './lib/http.js';
 import { csrfProtection } from './lib/middleware.js';
 import { bootstrapDb, bootstrapSupabaseDemoUser, bootstrapWorkspaceDemoData } from './services/bootstrap.js';
@@ -45,7 +46,7 @@ if (getDataProvider() === 'local') {
   }
 }
 
-if (getDataProvider() === 'supabase') {
+if (getDataProvider() === 'supabase' && config.demoBootstrapEnabled) {
   try {
     await bootstrapSupabaseDemoUser(dataStore);
   } catch (error) {
@@ -57,6 +58,11 @@ if (getDataProvider() === 'supabase') {
       reason: String(error?.message || 'bootstrap_failed'),
     });
   }
+} else if (getDataProvider() === 'supabase') {
+  logger.info('supabase_bootstrap_disabled', {
+    provider: getDataProvider(),
+    node_env: config.nodeEnv,
+  });
 }
 
 app.set('trust proxy', 1);
@@ -113,6 +119,7 @@ app.use('/api/v1/analyze', analyzeRoutes);
 app.use('/api/v1/audit', auditRoutes);
 app.use('/api/v1/workspace', workspaceRoutes);
 app.use('/api/v1/analytics', analyticsInsightsRoutes);
+app.use('/api/v1/public', publicRoutes);
 
 // Legacy unversioned routes — kept for backwards compatibility
 app.use('/api/auth', authRoutes);
@@ -122,6 +129,7 @@ app.use('/api/analyze', analyzeRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/workspace', workspaceRoutes);
 app.use('/api/analytics', analyticsInsightsRoutes);
+app.use('/api/public', publicRoutes);
 
 // Dev tools: only mounted when not in production (double guard — route itself also checks)
 if (!config.isProduction) {

@@ -6,7 +6,7 @@ import {
   SESSION_COOKIE_NAME,
   verifyPassword,
 } from '../lib/auth.js';
-import { getCookieOptions } from '../lib/http.js';
+import { getClearCookieOptions, getCookieOptions } from '../lib/http.js';
 import { createId } from '../lib/utils.js';
 import { optionalAuth, requireAuth, wrapAsyncRoutes } from '../lib/middleware.js';
 import { dataStore } from '../lib/dataStore.js';
@@ -14,13 +14,17 @@ import { getSessionSecret, isAuthProviderSupabase } from '../lib/config.js';
 import { createRateLimit, isAccountLocked, recordLoginFailure, recordLoginSuccess } from '../lib/rateLimit.js';
 import { schemas, validateBody } from '../lib/validation.js';
 import { logger } from '../lib/observability.js';
+import { writeAuditLog } from '../lib/auditLog.js';
 import {
+  adminDeleteAuthUser,
   clearSupabaseAuthCookies,
   adminCreateAuthUser,
   getSupabaseAuthCookies,
+  getAuthUserFromAccessToken,
   setSupabaseAuthCookies,
   signInWithPassword,
   signOutSupabaseSession,
+  updateAuthUserPassword,
 } from '../lib/supabaseAuth.js';
 import { ensureWorkspaceUserForAuth } from '../lib/workspaceUser.js';
 
@@ -36,6 +40,23 @@ const authLimiter = createRateLimit({
   keyGenerator: (req) => `${req.ip}:${normalizeEmail(req.body?.email || '')}`,
   message: 'Too many auth attempts, please try again later.',
 });
+
+const resolveCurrentWorkspaceMember = async (user) => {
+  const members = await dataStore.listWorkspaceMembers(user).catch(() => []);
+  const membershipUserId = String(user?.supabase_auth_id || user?.id || '').trim();
+  const normalizedEmail = normalizeEmail(user?.email);
+
+  const currentMember =
+    members.find((member) => String(member?.user_id || '').trim() === membershipUserId)
+    || members.find((member) => String(member?.app_user_id || '').trim() === String(user?.id || '').trim())
+    || members.find((member) => normalizeEmail(member?.email) === normalizedEmail)
+    || null;
+
+  return {
+    members,
+    currentMember,
+  };
+};
 
 const toApiAuthError = (error, fallbackMessage = 'Authentication failed') => {
   const status = Number(error?.status || 0);
@@ -131,14 +152,23 @@ router.post('/register', authLimiter, validateBody(schemas.authRegisterSchema), 
       return res.status(409).json({ message: 'An account with this email already exists. Please sign in.' });
     }
 
+    const pendingInvite = await dataStore.findActiveWorkspaceInviteByEmail(email).catch(() => null);
+
     const newUser = await dataStore.createUser({
       id: createId('user'),
-      workspace_id: createId('ws'),
+      workspace_id: pendingInvite?.workspace_id || createId('ws'),
+      workspace_role: pendingInvite?.role || 'owner',
       email,
       full_name: fullName,
       password_hash: hashPassword(password),
       created_at: new Date().toISOString(),
     });
+
+    if (pendingInvite) {
+      await dataStore.consumeWorkspaceInviteByEmail(email, {
+        accepted_by_user_id: newUser.id,
+      }).catch(() => null);
+    }
 
     const token = createSessionToken(newUser.id, getSessionSecret());
     res.cookie(SESSION_COOKIE_NAME, token, getCookieOptions());
@@ -234,6 +264,45 @@ router.post('/reset-password', authLimiter, validateBody(schemas.authResetPasswo
   return res.json({ ok: true, message: 'If this email is registered, a reset link has been sent. Check your inbox or contact your administrator.' });
 });
 
+router.post('/reset-password/complete', authLimiter, validateBody(schemas.authCompletePasswordResetSchema), async (req, res) => {
+  if (!isAuthProviderSupabase()) {
+    return res.status(400).json({ message: 'Password recovery is only available with Supabase Auth.' });
+  }
+
+  const accessToken = String(req.validatedBody.access_token || '').trim();
+  const refreshToken = String(req.validatedBody.refresh_token || '').trim();
+  const newPassword = String(req.validatedBody.new_password || '');
+
+  try {
+    await updateAuthUserPassword({
+      accessToken,
+      password: newPassword,
+    });
+
+    const authUser = await getAuthUserFromAccessToken(accessToken);
+    if (!authUser?.id) {
+      return res.status(401).json({ message: 'Recovery session is invalid or expired.' });
+    }
+
+    setSupabaseAuthCookies(res, {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      expires_in: 3600,
+      user: authUser,
+    });
+
+    const appUser = await ensureWorkspaceUserForAuth({
+      authUser,
+      fallbackFullName: authUser.user_metadata?.full_name || authUser.email || '',
+    });
+
+    return res.json({ ok: true, user: sanitizeUser(appUser || authUser) });
+  } catch (error) {
+    const normalized = toApiAuthError(error, 'Password reset failed');
+    return res.status(normalized.status).json({ message: normalized.message });
+  }
+});
+
 router.get('/me/export', requireAuth, async (req, res) => {
   const user = await dataStore.findUserById(req.user.id);
   const leads = await dataStore.listLeads(req.user, '-created_date');
@@ -245,6 +314,16 @@ router.get('/me/export', requireAuth, async (req, res) => {
   };
 
   const filename = `aimleads-export-${new Date().toISOString().slice(0, 10)}.json`;
+  await writeAuditLog({
+    user: req.user,
+    action: 'export',
+    resourceType: 'user_data',
+    resourceId: filename,
+    changes: {
+      email: req.user.email,
+      lead_count: Array.isArray(leads) ? leads.length : 0,
+    },
+  });
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   return res.send(JSON.stringify(exportData, null, 2));
@@ -252,12 +331,31 @@ router.get('/me/export', requireAuth, async (req, res) => {
 
 router.delete('/me', requireAuth, async (req, res) => {
   const userId = req.user.id;
+  const existingUser = await dataStore.findUserById(userId);
+  const membershipUserId = existingUser?.supabase_auth_id || existingUser?.id || req.user.supabase_auth_id || req.user.id;
 
-  // Best-effort: delete all workspace leads
+  const { members, currentMember } = await resolveCurrentWorkspaceMember(req.user);
+  if (!currentMember) {
+    return res.status(409).json({
+      message: 'Unable to verify workspace ownership. Please contact support before deleting this account.',
+    });
+  }
+
+  if (currentMember?.role === 'owner') {
+    const ownerCount = members.filter((member) => member.role === 'owner').length;
+    if (ownerCount <= 1 && members.length > 1) {
+      return res.status(400).json({
+        message: 'Transfer ownership before deleting the last owner account.',
+      });
+    }
+  }
+
+  // Self-serve deletion should remove the account, not wipe the whole workspace.
   try {
-    const leads = await dataStore.listLeads(req.user, '-created_date');
-    await Promise.allSettled((leads || []).map((l) => dataStore.deleteLead(req.user, l.id)));
-  } catch { /* continue even if partial */ }
+    if (typeof dataStore.deleteWorkspaceMembership === 'function') {
+      await dataStore.deleteWorkspaceMembership(req.user, membershipUserId);
+    }
+  } catch { /* continue */ }
 
   // Best-effort: delete user record
   try {
@@ -270,12 +368,13 @@ router.delete('/me', requireAuth, async (req, res) => {
   if (isAuthProviderSupabase()) {
     const { getSupabaseAuthCookies, signOutSupabaseSession, clearSupabaseAuthCookies } = await import('../lib/supabaseAuth.js');
     const { accessToken } = getSupabaseAuthCookies(req);
+    await adminDeleteAuthUser(existingUser?.supabase_auth_id || req.user.supabase_auth_id).catch(() => {});
     await signOutSupabaseSession(accessToken).catch(() => {});
     clearSupabaseAuthCookies(res);
   }
 
-  res.clearCookie(SESSION_COOKIE_NAME, getCookieOptions());
-  return res.status(200).json({ ok: true, message: 'Account and all associated data deleted.' });
+  res.clearCookie(SESSION_COOKIE_NAME, getClearCookieOptions());
+  return res.status(200).json({ ok: true, message: 'Account deleted. Workspace data was not deleted.' });
 });
 
 router.post('/logout', async (req, res) => {
@@ -283,11 +382,11 @@ router.post('/logout', async (req, res) => {
     const { accessToken } = getSupabaseAuthCookies(req);
     await signOutSupabaseSession(accessToken);
     clearSupabaseAuthCookies(res);
-    res.clearCookie(SESSION_COOKIE_NAME, getCookieOptions());
+    res.clearCookie(SESSION_COOKIE_NAME, getClearCookieOptions());
     return res.status(204).send();
   }
 
-  res.clearCookie(SESSION_COOKIE_NAME, getCookieOptions());
+  res.clearCookie(SESSION_COOKIE_NAME, getClearCookieOptions());
   return res.status(204).send();
 });
 

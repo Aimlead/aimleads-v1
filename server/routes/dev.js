@@ -400,7 +400,7 @@ router.post('/load-mantra', async (req, res) => {
 
   let analyzed = 0;
   for (const lead of mantraLeads) {
-    const result = analyzeLead({ lead, icpProfile: mantraIcp });
+    const result = await analyzeLead({ lead, icpProfile: mantraIcp });
     await dataStore.updateLead(req.user, lead.id, toLeadAnalysisUpdatePayload(result));
     analyzed += 1;
   }
@@ -430,7 +430,7 @@ router.post('/reanalyze', async (req, res) => {
 
   let analyzed = 0;
   for (const lead of scoped) {
-    const result = analyzeLead({ lead, icpProfile: activeIcp });
+    const result = await analyzeLead({ lead, icpProfile: activeIcp });
     await dataStore.updateLead(req.user, lead.id, toLeadAnalysisUpdatePayload(result));
     analyzed += 1;
   }
@@ -452,7 +452,6 @@ router.get('/checkup', async (req, res) => {
 });
 
 export default router;
-
 
 
 

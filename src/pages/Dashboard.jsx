@@ -1,17 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { AlertTriangle, Brain, Download, Loader2, RefreshCcw, Sparkles, Target, TrendingUp, Upload, Users, Zap } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { AlertTriangle, Brain, Download, Loader2, MessageSquare, RefreshCcw, Sparkles, Target, TrendingUp, Upload, Users, Zap } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import ActivationChecklist from '@/components/ActivationChecklist';
 import LeadSlideOver from '@/components/leads/LeadSlideOver';
 import ImportCSVDialog from '@/components/leads/ImportCSVDialog';
 import LeadsTable from '@/components/leads/LeadsTable';
-import OnboardingModal from '@/components/OnboardingModal';
 import { SkeletonCard } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ACTIVATION_ANALYZE_BATCH_SIZE } from '@/constants/activation';
+import { ROUTES } from '@/constants/routes';
 import { LEAD_STATUS } from '@/constants/leads';
+import { getActivationState } from '@/lib/activation';
 import { useAuth } from '@/lib/AuthContext';
 import { exportLeadsToCsv } from '@/lib/exportCsv';
 import { analyzeLead } from '@/services/analysis/analyzeLead';
@@ -73,6 +76,7 @@ const buildAnalysisUpdatePayload = (result) => ({
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -126,10 +130,24 @@ export default function Dashboard() {
     window.localStorage.setItem(STORAGE_KEY, selectedSourceList);
   }, [selectedSourceList]);
 
+  useEffect(() => {
+    if (searchParams.get('openImport') !== '1') return;
+    setImportDialogOpen(true);
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('openImport');
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const visibleLeads = useMemo(() => {
     if (selectedSourceList === LIST_KEYS.ALL) return leads;
     return leads.filter((lead) => toSourceListKey(lead) === selectedSourceList);
   }, [leads, selectedSourceList]);
+
+  const activationState = useMemo(
+    () => getActivationState({ activeIcp, leads }),
+    [activeIcp, leads]
+  );
 
   useEffect(() => {
     if (!selectedLead?.id) return;
@@ -148,7 +166,95 @@ export default function Dashboard() {
     navigate(`/leads/${lead.id}`, { state: { lead } });
   };
 
-  const handleImportSuccess = () => queryClient.invalidateQueries({ queryKey: ['leads'] });
+  const getImportSourceListKey = (importResult) => {
+    const sourceKeys = new Set((importResult?.createdLeads || []).map((lead) => toSourceListKey(lead)));
+    if (sourceKeys.size === 1) return [...sourceKeys][0];
+    return LIST_KEYS.ALL;
+  };
+
+  const scrollToLeadsTable = () => {
+    if (typeof window === 'undefined') return;
+    window.requestAnimationFrame(() => {
+      document.getElementById('dashboard-leads-table')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  };
+
+  const runLeadAnalysisBatch = async (leadBatch, successMessage) => {
+    if (leadBatch.length === 0) return { analyzedCount: 0, firstLeadId: null };
+
+    const activeProfile = activeIcp || await dataClient.icp.getActive();
+    if (!activeProfile) {
+      toast.error('Create an active ICP before analyzing leads.');
+      navigate(ROUTES.icp);
+      return { analyzedCount: 0, firstLeadId: null };
+    }
+
+    setIsReanalyzing(true);
+    try {
+      let analyzedCount = 0;
+      for (const lead of leadBatch) {
+        const result = await analyzeLead({
+          lead,
+          icp_profile_id: activeProfile.id,
+          icp_profile: activeProfile,
+        });
+        await dataClient.leads.update(lead.id, buildAnalysisUpdatePayload(result));
+        analyzedCount += 1;
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success(successMessage || `Analyzed ${analyzedCount} lead(s)`);
+      return { analyzedCount, firstLeadId: leadBatch[0]?.id || null };
+    } catch (error) {
+      console.warn('Activation analysis failed', error);
+      toast.error('Failed to analyze leads');
+      return { analyzedCount: 0, firstLeadId: null };
+    } finally {
+      setIsReanalyzing(false);
+    }
+  };
+
+  const focusImportedLeads = async (importResult) => {
+    const sourceListKey = getImportSourceListKey(importResult);
+    setSelectedSourceList(sourceListKey);
+    setImportDialogOpen(false);
+    scrollToLeadsTable();
+  };
+
+  const handleImportSuccess = (importResult) => {
+    if (importResult?.createdLeads?.length) {
+      setSelectedSourceList(getImportSourceListKey(importResult));
+    }
+    queryClient.invalidateQueries({ queryKey: ['leads'] });
+  };
+
+  const handleAnalyzeImportedLeads = async (importResult) => {
+    const importedLeads = (importResult?.createdLeads || []).slice(0, ACTIVATION_ANALYZE_BATCH_SIZE);
+    if (importedLeads.length === 0) {
+      await focusImportedLeads(importResult);
+      return;
+    }
+
+    setSelectedSourceList(getImportSourceListKey(importResult));
+    setImportDialogOpen(false);
+
+    const result = await runLeadAnalysisBatch(
+      importedLeads,
+      `Analyzed ${importedLeads.length} imported lead(s). Review the best one and start the follow-up workflow next.`
+    );
+
+    if (result.firstLeadId) {
+      const freshLead = await dataClient.leads.getById(result.firstLeadId);
+      if (freshLead) {
+        setSelectedLead(freshLead);
+        setSlideOverOpen(true);
+      }
+    }
+  };
+
   const handleLeadUpdated = () => queryClient.invalidateQueries({ queryKey: ['leads'] });
 
   const handleSwitchIcp = async (nextIcpId) => {
@@ -235,6 +341,7 @@ export default function Dashboard() {
   };
 
   const getLeadScore = (lead) => (Number.isFinite(lead.final_score) ? lead.final_score : lead.icp_score);
+  const hasAnalyzedLead = activationState.hasAnalyzedLead;
   const scoredLeads = visibleLeads.map((lead) => getLeadScore(lead)).filter((score) => Number.isFinite(score));
   const totalLeads = visibleLeads.length;
   const qualifiedLeads = visibleLeads.filter((lead) => lead.status === LEAD_STATUS.QUALIFIED).length;
@@ -248,6 +355,90 @@ export default function Dashboard() {
     { key: 'qualified', value: qualifiedLeads, label: 'Qualified' },
     { key: 'avg', value: avgScore, label: 'Avg Final Score' },
     { key: 'toAnalyze', value: toAnalyze, label: 'To Analyze' },
+  ];
+
+  const handleActivationAnalysis = async () => {
+    if (leads.length === 0) {
+      setImportDialogOpen(true);
+      return;
+    }
+
+    const nextLead = activationState.leadToAnalyze || leads[0];
+    const result = await runLeadAnalysisBatch(
+      [nextLead],
+      `${nextLead.company_name || 'Lead'} analyzed. Open it now and start the follow-up workflow.`
+    );
+
+    if (result.firstLeadId) {
+      const freshLead = await dataClient.leads.getById(result.firstLeadId);
+      if (freshLead) {
+        setSelectedLead(freshLead);
+        setSlideOverOpen(true);
+      }
+    }
+  };
+
+  const activationSteps = [
+    {
+      id: 'icp',
+      icon: Target,
+      title: 'Set your active ICP',
+      description: activeIcp
+        ? `Current scoring profile: ${activeIcp.name}.`
+        : 'Define the industries, roles, company size, and geography you want AI to prioritize.',
+      complete: activationState.hasActiveIcp,
+      actionLabel: activeIcp ? 'Review ICP' : 'Configure ICP',
+      onAction: () => navigate(ROUTES.icp),
+    },
+    {
+      id: 'import',
+      icon: Upload,
+      title: 'Import your first lead list',
+      description: leads.length > 0
+        ? `${leads.length} lead(s) already available in Smart Inbox.`
+        : 'Upload a CSV or Excel file to seed your workspace with prospects.',
+      complete: activationState.hasImportedLeads,
+      actionLabel: leads.length > 0 ? 'Review leads' : 'Import leads',
+      onAction: leads.length > 0 ? scrollToLeadsTable : () => setImportDialogOpen(true),
+    },
+    {
+      id: 'analysis',
+      icon: Sparkles,
+      title: 'Analyze your first lead',
+      description: hasAnalyzedLead
+        ? 'At least one lead has already been scored and enriched.'
+        : 'Run the first analysis to generate fit scoring, intent signals, and tailored copy.',
+      complete: hasAnalyzedLead,
+      actionLabel:
+        leads.length === 0
+          ? 'Import leads first'
+          : !activeIcp
+            ? 'Configure ICP first'
+            : isReanalyzing
+              ? 'Analyzing...'
+              : 'Analyze first lead',
+      onAction:
+        leads.length === 0
+          ? () => setImportDialogOpen(true)
+          : !activeIcp
+            ? () => navigate(ROUTES.icp)
+            : handleActivationAnalysis,
+      disabled: Boolean(activeIcp) && leads.length > 0 && (isReanalyzing || !activationState.leadToAnalyze),
+    },
+    {
+      id: 'review',
+      icon: MessageSquare,
+      title: 'Start your first follow-up',
+      description: activationState.hasFollowUpStarted
+        ? 'A lead already has notes or a follow-up status set.'
+        : 'Open the best analyzed lead and set notes or a follow-up status so the workflow actually starts.',
+      complete: activationState.hasFollowUpStarted,
+      actionLabel: activationState.leadToReview ? 'Open best lead' : 'Open pipeline',
+      onAction: activationState.leadToReview
+        ? () => handleOpenLeadPage(activationState.leadToReview)
+        : () => navigate(ROUTES.pipeline),
+      disabled: !activationState.hasAnalyzedLead,
+    },
   ];
 
   return (
@@ -285,7 +476,12 @@ export default function Dashboard() {
             <Download className="w-3.5 h-3.5" />
             Export
           </Button>
-          <Button onClick={() => setImportDialogOpen(true)} size="sm" className="gap-1.5 h-8 text-xs bg-gradient-to-r from-brand-sky to-brand-sky-2">
+          <Button
+            id="import-csv-trigger"
+            onClick={() => setImportDialogOpen(true)}
+            size="sm"
+            className="gap-1.5 h-8 text-xs bg-gradient-to-r from-brand-sky to-brand-sky-2"
+          >
             <Upload className="w-3.5 h-3.5" />
             Import CSV
           </Button>
@@ -332,6 +528,8 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <ActivationChecklist steps={activationSteps} />
+
       {/* ── Error state ─────────────────────────────────────────────────── */}
       {leadsError && (
         <div className="flex items-center gap-3 mb-5 p-4 bg-rose-50 border border-rose-100 rounded-xl text-rose-700 text-sm">
@@ -373,15 +571,15 @@ export default function Dashboard() {
             })}
       </div>
 
-      <LeadsTable
-        leads={visibleLeads}
-        isLoading={isLoading}
-        onSelectLead={handleSelectLead}
-        onOpenLeadPage={handleOpenLeadPage}
-        onLeadUpdated={handleLeadUpdated}
-      />
-
-      <OnboardingModal />
+      <div id="dashboard-leads-table">
+        <LeadsTable
+          leads={visibleLeads}
+          isLoading={isLoading}
+          onSelectLead={handleSelectLead}
+          onOpenLeadPage={handleOpenLeadPage}
+          onLeadUpdated={handleLeadUpdated}
+        />
+      </div>
 
       <LeadSlideOver
         lead={selectedLead}
@@ -394,6 +592,13 @@ export default function Dashboard() {
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
         onImportSuccess={handleImportSuccess}
+        hasActiveIcp={Boolean(activeIcp?.id)}
+        onReviewIcp={() => {
+          setImportDialogOpen(false);
+          navigate(ROUTES.icp);
+        }}
+        onFocusImportedLeads={focusImportedLeads}
+        onAnalyzeImportedLeads={handleAnalyzeImportedLeads}
       />
     </>
   );

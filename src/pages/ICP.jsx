@@ -397,7 +397,7 @@ export default function ICP() {
             </Button>
             <Button
               onClick={() => generateMutation.mutate(genDescription)}
-              disabled={genDescription.trim().length < 10 || generateMutation.isPending}
+              disabled={genDescription.trim().length < 20 || generateMutation.isPending}
               className="gap-2 bg-gradient-to-r from-brand-sky to-brand-sky-2"
             >
               {generateMutation.isPending

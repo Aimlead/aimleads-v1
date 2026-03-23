@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { ClipboardList, Filter, Loader2, RefreshCcw, Search, Shield, Sparkles, Tag, Trash2, TrendingUp } from 'lucide-react';
+import { ClipboardList, Download, Filter, Loader2, Mail, RefreshCcw, Search, Shield, Sparkles, Tag, Trash2, TrendingUp, Users } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { dataClient } from '@/services/dataClient';
 import { Button } from '@/components/ui/button';
@@ -14,12 +14,27 @@ const ACTION_META = {
   create: { label: 'Created', color: 'bg-emerald-50 text-emerald-700 border-emerald-100', icon: TrendingUp, dot: 'bg-emerald-400' },
   update: { label: 'Updated', color: 'bg-blue-50 text-blue-700 border-blue-100', icon: Sparkles, dot: 'bg-blue-400' },
   delete: { label: 'Deleted', color: 'bg-rose-50 text-rose-700 border-rose-100', icon: Trash2, dot: 'bg-rose-400' },
+  export: { label: 'Exported', color: 'bg-amber-50 text-amber-700 border-amber-100', icon: Download, dot: 'bg-amber-400' },
 };
 
 const RESOURCE_META = {
   lead: { label: 'Lead', icon: TrendingUp },
   icp_profile: { label: 'ICP Profile', icon: Tag },
+  workspace_invite: { label: 'Workspace Invite', icon: Mail },
+  workspace_member: { label: 'Workspace Member', icon: Users },
+  user_data: { label: 'Account Data', icon: Shield },
+  lead_export: { label: 'Lead Export', icon: Download },
 };
+
+const ACTION_ORDER = ['create', 'update', 'delete', 'export'];
+const RESOURCE_FILTER_OPTIONS = [
+  { value: 'lead', label: 'Leads' },
+  { value: 'icp_profile', label: 'ICP Profiles' },
+  { value: 'workspace_invite', label: 'Workspace invites' },
+  { value: 'workspace_member', label: 'Workspace members' },
+  { value: 'user_data', label: 'Account data exports' },
+  { value: 'lead_export', label: 'Lead exports' },
+];
 
 function ActionBadge({ action }) {
   const meta = ACTION_META[action] || { label: action, color: 'bg-slate-50 text-slate-600 border-slate-100', dot: 'bg-slate-400' };
@@ -54,7 +69,11 @@ function AuditRow({ entry, delay = 0 }) {
           </div>
           <div>
             <p className="text-sm font-medium text-slate-700">{resourceMeta.label}</p>
-            <p className="text-xs text-slate-400 font-mono">{entry.resource_id?.slice(0, 12)}…</p>
+            <p className="text-xs text-slate-400 font-mono">
+              {entry.resource_id
+                ? (String(entry.resource_id).length > 20 ? `${String(entry.resource_id).slice(0, 20)}…` : String(entry.resource_id))
+                : '—'}
+            </p>
           </div>
         </div>
       </td>
@@ -125,8 +144,8 @@ export default function AuditLog() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        {['create', 'update', 'delete'].map((action) => {
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {ACTION_ORDER.map((action) => {
           const meta = ACTION_META[action];
           const count = entries.filter((e) => e.action === action).length;
           return (
@@ -170,6 +189,7 @@ export default function AuditLog() {
             <SelectItem value="create">Created</SelectItem>
             <SelectItem value="update">Updated</SelectItem>
             <SelectItem value="delete">Deleted</SelectItem>
+            <SelectItem value="export">Exported</SelectItem>
           </SelectContent>
         </Select>
 
@@ -179,8 +199,9 @@ export default function AuditLog() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All resources</SelectItem>
-            <SelectItem value="lead">Leads</SelectItem>
-            <SelectItem value="icp_profile">ICP Profiles</SelectItem>
+            {RESOURCE_FILTER_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
 

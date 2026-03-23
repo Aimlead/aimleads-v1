@@ -20,14 +20,17 @@ import LeadDetail from '@/pages/LeadDetail';
 const AccountSettings = lazy(() => import('@/pages/AccountSettings'));
 const Analytics = lazy(() => import('@/pages/Analytics'));
 const Pipeline = lazy(() => import('@/pages/Pipeline'));
-const Team = lazy(() => import('@/pages/Team'));
+const Team = lazy(() => import('@/pages/Team.jsx'));
 const ICP = lazy(() => import('@/pages/ICP'));
 const Pricing = lazy(() => import('@/pages/Pricing'));
 const Reports = lazy(() => import('@/pages/Reports'));
 const Settings = lazy(() => import('@/pages/Settings'));
 const AuditLog = lazy(() => import('@/pages/AuditLog'));
 const Segments = lazy(() => import('@/pages/Segments'));
+const Outreach = lazy(() => import('@/pages/Outreach'));
+const Help = lazy(() => import('@/pages/Help'));
 const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 
 function PageLoader() {
   return (
@@ -87,6 +90,7 @@ function AppRoutes() {
       <Route path={ROUTES.home} element={<Landing />} />
       <Route path={ROUTES.pricing} element={<Pricing />} />
       <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
+      <Route path={ROUTES.resetPassword} element={<ResetPassword />} />
       <Route
         path={ROUTES.login}
         element={
@@ -108,7 +112,9 @@ function AppRoutes() {
         <Route path={ROUTES.leadDetail} element={<LeadDetail />} />
         <Route path={ROUTES.leads} element={<Navigate to={ROUTES.dashboard} replace />} />
         <Route path={ROUTES.auditLog} element={<AuditLog />} />
-<Route path={ROUTES.segments} element={<Segments />} />
+        <Route path={ROUTES.segments} element={<Segments />} />
+        <Route path={ROUTES.outreach} element={<Outreach />} />
+        <Route path={ROUTES.help} element={<Help />} />
       </Route>
 
       <Route path="*" element={<PageNotFound />} />

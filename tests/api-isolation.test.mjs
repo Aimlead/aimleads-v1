@@ -200,8 +200,56 @@ test('workspace isolation for icp + analyze', async () => {
   assert.equal(analysis.payload?.message, 'No active ICP profile found');
 });
 
+test('DELETE /auth/me deletes the account without wiping workspace leads', async () => {
+  const user = await registerAndGetCookie('selfdelete');
+
+  const createdLead = await request('/leads', {
+    method: 'POST',
+    cookie: user.cookie,
+    body: {
+      company_name: 'Delete Safety Corp',
+      website_url: 'delete-safety.test',
+      industry: 'Software Development',
+      contact_name: 'Nora Safety',
+      contact_role: 'CTO',
+      contact_email: 'nora@delete-safety.test',
+      company_size: 40,
+      country: 'France',
+    },
+  });
+
+  assert.equal(createdLead.response.status, 201);
+  const leadId = createdLead.payload?.data?.id;
+  assert.ok(leadId, 'created lead id missing');
+
+  const deleted = await request('/auth/me', {
+    method: 'DELETE',
+    cookie: user.cookie,
+  });
+
+  assert.equal(deleted.response.status, 200);
+  assert.equal(deleted.payload?.message, 'Account deleted. Workspace data was not deleted.');
+
+  const db = JSON.parse(await fs.readFile(dbPath, 'utf8'));
+  assert.equal((db.users || []).some((entry) => entry.id === user.user?.id), false, 'user should be deleted');
+  assert.equal((db.leads || []).some((entry) => entry.id === leadId), true, 'workspace leads should remain intact');
+});
+
+test('POST /auth/reset-password/complete is unavailable in legacy auth mode but no longer 404s', async () => {
+  const { response, payload } = await request('/auth/reset-password/complete', {
+    method: 'POST',
+    body: {
+      access_token: 'legacy-access',
+      refresh_token: 'legacy-refresh',
+      new_password: 'Reset123',
+    },
+  });
+
+  assert.equal(response.status, 400);
+  assert.equal(payload?.message, 'Password recovery is only available with Supabase Auth.');
+});
+
 test.after(async () => {
   await new Promise((resolve) => server.close(resolve));
   await fs.rm(tmpDir, { recursive: true, force: true });
 });
-

@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Loader2, Lock, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/lib/AuthContext';
 import { dataClient } from '@/services/dataClient';
 
 export default function AccountSettings() {
   const { user, refreshUser } = useAuth();
+  const usesManagedPasswordRecovery = Boolean(user?.supabase_auth_id);
 
   const [profileForm, setProfileForm] = useState({ full_name: user?.full_name || '' });
   const [profileLoading, setProfileLoading] = useState(false);
@@ -128,62 +131,87 @@ export default function AccountSettings() {
       </Card>
 
       {/* Password */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lock className="w-5 h-5" />
-            Change Password
-          </CardTitle>
-          <CardDescription>Minimum 8 characters with at least 1 uppercase letter and 1 number.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handlePasswordSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="current_password">Current password</Label>
-              <Input
-                id="current_password"
-                type="password"
-                value={passwordForm.current_password}
-                onChange={(e) => setPasswordForm((prev) => ({ ...prev, current_password: e.target.value }))}
-                placeholder="••••••••"
-                required
-              />
+      {usesManagedPasswordRecovery ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5" />
+              Password recovery
+            </CardTitle>
+            <CardDescription>
+              This account uses managed authentication. Start the reset-password flow instead of changing it directly here.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+              We&apos;ll send you a secure recovery link so you can set a new password without risking a failed in-app update.
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="new_password">New password</Label>
-              <Input
-                id="new_password"
-                type="password"
-                value={passwordForm.new_password}
-                onChange={(e) => setPasswordForm((prev) => ({ ...prev, new_password: e.target.value }))}
-                placeholder="••••••••"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirm_password">Confirm new password</Label>
-              <Input
-                id="confirm_password"
-                type="password"
-                value={passwordForm.confirm_password}
-                onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirm_password: e.target.value }))}
-                placeholder="••••••••"
-                required
-              />
-            </div>
-
-            {passwordError && <p className="text-sm text-rose-600">{passwordError}</p>}
-            {passwordSuccess && <p className="text-sm text-emerald-600">{passwordSuccess}</p>}
-
-            <Button type="submit" variant="outline" disabled={passwordLoading} className="gap-2">
-              {passwordLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-              Change password
+            <Button asChild variant="outline" className="gap-2">
+              <Link to={ROUTES.forgotPassword}>
+                <Lock className="w-4 h-4" />
+                Start password reset
+              </Link>
             </Button>
-          </form>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5" />
+              Change Password
+            </CardTitle>
+            <CardDescription>Minimum 8 characters with at least 1 uppercase letter and 1 number.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="current_password">Current password</Label>
+                <Input
+                  id="current_password"
+                  type="password"
+                  value={passwordForm.current_password}
+                  onChange={(e) => setPasswordForm((prev) => ({ ...prev, current_password: e.target.value }))}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="new_password">New password</Label>
+                <Input
+                  id="new_password"
+                  type="password"
+                  value={passwordForm.new_password}
+                  onChange={(e) => setPasswordForm((prev) => ({ ...prev, new_password: e.target.value }))}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirm_password">Confirm new password</Label>
+                <Input
+                  id="confirm_password"
+                  type="password"
+                  value={passwordForm.confirm_password}
+                  onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirm_password: e.target.value }))}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+
+              {passwordError && <p className="text-sm text-rose-600">{passwordError}</p>}
+              {passwordSuccess && <p className="text-sm text-emerald-600">{passwordSuccess}</p>}
+
+              <Button type="submit" variant="outline" disabled={passwordLoading} className="gap-2">
+                {passwordLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                Change password
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

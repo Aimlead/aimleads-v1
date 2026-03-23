@@ -64,18 +64,35 @@ export const ensureWorkspaceUserForAuth = async ({ authUser, fallbackFullName = 
       }
 
       appUser = (await dataStore.updateUser(byEmail.id, updates)) || { ...byEmail, ...updates };
+
+      const pendingInvite = await dataStore.findActiveWorkspaceInviteByEmail(email).catch(() => null);
+      if (pendingInvite && pendingInvite.workspace_id === appUser.workspace_id) {
+        await dataStore.consumeWorkspaceInviteByEmail(email, {
+          accepted_by_user_id: appUser.id,
+        }).catch(() => null);
+      }
+
       return appUser;
     }
   }
 
+  const pendingInvite = email ? await dataStore.findActiveWorkspaceInviteByEmail(email).catch(() => null) : null;
+
   appUser = await dataStore.createUser({
     id: createId('user'),
-    workspace_id: createId('ws'),
+    workspace_id: pendingInvite?.workspace_id || createId('ws'),
+    workspace_role: pendingInvite?.role || 'owner',
     email: email || `${String(authUser.id).slice(0, 8)}@unknown.local`,
     full_name: fullName,
     supabase_auth_id: authUser.id,
     created_at: new Date().toISOString(),
   });
+
+  if (pendingInvite) {
+    await dataStore.consumeWorkspaceInviteByEmail(email, {
+      accepted_by_user_id: appUser.id,
+    }).catch(() => null);
+  }
 
   return appUser;
 };

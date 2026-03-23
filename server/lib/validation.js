@@ -49,6 +49,28 @@ const leadPatchSchema = z.object({
   status: z.string().trim().max(100).optional(),
   follow_up_status: z.string().trim().max(100).optional(),
   notes: z.string().trim().max(10000).optional(),
+  intent_signals: z
+    .object({
+      pre_call: z.array(z.string().trim().min(1).max(200)).optional(),
+      post_contact: z.array(z.string().trim().min(1).max(200)).optional(),
+      negative: z.array(z.string().trim().min(1).max(200)).optional(),
+    })
+    .passthrough()
+    .optional(),
+  internet_signals: z
+    .array(
+      z
+        .object({
+          key: z.string().trim().min(1).max(200),
+          evidence: z.string().trim().max(2000).optional(),
+          confidence: z.union([z.number(), z.string()]).optional(),
+          source_type: z.string().trim().max(100).optional(),
+          found_at: z.string().trim().max(100).optional(),
+        })
+        .passthrough()
+    )
+    .max(200)
+    .optional(),
 });
 
 const scoreMapSchema = z.object({
@@ -141,14 +163,16 @@ const icpActiveSchema = z
   })
   .passthrough();
 
+const passwordSchema = z
+  .string()
+  .min(8, 'Password must be at least 8 characters')
+  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+  .regex(/[0-9]/, 'Password must contain at least one number');
+
 const authRegisterSchema = z
   .object({
     email: z.string().trim().email(),
-    password: z
-      .string()
-      .min(8, 'Password must be at least 8 characters')
-      .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-      .regex(/[0-9]/, 'Password must contain at least one number'),
+    password: passwordSchema,
     full_name: z.string().trim().optional(),
     fullName: z.string().trim().optional(),
   })
@@ -185,7 +209,7 @@ const signalItemSchema = z
   .object({
     key: z.string().trim().min(1).max(200),
     evidence: z.string().trim().max(2000).optional(),
-    confidence: z.number().min(0).max(1).optional(),
+    confidence: z.number().min(0).max(100).optional(),
     source_type: z.string().trim().max(100).optional(),
     found_at: z.string().trim().max(100).optional(),
   })
@@ -209,6 +233,40 @@ const externalSignalsSchema = z.object({
 
 const authResetPasswordSchema = z.object({
   email: z.string().trim().email(),
+});
+
+const authCompletePasswordResetSchema = z.object({
+  access_token: z.string().trim().min(1),
+  refresh_token: z.string().trim().min(1),
+  new_password: passwordSchema,
+});
+
+const demoRequestCreateSchema = z.object({
+  full_name: z.string().trim().min(2).max(200),
+  company: z.string().trim().min(2).max(200),
+  email: z.string().trim().email(),
+  team_size: z.string().trim().max(100).optional().default(''),
+  interest: z.string().trim().max(200).optional().default(''),
+  notes: z.string().trim().max(2000).optional().default(''),
+  source: z.string().trim().max(120).optional().default('booking_modal'),
+});
+
+const productEventSchema = z.object({
+  event: z.string().trim().min(1).max(120),
+  path: z.string().trim().max(500).optional().default(''),
+  source: z.string().trim().max(120).optional().default('web_app'),
+  properties: z.record(z.any()).optional().default({}),
+});
+
+const workspaceInviteRoleSchema = z.enum(['admin', 'member']);
+
+const workspaceInviteCreateSchema = z.object({
+  email: z.string().trim().email(),
+  role: workspaceInviteRoleSchema.default('member'),
+});
+
+const workspaceMemberRoleUpdateSchema = z.object({
+  role: workspaceInviteRoleSchema,
 });
 
 const toValidationError = (error) => {
@@ -245,6 +303,9 @@ export const schemas = {
   authRegisterSchema,
   authLoginSchema,
   authResetPasswordSchema,
+  authCompletePasswordResetSchema,
+  demoRequestCreateSchema,
+  productEventSchema,
   leadCreateSchema,
   leadImportSchema,
   leadPatchSchema,
@@ -254,4 +315,6 @@ export const schemas = {
   bulkDeleteSchema,
   icpGenerateSchema,
   externalSignalsSchema,
+  workspaceInviteCreateSchema,
+  workspaceMemberRoleUpdateSchema,
 };

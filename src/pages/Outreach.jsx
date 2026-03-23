@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ACTIVATION_SEQUENCE_STORAGE_KEY } from '@/constants/activation';
 import { dataClient } from '@/services/dataClient';
 import { cn } from '@/lib/utils';
 
@@ -394,6 +395,9 @@ export default function Outreach() {
       if (!data) {
         toast.error('Génération impossible — vérifiez qu\'un ICP actif est configuré et que ANTHROPIC_API_KEY est défini.');
         return;
+      }
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(ACTIVATION_SEQUENCE_STORAGE_KEY, '1');
       }
       setSequence(data);
       toast.success('Séquence générée !');

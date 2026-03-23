@@ -1,6 +1,14 @@
 import React, { useId } from 'react';
 import { cn } from '@/lib/utils';
 
+/*
+ * Brand palette (from official logos):
+ *   Indigo  #1e1050
+ *   Wine    #8b2252
+ *   Coral   #e85d3a
+ *   Orange  #f08030
+ */
+
 /* ─── Inline SVG: the A lettermark ─────────────────────────────────────── */
 function AimMark({ className }) {
   const id = useId();
@@ -16,9 +24,10 @@ function AimMark({ className }) {
     >
       <defs>
         <linearGradient id={gradId} x1="4" y1="62" x2="56" y2="4" gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor="#3A8DFF" />
-          <stop offset="45%"  stopColor="#2a7df0" />
-          <stop offset="100%" stopColor="#5AD38C" />
+          <stop offset="0%"   stopColor="#1e1050" />
+          <stop offset="35%"  stopColor="#8b2252" />
+          <stop offset="70%"  stopColor="#e85d3a" />
+          <stop offset="100%" stopColor="#f08030" />
         </linearGradient>
       </defs>
       {/* Left leg */}
@@ -30,7 +39,7 @@ function AimMark({ className }) {
       {/* Crossbar */}
       <line x1="14" y1="38" x2="46" y2="38" stroke={`url(#${gradId})`} strokeWidth="6.5" strokeLinecap="round" />
       {/* Signal dot */}
-      <circle cx="30" cy="6" r="5" fill="#5AD38C" />
+      <circle cx="30" cy="6" r="5" fill="#f08030" />
     </svg>
   );
 }
@@ -45,7 +54,7 @@ function AimWordmark({ className }) {
         fontWeight: 800,
         fontSize: '1.25rem',
         letterSpacing: '-0.04em',
-        background: 'linear-gradient(135deg, #3A8DFF 0%, #2a7df0 45%, #5AD38C 100%)',
+        background: 'linear-gradient(135deg, #1e1050 0%, #8b2252 35%, #e85d3a 70%, #f08030 100%)',
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
         backgroundClip: 'text',

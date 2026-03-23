@@ -11,7 +11,7 @@
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-To report a security vulnerability, please email: **security@aimleads.io**
+To report a security vulnerability, please email: **marketmenow75@gmail.com**
 
 Include the following in your report:
 - A description of the vulnerability and its potential impact

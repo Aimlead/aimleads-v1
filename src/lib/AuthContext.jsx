@@ -88,6 +88,10 @@ export function AuthProvider({ children }) {
     dataClient.auth.redirectToLogin(redirectUrl);
   };
 
+  const refreshUser = async () => {
+    await checkAppState();
+  };
+
   const value = useMemo(
     () => ({
       user,
@@ -101,6 +105,7 @@ export function AuthProvider({ children }) {
       logout,
       navigateToLogin,
       checkAppState,
+      refreshUser,
       mode: dataClient.mode,
     }),
     [user, isAuthenticated, isLoadingAuth, isLoadingPublicSettings, authError, appPublicSettings]
@@ -116,4 +121,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
