@@ -23,3 +23,6 @@ reports/local-validation-*.json
 reports/local-validation-*.csv
 
 server/data/db.json
+
+.claude/
+coverage/
