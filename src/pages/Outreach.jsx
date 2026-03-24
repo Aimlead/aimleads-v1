@@ -402,7 +402,14 @@ export default function Outreach() {
       setSequence(data);
       toast.success('Séquence générée !');
     },
-    onError: () => toast.error('Génération échouée. Réessayez.'),
+    onError: (error) => {
+      const msg = error?.payload?.message || error?.message || null;
+      if (msg) {
+        toast.error(`Génération échouée : ${msg}`);
+      } else {
+        toast.error('Génération échouée. Vérifiez que ANTHROPIC_API_KEY est configurée et qu\'un ICP actif existe.');
+      }
+    },
   });
 
   useEffect(() => {

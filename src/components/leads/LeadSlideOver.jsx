@@ -72,7 +72,7 @@ const INTENT_SIGNAL_GROUPS = [
   },
 ];
 
-const INTERNET_SIGNAL_OPTIONS = INTENT_SIGNAL_GROUPS.flatMap((group) => group.items);
+const INTERNET_SIGNAL_OPTIONS = INTENT_SIGNAL_GROUPS.find((g) => g.key === 'pre_call')?.items ?? [];
 const LABEL_BY_SIGNAL_KEY = Object.fromEntries(INTERNET_SIGNAL_OPTIONS.map((item) => [item.key, item.label]));
 
 const createInternetSignalDraft = () => ({
@@ -448,36 +448,17 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
                 {lead.final_category ? <span className="text-slate-500"> ({lead.final_category})</span> : null}
               </p>
             ) : null}
-            <p className="text-[11px] text-slate-500">Model: Final = ICP base + AI reinforcement (intent + internet evidence)</p>
-          </div>
+            </div>
         </div>
 
         <div className="mb-4 rounded-xl border border-slate-200 p-4 space-y-4 bg-slate-50/40">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-slate-800">Signals & Evidence</p>
-              <p className="text-xs text-slate-500 mt-1">
-                Auto-detection internet = mode par defaut. Les signaux manuels servent uniquement a corriger/renforcer.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-1.5 text-[11px]">
-              <span className="px-2 py-1 rounded-md border border-slate-200 bg-white text-slate-600">Intent: {intentCount}</span>
-              <span className="px-2 py-1 rounded-md border border-slate-200 bg-white text-slate-600">Internet: {internetSignals.length}</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-            <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-              <p className="text-slate-500">Auto-discovered</p>
-              <p className="font-semibold text-slate-800">{internetSignals.length} signal(s)</p>
-            </div>
-            <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-              <p className="text-slate-500">Manual intent</p>
-              <p className="font-semibold text-slate-800">{intentCount} selection(s)</p>
-            </div>
-            <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-              <p className="text-slate-500">Mode</p>
-              <p className="font-semibold text-slate-800">ICP + AI reinforcement</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-slate-800">Signaux & Preuves</p>
+            <div className="flex gap-1.5 text-[11px]">
+              <span className="px-2 py-1 rounded-md border border-slate-200 bg-white text-slate-600">{internetSignals.length} internet</span>
+              {intentCount > 0 && (
+                <span className="px-2 py-1 rounded-md border border-slate-200 bg-white text-slate-600">{intentCount} intent</span>
+              )}
             </div>
           </div>
 

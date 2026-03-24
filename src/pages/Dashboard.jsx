@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { AlertTriangle, Brain, Download, Loader2, MessageSquare, RefreshCcw, Sparkles, Target, TrendingUp, Upload, Users, Zap } from 'lucide-react';
+import { AlertTriangle, Brain, Download, Loader2, MessageSquare, RefreshCcw, Sparkles, Target, TrendingUp, Upload, Users } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import ActivationChecklist from '@/components/ActivationChecklist';
@@ -26,8 +26,6 @@ const LIST_KEYS = {
 };
 
 const STORAGE_KEY = 'aimleads:selected-source-list';
-const MANTRA_SOURCE_TAG = 'given_to_sales_onboarding_2024_09_11';
-const CAN_USE_DEV_TOOLS = import.meta.env.DEV || String(import.meta.env.VITE_ENABLE_DEV_TOOLS || '').trim() === '1';
 
 const STAT_STYLE = {
   total: { icon: Users, bg: 'bg-violet-500' },
@@ -89,7 +87,6 @@ export default function Dashboard() {
   });
   const [isSwitchingIcp, setIsSwitchingIcp] = useState(false);
   const [isReanalyzing, setIsReanalyzing] = useState(false);
-  const [isRestoringMantra, setIsRestoringMantra] = useState(false);
 
   const { data: leads = [], isLoading, isError: leadsError, refetch: refetchLeads } = useQuery({
     queryKey: ['leads'],
@@ -116,8 +113,6 @@ export default function Dashboard() {
       .map(([key, count]) => ({ key, count, label: sourceListLabel(key) }))
       .sort((left, right) => right.count - left.count);
   }, [leads]);
-
-  const hasMantraList = sourceListOptions.some((option) => option.key === MANTRA_SOURCE_TAG);
 
   useEffect(() => {
     const valid =
@@ -275,26 +270,6 @@ export default function Dashboard() {
     }
   };
 
-  const handleRestoreMantra = async () => {
-    if (!CAN_USE_DEV_TOOLS) return;
-    setIsRestoringMantra(true);
-    try {
-      const result = await dataClient.dev.loadMantra();
-      toast.success(
-        `Mantra loaded: ${result?.imported ?? 0} imported, ${result?.analyzed ?? 0} analyzed (total ${result?.total_tagged ?? 0}).`
-      );
-      setSelectedSourceList(MANTRA_SOURCE_TAG);
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
-      queryClient.invalidateQueries({ queryKey: ['icpProfilesQuickSwitch'] });
-      queryClient.invalidateQueries({ queryKey: ['icpConfig'] });
-    } catch (error) {
-      console.warn('Restore Mantra failed', error);
-      toast.error('Failed to restore Mantra list');
-    } finally {
-      setIsRestoringMantra(false);
-    }
-  };
-
   const handleReanalyzeVisible = async () => {
     if (visibleLeads.length === 0) {
       toast('No leads to analyze in this list');
@@ -303,31 +278,17 @@ export default function Dashboard() {
     setIsReanalyzing(true);
     try {
       let analyzedCount = 0;
-      const canUseDevEndpoint = selectedSourceList !== LIST_KEYS.UNLISTED;
+      const activeProfile = await dataClient.icp.getActive();
+      if (!activeProfile) throw new Error('No active ICP profile found');
 
-      if (canUseDevEndpoint) {
-        try {
-          const payload = selectedSourceList === LIST_KEYS.ALL ? {} : { source_tag: selectedSourceList };
-          const response = await dataClient.dev.reanalyze(payload);
-          analyzedCount = Number(response?.analyzed || response?.total_scoped || 0);
-        } catch {
-          analyzedCount = 0;
-        }
-      }
-
-      if (analyzedCount === 0) {
-        const activeProfile = await dataClient.icp.getActive();
-        if (!activeProfile) throw new Error('No active ICP profile found');
-
-        for (const lead of visibleLeads) {
-          const result = await analyzeLead({
-            lead,
-            icp_profile_id: activeProfile.id,
-            icp_profile: activeProfile,
-          });
-          await dataClient.leads.update(lead.id, buildAnalysisUpdatePayload(result));
-          analyzedCount += 1;
-        }
+      for (const lead of visibleLeads) {
+        const result = await analyzeLead({
+          lead,
+          icp_profile_id: activeProfile.id,
+          icp_profile: activeProfile,
+        });
+        await dataClient.leads.update(lead.id, buildAnalysisUpdatePayload(result));
+        analyzedCount += 1;
       }
 
       toast.success(`Re-analyzed ${analyzedCount} lead(s)`);
@@ -456,12 +417,6 @@ export default function Dashboard() {
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          {CAN_USE_DEV_TOOLS && (
-            <Button variant="outline" size="sm" onClick={handleRestoreMantra} disabled={isRestoringMantra} className="gap-1.5 h-8 text-xs">
-              {isRestoringMantra ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
-              Demo
-            </Button>
-          )}
           <Button variant="outline" size="sm" onClick={handleReanalyzeVisible} disabled={isReanalyzing} className="gap-1.5 h-8 text-xs">
             {isReanalyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCcw className="w-3.5 h-3.5" />}
             Re-analyze

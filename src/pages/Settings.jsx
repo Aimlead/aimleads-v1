@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Copy, Database, KeyRound, Loader2, Puzzle, RefreshCw, Save, Settings2, ShieldCheck, Target, Users } from 'lucide-react';
+import { KeyRound, Loader2, Puzzle, Save, Settings2, ShieldCheck, Target, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -39,42 +39,6 @@ const SCORING_PRESETS = [
   },
 ];
 
-const buildSchemaFixSql = (unsupportedUserColumns = [], unsupportedLeadColumns = []) => {
-  const userColumns = Array.isArray(unsupportedUserColumns) ? unsupportedUserColumns : [];
-  const leadColumns = Array.isArray(unsupportedLeadColumns) ? unsupportedLeadColumns : [];
-  const lines = [];
-
-  if (userColumns.includes('supabase_auth_id')) {
-    lines.push(
-      '-- users.supabase_auth_id fix',
-      'alter table if exists users add column if not exists supabase_auth_id text;',
-      'create unique index if not exists idx_users_supabase_auth_id on users(supabase_auth_id);',
-      'alter table if exists users alter column password_hash drop not null;',
-      ''
-    );
-  }
-
-  if (leadColumns.includes('internet_signals') || leadColumns.includes('auto_signal_metadata')) {
-    lines.push(
-      '-- leads signal columns fix',
-      'alter table if exists leads',
-      '  add column if not exists internet_signals jsonb,',
-      '  add column if not exists auto_signal_metadata jsonb;',
-      ''
-    );
-  }
-
-  if (lines.length === 0) {
-    return '-- No schema fix required based on current diagnostics.';
-  }
-
-  return lines.join('\n').trim();
-};
-const formatValue = (value) => {
-  if (value === null || value === undefined) return 'n/a';
-  if (typeof value === 'number') return String(Math.round(value * 100) / 100);
-  return String(value);
-};
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -147,18 +111,9 @@ const ScoringNumberInput = ({ label, value, onChange, disabled, min = 0, max = 1
 export default function Settings() {
   const { user, appPublicSettings } = useAuth();
   const queryClient = useQueryClient();
-  const [busyAction, setBusyAction] = useState('');
-  const [checkup, setCheckup] = useState(null);
   const [isSavingScoring, setIsSavingScoring] = useState(false);
   const [scoringDirty, setScoringDirty] = useState(false);
   const [scoringForm, setScoringForm] = useState(DEFAULT_SCORING_SETTINGS);
-  const showDeveloperTools = useMemo(() => {
-    if (import.meta.env.DEV) return true;
-    if (typeof window === 'undefined') return false;
-
-    const hostname = String(window.location.hostname || '').trim().toLowerCase();
-    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.local');
-  }, []);
 
   const { data: icpProfiles = [] } = useQuery({
     queryKey: ['icpConfig'],
@@ -210,68 +165,6 @@ export default function Settings() {
   const invalidateWorkspaceData = () => {
     queryClient.invalidateQueries({ queryKey: ['leads'] });
     queryClient.invalidateQueries({ queryKey: ['icpConfig'] });
-  };
-
-  const runCheckup = async () => {
-    const result = await dataClient.dev.checkup();
-    setCheckup(result);
-    return result;
-  };
-
-  const unsupportedUserColumns = useMemo(
-    () => (Array.isArray(checkup?.schema_diagnostics?.unsupported_user_columns) ? checkup.schema_diagnostics.unsupported_user_columns : []),
-    [checkup]
-  );
-
-  const unsupportedLeadColumns = useMemo(
-    () => (Array.isArray(checkup?.schema_diagnostics?.unsupported_lead_columns) ? checkup.schema_diagnostics.unsupported_lead_columns : []),
-    [checkup]
-  );
-
-  const hasSchemaMismatch = unsupportedUserColumns.length > 0 || unsupportedLeadColumns.length > 0;
-  const schemaFixSql = useMemo(
-    () => buildSchemaFixSql(unsupportedUserColumns, unsupportedLeadColumns),
-    [unsupportedUserColumns, unsupportedLeadColumns]
-  );
-
-  const copySchemaFixSql = async () => {
-    try {
-      if (!navigator?.clipboard?.writeText) {
-        toast.error('Clipboard API unavailable in this browser.');
-        return;
-      }
-      await navigator.clipboard.writeText(schemaFixSql);
-      toast.success('SQL fix copied. Paste it in Supabase SQL Editor and run.');
-    } catch (error) {
-      toast.error('Unable to copy SQL fix.');
-      console.warn('copySchemaFixSql failed', error);
-    }
-  };
-
-  useEffect(() => {
-    if (dataClient.mode !== 'api') return;
-    runCheckup().catch(() => {});
-  }, []);
-
-  const runAction = async (actionKey, action) => {
-    setBusyAction(actionKey);
-    try {
-      const result = await action();
-      invalidateWorkspaceData();
-      if (result?.checkup) {
-        setCheckup(result.checkup);
-      } else {
-        await runCheckup();
-      }
-      return result;
-    } catch (error) {
-      const message = error?.message || 'Action failed';
-      toast.error(message);
-      console.warn(`Dev action failed (${actionKey})`, error);
-      throw error;
-    } finally {
-      setBusyAction('');
-    }
   };
 
   const updateBlendWeight = (key, rawValue) => {
@@ -633,155 +526,6 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      {showDeveloperTools ? (
-        <Card className="mt-6 border-brand-sky/20 bg-brand-sky/5/40">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-brand-sky/10 to-brand-sky/20 flex items-center justify-center">
-              <Database className="w-5 h-5 text-brand-sky" />
-            </div>
-            <div>
-              <CardTitle>Dev Tools</CardTitle>
-              <CardDescription>One-click test data actions for your current workspace</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-slate-600">
-            Useful to recover the Mantra dataset and rerun scoring without terminal commands.
-          </p>
-
-          <div className="flex flex-wrap gap-3">
-            <Button
-              variant="outline"
-              disabled={Boolean(busyAction)}
-              onClick={() =>
-                runAction('demo', async () => {
-                  const result = await dataClient.dev.loadDemo();
-                  toast.success(`Demo data ready. Total leads in workspace: ${result?.total ?? 'n/a'}`);
-                  return result;
-                })
-              }
-            >
-              {busyAction === 'demo' ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              Load Demo Data
-            </Button>
-
-            <Button
-              className="bg-gradient-to-r from-brand-sky to-brand-mint hover:from-brand-sky-2 hover:to-brand-mint"
-              disabled={Boolean(busyAction)}
-              onClick={() =>
-                runAction('mantra', async () => {
-                  const result = await dataClient.dev.loadMantra();
-                  toast.success(
-                    `Mantra loaded: ${result?.imported ?? 0} imported, ${result?.analyzed ?? 0} analyzed (total ${result?.total_tagged ?? 0}).`
-                  );
-                  return result;
-                })
-              }
-            >
-              {busyAction === 'mantra' ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              Load Mantra (174)
-            </Button>
-
-            <Button
-              variant="secondary"
-              disabled={Boolean(busyAction)}
-              onClick={() =>
-                runAction('reanalyze', async () => {
-                  const result = await dataClient.dev.reanalyze();
-                  toast.success(`Re-analysis done: ${result?.analyzed ?? 0} leads updated.`);
-                  return result;
-                })
-              }
-            >
-              {busyAction === 'reanalyze' ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              Re-analyze Workspace
-            </Button>
-
-            <Button
-              variant="outline"
-              disabled={Boolean(busyAction)}
-              onClick={() =>
-                runAction('checkup', async () => {
-                  const result = await runCheckup();
-                  toast.success('Checkup refreshed.');
-                  return { checkup: result };
-                })
-              }
-            >
-              {busyAction === 'checkup' ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              Run Checkup
-            </Button>
-          </div>
-
-          {checkup ? (
-            <div className="rounded-lg border border-brand-sky/15 bg-white/80 p-4 text-sm text-slate-700 space-y-2">
-              <p>
-                Provider actif: <span className="font-semibold">{formatValue(checkup.runtime_provider)}</span>
-                {' '}| Configure: <span className="font-semibold">{formatValue(checkup.configured_provider || checkup.runtime_provider)}</span>
-                {' '}| Active ICP: <span className="font-semibold">{formatValue(checkup.active_icp?.name)}</span>
-              </p>
-              {String(checkup.runtime_provider || '').includes('fallback') ? (
-                <p className="text-amber-700">
-                  Backend en fallback local: Supabase indisponible au runtime. Verifie SUPABASE_URL / key / reseau.
-                </p>
-              ) : null}
-
-              {unsupportedUserColumns.length > 0 ? (
-                <p className="text-amber-700">
-                  Schema users incomplet ({unsupportedUserColumns.join(', ')}). Lance la migration
-                  <span className="font-semibold"> 20260318_auth_native_supabase.sql</span>.
-                </p>
-              ) : null}
-
-              {unsupportedLeadColumns.length > 0 ? (
-                <p className="text-amber-700">
-                  Schema leads incomplet ({unsupportedLeadColumns.join(', ')}). Verifie schema.sql + migrations.
-                </p>
-              ) : null}
-
-              {hasSchemaMismatch ? (
-                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2">
-                  <p className="text-amber-800 font-medium">Supabase fix required: copy and run SQL in SQL Editor.</p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" size="sm" variant="outline" onClick={copySchemaFixSql} className="gap-2">
-                      <Copy className="w-4 h-4" />
-                      Copy SQL fix
-                    </Button>
-                  </div>
-                  <pre className="text-xs text-slate-700 bg-white/70 rounded border p-2 overflow-x-auto">{schemaFixSql}</pre>
-                </div>
-              ) : null}
-
-              <p>
-                Leads workspace: <span className="font-semibold">{formatValue(checkup.counts?.workspace_leads_total)}</span> | Mantra tagged:{' '}
-                <span className="font-semibold">{formatValue(checkup.counts?.mantra_tagged_total)}</span> | Mantra analyzed:{' '}
-                <span className="font-semibold">{formatValue(checkup.counts?.mantra_analyzed_total)}</span>
-              </p>
-              <p>
-                Avg Mantra ICP: <span className="font-semibold">{formatValue(checkup.averages?.mantra_icp_score_avg)}</span> | Avg Mantra AI:{' '}
-                <span className="font-semibold">{formatValue(checkup.averages?.mantra_ai_score_avg)}</span> | Avg Mantra Final:{' '}
-                <span className="font-semibold">{formatValue(checkup.averages?.mantra_final_score_avg)}</span>
-              </p>
-              {Array.isArray(checkup.warnings) && checkup.warnings.length > 0 ? (
-                <div className="text-amber-700">
-                  {checkup.warnings.map((warning) => (
-                    <p key={warning}>- {warning}</p>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-emerald-700">No coherence warning detected.</p>
-              )}
-            </div>
-          ) : null}
-
-          <p className="text-xs text-slate-500">
-            Available only outside production. Actions apply to the currently logged-in workspace.
-          </p>
-        </CardContent>
-        </Card>
-      ) : null}
     </div>
   );
 }
