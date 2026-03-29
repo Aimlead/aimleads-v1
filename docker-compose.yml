@@ -1,11 +1,22 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: aimleads:latest
     container_name: aimleads
     restart: unless-stopped
     ports:
       - "80:3010"
-    env_file:
-      - .env
     environment:
       - NODE_ENV=production
+      - API_PORT=3010
+      - TRUST_PROXY=true
+      - CORS_ORIGIN=https://aimlead.io
+      - VITE_API_BASE_URL=https://aimlead.io/api
+      - DATA_PROVIDER=supabase
+      - AUTH_PROVIDER=supabase
+      - ENABLE_DEMO_BOOTSTRAP=false
+      - ENABLE_API_DOCS=false
+      - SUPABASE_FALLBACK_TO_LOCAL=false
+      - VITE_ALLOW_API_FALLBACK=0
