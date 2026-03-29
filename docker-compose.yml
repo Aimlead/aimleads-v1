@@ -1,0 +1,11 @@
+services:
+  app:
+    build: .
+    container_name: aimleads
+    restart: unless-stopped
+    ports:
+      - "80:3010"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production

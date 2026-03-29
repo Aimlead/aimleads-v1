@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'url';
+import path from 'path';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import cors from 'cors';
@@ -143,6 +145,16 @@ if (!config.isProduction) {
 app.use('/api', (_req, res) => {
   return res.status(404).json({ message: 'API route not found' });
 });
+
+// Serve frontend static files in production
+if (config.isProduction) {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const distPath = path.join(__dirname, '..', 'dist');
+  app.use(express.static(distPath, { maxAge: '30d' }));
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
 
 app.use(errorHandlerMiddleware);
 
