@@ -196,6 +196,19 @@ export const updateAuthUserPassword = async ({ accessToken, password }) => {
   return payload && typeof payload === 'object' ? payload : null;
 };
 
+export const sendPasswordResetEmail = async ({ email, redirectTo }) => {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return null;
+
+  return requestSupabaseAuth('/recover', {
+    method: 'POST',
+    body: {
+      email: normalizedEmail,
+      ...(redirectTo ? { redirect_to: redirectTo } : {}),
+    },
+  });
+};
+
 export const signOutSupabaseSession = async (accessToken) => {
   if (!accessToken) return;
 

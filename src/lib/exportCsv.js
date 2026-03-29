@@ -20,6 +20,12 @@ export const escapeCsvValue = (value) => {
 export function exportLeadsToCsv(leads, filename = 'leads-export.csv') {
   if (!leads || leads.length === 0) return;
 
+  const resolveCellValue = (lead, key) => {
+    if (key === 'created_at') return lead.created_at || lead.created_date;
+    if (key === 'final_recommended_action') return lead.final_recommended_action || lead.recommended_action;
+    return lead[key];
+  };
+
   const COLUMNS = [
     { key: 'company_name', label: 'Company Name' },
     { key: 'website_url', label: 'Website' },
@@ -34,15 +40,15 @@ export function exportLeadsToCsv(leads, filename = 'leads-export.csv') {
     { key: 'final_score', label: 'Final Score' },
     { key: 'icp_score', label: 'ICP Score' },
     { key: 'icp_category', label: 'ICP Category' },
-    { key: 'recommended_action', label: 'Recommended Action' },
+    { key: 'final_recommended_action', label: 'Recommended Action' },
     { key: 'source_list', label: 'Source List' },
     { key: 'notes', label: 'Notes' },
-    { key: 'created_date', label: 'Created Date' },
+    { key: 'created_at', label: 'Created Date' },
     { key: 'last_analyzed_at', label: 'Last Analyzed' },
   ];
 
   const header = COLUMNS.map((col) => escapeCsvValue(col.label)).join(',');
-  const rows = leads.map((lead) => COLUMNS.map((col) => escapeCsvValue(lead[col.key])).join(','));
+  const rows = leads.map((lead) => COLUMNS.map((col) => escapeCsvValue(resolveCellValue(lead, col.key))).join(','));
 
   const csv = [header, ...rows].join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });

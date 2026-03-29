@@ -158,6 +158,22 @@ test('PATCH /leads/:id — updates a lead', async () => {
   assert.equal(payload?.data?.follow_up_status, 'Called');
 });
 
+test('PATCH /leads/:id — partial updates keep company size intact', async () => {
+  const user = await registerAndGetCookie('partial-updater');
+  const created = await createLead(user.cookie, { company_size: 220 });
+  const leadId = created.payload?.data?.id;
+
+  const { response, payload } = await request(`/leads/${leadId}`, {
+    method: 'PATCH',
+    cookie: user.cookie,
+    body: { status: 'Processing' },
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(payload?.data?.status, 'Processing');
+  assert.equal(payload?.data?.company_size, 220);
+});
+
 test('PATCH /leads/:id — persists manual intent and internet signals', async () => {
   const user = await registerAndGetCookie('signal-editor');
   const created = await createLead(user.cookie);
@@ -186,6 +202,37 @@ test('PATCH /leads/:id — persists manual intent and internet signals', async (
   assert.deepEqual(payload?.data?.intent_signals?.pre_call, ['recent_funding']);
   assert.equal(payload?.data?.internet_signals?.[0]?.key, 'active_rfp');
   assert.equal(payload?.data?.internet_signals?.[0]?.confidence, 93);
+});
+
+test('PATCH /leads/:id — persists analysis fields without wiping company size', async () => {
+  const user = await registerAndGetCookie('analysis-patch');
+  const created = await createLead(user.cookie, { company_size: 120 });
+  const leadId = created.payload?.data?.id;
+
+  const { response, payload } = await request(`/leads/${leadId}`, {
+    method: 'PATCH',
+    cookie: user.cookie,
+    body: {
+      status: 'Qualified',
+      icp_score: 74,
+      ai_score: 68,
+      final_score: 79,
+      final_category: 'Strong Fit',
+      final_status: 'Qualified',
+      analysis_summary: 'Scored successfully',
+      generated_icebreakers: {
+        email: 'Custom email opener',
+      },
+    },
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(payload?.data?.company_size, 120);
+  assert.equal(payload?.data?.icp_score, 74);
+  assert.equal(payload?.data?.ai_score, 68);
+  assert.equal(payload?.data?.final_score, 79);
+  assert.equal(payload?.data?.analysis_summary, 'Scored successfully');
+  assert.equal(payload?.data?.generated_icebreakers?.email, 'Custom email opener');
 });
 
 test('DELETE /leads/:id — deletes a lead', async () => {

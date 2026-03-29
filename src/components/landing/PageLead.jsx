@@ -30,7 +30,6 @@ export default function PageLead({ ctx }) {
     <div>
       <Topbar ctx={ctx} />
 
-      {/* Hero */}
       <section className="hero" style={{ background: 'var(--navy)', padding: '72px 52px 80px', position: 'relative', overflow: 'hidden' }}>
         <svg style={{ position: 'absolute', bottom: -60, right: -40, width: 360, opacity: .06, pointerEvents: 'none' }} viewBox="0 0 360 240" fill="none">
           <g stroke="white" strokeWidth="1.2" fill="none">
@@ -55,7 +54,6 @@ export default function PageLead({ ctx }) {
             </div>
           </div>
 
-          {/* SaaS mock */}
           <div className="saas-mock">
             <div className="mock-titlebar">
               <div className="mock-dots">
@@ -104,7 +102,6 @@ export default function PageLead({ ctx }) {
       </section>
 
       <div className="content">
-        {/* Stats row — top of content */}
         <div className="stats-row rv" style={{ marginTop: 0, borderRadius: '0 0 14px 14px' }}>
           <div className="stat-box">
             <div className="stat-val"><span className="accent">94%</span></div>
@@ -120,7 +117,6 @@ export default function PageLead({ ctx }) {
           </div>
         </div>
 
-        {/* Features */}
         <div className="section-block rv" id="lead-features">
           <div className="block-label">Fonctionnalités clés</div>
           <h2 className="block-title">Tout ce dont vos SDR <em>ont besoin</em>.</h2>
@@ -186,7 +182,6 @@ export default function PageLead({ ctx }) {
           </div>
         </div>
 
-        {/* Comparison table */}
         <div className="section-block rv">
           <div className="block-label navy">Comparatif</div>
           <h2 className="block-title">Avant / <em>Après AImlead.</em></h2>
@@ -202,7 +197,6 @@ export default function PageLead({ ctx }) {
           </table>
         </div>
 
-        {/* CTA band */}
         <div className="cta-band rv">
           <div>
             <h3>Essayez le Lead-Scoreur dans l'app</h3>

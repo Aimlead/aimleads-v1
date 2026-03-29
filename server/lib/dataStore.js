@@ -1,6 +1,6 @@
 import { readDb, withDb } from './db.js';
 import { getDataProvider, getRuntimeConfig } from './config.js';
-import { createId, sortByCreatedDateDesc } from './utils.js';
+import { createId } from './utils.js';
 import { filterByUserScope, getUserWorkspaceId, isRecordScopedToUser, withUserScope } from './scope.js';
 import { logger } from './observability.js';
 
@@ -58,16 +58,13 @@ const sortByCreatedAtDesc = (items = []) =>
   });
 
 const isCurrentWorkspaceMember = (member, user) => {
-  const currentEmail = normalizeEmail(user?.email);
-  const memberEmail = normalizeEmail(member?.email);
   const memberUserId = String(member?.user_id || '').trim();
   const memberAppUserId = String(member?.app_user_id || '').trim();
   const currentMemberUserId = getMembershipUserId(user);
 
   return (
     (currentMemberUserId && memberUserId === currentMemberUserId) ||
-    (user?.id && memberAppUserId === String(user.id)) ||
-    (currentEmail && memberEmail === currentEmail)
+    (user?.id && memberAppUserId === String(user.id))
   );
 };
 
@@ -106,6 +103,17 @@ const toWorkspaceInviteView = (invite) => ({
   revoked_at: invite?.revoked_at || null,
   status: isPendingInvite(invite) ? 'pending' : invite?.accepted_at ? 'accepted' : 'revoked',
 });
+
+const withWorkspaceId = (user, workspaceId) => {
+  if (!user) return user;
+  if (!workspaceId || String(user.workspace_id || '').trim() === String(workspaceId).trim()) {
+    return user;
+  }
+  return {
+    ...user,
+    workspace_id: workspaceId,
+  };
+};
 
 const matchWhere = (record, where = {}) => {
   return Object.entries(where).every(([key, value]) => record[key] === value);
@@ -201,6 +209,40 @@ const toSafeUserWriteBody = (body, unsupportedColumns = new Set()) => {
   return toSafeUserWriteRow(body, unsupportedColumns);
 };
 
+const mapWriteBody = (body, transform) => {
+  if (Array.isArray(body)) {
+    return body.map((item) => transform(item));
+  }
+  return transform(body);
+};
+
+const applyLegacyOwnerUserId = (body, ownerUserId, unsupportedColumns = new Set()) => {
+  if (!ownerUserId || unsupportedColumns.has('owner_user_id')) {
+    return body;
+  }
+
+  return mapWriteBody(body, (row) => {
+    if (!row || typeof row !== 'object') return row;
+    if (row.owner_user_id) return row;
+    return {
+      ...row,
+      owner_user_id: ownerUserId,
+    };
+  });
+};
+
+const pruneUnsupportedColumnsFromBody = (body, unsupportedColumns = new Set()) => {
+  return mapWriteBody(body, (row) => {
+    if (!row || typeof row !== 'object') return row;
+
+    const next = { ...row };
+    for (const column of unsupportedColumns) {
+      delete next[column];
+    }
+    return next;
+  });
+};
+
 const parseMissingColumnError = (error) => {
   const text = [
     error?.message,
@@ -230,6 +272,37 @@ const parseMissingColumnError = (error) => {
   return null;
 };
 
+const parseRequiredColumnError = (error, table) => {
+  const text = [
+    error?.message,
+    error?.payload?.message,
+    error?.payload?.hint,
+    error?.payload?.details,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const relationMatch = text.match(/null value in column "([^"]+)" of relation "([^"]+)"/i);
+  if (relationMatch) {
+    const column = String(relationMatch[1] || '').trim();
+    const relation = String(relationMatch[2] || '').trim();
+    if (column && relation && (!table || relation === table)) {
+      return { table: relation, column };
+    }
+  }
+
+  const tableMatch = text.match(/column "([^"]+)" of table "([^"]+)"/i);
+  if (tableMatch) {
+    const column = String(tableMatch[1] || '').trim();
+    const relation = String(tableMatch[2] || '').trim();
+    if (column && relation && (!table || relation === table)) {
+      return { table: relation, column };
+    }
+  }
+
+  return null;
+};
+
 const localStore = {
   async findUserByEmail(email) {
     const db = await readDb();
@@ -248,6 +321,21 @@ const localStore = {
   async findUserById(userId) {
     const db = await readDb();
     return (db.users || []).find((user) => user.id === userId) || null;
+  },
+
+  async findFirstWorkspaceMembershipForUser(user) {
+    const membershipUserId = getMembershipUserId(user);
+    const appUserId = String(user?.id || '').trim();
+    const db = await readDb();
+
+    return (
+      (db.workspaceMembers || []).find(
+        (entry) =>
+          String(entry?.user_id || '').trim() === membershipUserId ||
+          String(entry?.app_user_id || '').trim() === appUserId
+      ) ||
+      null
+    );
   },
 
   async updateUser(userId, updates) {
@@ -394,10 +482,14 @@ const localStore = {
     return { workspace_id: workspaceId, user_id: normalizedMemberUserId };
   },
 
-  async listLeads(user, sort = '-created_date') {
+  async listLeads(user, sort = '-created_at') {
     let leads = filterByUserScope((await readDb()).leads || [], user).filter((l) => !l.deleted_at);
-    if (sort === '-created_date') {
-      leads = sortByCreatedDateDesc(leads);
+    if (sort === '-created_date' || sort === '-created_at') {
+      leads = [...leads].sort((left, right) => {
+        const rightTs = toTimestamp(right?.created_at || right?.created_date);
+        const leftTs = toTimestamp(left?.created_at || left?.created_date);
+        return rightTs - leftTs;
+      });
     }
     return leads;
   },
@@ -440,22 +532,30 @@ const localStore = {
     const createdAt = new Date().toISOString();
     let createdInvite = null;
 
-    await withDb((current) => {
-      const users = current.users || [];
-      const invites = current.workspaceInvites || [];
-      const existingUser = users.find((entry) => normalizeEmail(entry.email) === normalizedEmail);
+      await withDb((current) => {
+        const users = current.users || [];
+        const invites = current.workspaceInvites || [];
+        const existingUser = users.find((entry) => normalizeEmail(entry.email) === normalizedEmail);
+        const existingMembership = existingUser
+          ? (current.workspaceMembers || []).find(
+              (entry) =>
+                String(entry?.app_user_id || '').trim() === String(existingUser.id || '').trim()
+                || String(entry?.user_id || '').trim() === String(existingUser.supabase_auth_id || existingUser.id || '').trim()
+            ) || null
+          : null;
+        const existingUserWorkspaceId = String(existingMembership?.workspace_id || '').trim();
 
-      if (existingUser?.workspace_id === workspaceId) {
-        const error = new Error('This user is already a member of your workspace.');
-        error.status = 409;
-        throw error;
-      }
+        if (existingUserWorkspaceId === workspaceId) {
+          const error = new Error('This user is already a member of your workspace.');
+          error.status = 409;
+          throw error;
+        }
 
-      if (existingUser && existingUser.workspace_id !== workspaceId) {
-        const error = new Error('This email already belongs to another workspace account.');
-        error.status = 409;
-        throw error;
-      }
+        if (existingUser && existingUserWorkspaceId && existingUserWorkspaceId !== workspaceId) {
+          const error = new Error('This email already belongs to another workspace account.');
+          error.status = 409;
+          throw error;
+        }
 
       const existingInvite = invites.find(
         (invite) => normalizeEmail(invite.email) === normalizedEmail && isActiveWorkspaceInvite(invite)
@@ -590,7 +690,7 @@ const localStore = {
       {
         ...payload,
         id: payload.id || createId('lead'),
-        created_date: payload.created_date || new Date().toISOString(),
+        created_at: payload.created_at || payload.created_date || new Date().toISOString(),
       },
       user
     );
@@ -609,7 +709,7 @@ const localStore = {
         {
           ...row,
           id: row.id || createId('lead'),
-          created_date: row.created_date || new Date().toISOString(),
+          created_at: row.created_at || row.created_date || new Date().toISOString(),
         },
         user
       )
@@ -713,7 +813,7 @@ const localStore = {
             ...payload,
             id: createId('icp'),
             is_active: true,
-            created_date: new Date().toISOString(),
+            created_at: new Date().toISOString(),
           },
           user
         );
@@ -742,7 +842,7 @@ const localStore = {
         ...payload,
         id: payload.id || createId('icp'),
         is_active: payload.is_active || false,
-        created_date: payload.created_date || new Date().toISOString(),
+        created_at: payload.created_at || payload.created_date || new Date().toISOString(),
       },
       user
     );
@@ -826,6 +926,7 @@ const createSupabaseClient = () => {
   const apiKey = config.supabase.serviceRoleKey;
   const unsupportedLeadColumns = new Set();
   const unsupportedUserColumns = new Set();
+  const unsupportedIcpColumns = new Set();
 
   const request = async (table, { method = 'GET', query = {}, body, returnRepresentation = true } = {}) => {
     const params = new URLSearchParams();
@@ -885,7 +986,7 @@ const createSupabaseClient = () => {
     let nextBody = toSafeLeadWriteBody(body, unsupportedLeadColumns);
     let attempts = 0;
 
-    while (attempts < 5) {
+    while (attempts < 20) {
       attempts += 1;
       try {
         return await request('leads', {
@@ -975,6 +1076,82 @@ const createSupabaseClient = () => {
     throw new Error('Supabase users mutation failed after schema fallback attempts');
   };
 
+  const requestIcpProfilesWithCompatibility = async (
+    user,
+    {
+      method = 'GET',
+      query = {},
+      body,
+      returnRepresentation = true,
+    } = {}
+  ) => {
+    let nextQuery = { ...(query || {}) };
+    let nextBody = pruneUnsupportedColumnsFromBody(body, unsupportedIcpColumns);
+    let attempts = 0;
+
+    while (attempts < 20) {
+      attempts += 1;
+      try {
+        return await request('icp_profiles', {
+          method,
+          query: nextQuery,
+          body: nextBody,
+          returnRepresentation,
+        });
+      } catch (error) {
+        const missing = parseMissingColumnError(error);
+        if (missing?.table === 'icp_profiles' && missing?.column) {
+          if (unsupportedIcpColumns.has(missing.column)) {
+            throw error;
+          }
+
+          unsupportedIcpColumns.add(missing.column);
+          logger.warn('supabase_missing_icp_column_retrying_without_field', {
+            column: missing.column,
+            method,
+          });
+
+          delete nextQuery[missing.column];
+          const prunedBody = pruneUnsupportedColumnsFromBody(nextBody, unsupportedIcpColumns);
+          const queryChanged = JSON.stringify(nextQuery) !== JSON.stringify(query || {});
+          const bodyChanged = JSON.stringify(nextBody ?? null) !== JSON.stringify(prunedBody ?? null);
+
+          if (!queryChanged && !bodyChanged) {
+            throw error;
+          }
+
+          nextBody = prunedBody;
+          continue;
+        }
+
+        const required = parseRequiredColumnError(error, 'icp_profiles');
+        if (required?.column === 'owner_user_id' && !unsupportedIcpColumns.has('owner_user_id')) {
+          const ownerUserId = String(user?.app_user_id || user?.id || '').trim();
+          if (!ownerUserId) {
+            throw error;
+          }
+
+          const enrichedBody = applyLegacyOwnerUserId(nextBody, ownerUserId, unsupportedIcpColumns);
+          if (JSON.stringify(nextBody ?? null) === JSON.stringify(enrichedBody ?? null)) {
+            throw error;
+          }
+
+          logger.warn('supabase_legacy_icp_owner_user_required_retrying_with_field', {
+            column: 'owner_user_id',
+            method,
+          });
+
+          nextBody = enrichedBody;
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    throw new Error('Supabase icp_profiles mutation failed after compatibility attempts');
+  };
+
   const probeColumn = async ({ table, column, unsupportedSet }) => {
     try {
       await request(table, {
@@ -1061,6 +1238,31 @@ const createSupabaseClient = () => {
       return firstOrNull(rows);
     },
 
+    async findFirstWorkspaceMembershipForUser(user) {
+      const membershipUserId = getMembershipUserId(user);
+      const appUserId = String(user?.id || '').trim();
+
+      const query = {
+        order: 'created_at.asc',
+        limit: '1',
+      };
+
+      if (membershipUserId) {
+        query.user_id = `eq.${membershipUserId}`;
+      } else if (appUserId) {
+        query.app_user_id = `eq.${appUserId}`;
+      } else {
+        return null;
+      }
+
+      const rows = await request('workspace_members', {
+        method: 'GET',
+        query,
+      });
+
+      return firstOrNull(rows);
+    },
+
     async updateUser(userId, updates) {
       const rows = await requestUsersWithSchemaFallback({
         method: 'PATCH',
@@ -1112,7 +1314,6 @@ const createSupabaseClient = () => {
         ...payload,
         id: payload.id || createId('user'),
         workspace_id: payload.workspace_id || createId('ws'),
-        password_hash: payload.password_hash || '__supabase_auth__',
         created_at: payload.created_at || new Date().toISOString(),
       };
       delete user.workspace_role;
@@ -1145,6 +1346,7 @@ const createSupabaseClient = () => {
           body: {
             workspace_id: user.workspace_id,
             user_id: getMembershipUserId(user),
+            app_user_id: user.id,
             role: workspaceRole,
             created_at: user.created_at,
           },
@@ -1163,7 +1365,6 @@ const createSupabaseClient = () => {
       const user = {
         ...payload,
         id: payload.id || createId('user'),
-        password_hash: payload.password_hash || '__supabase_auth__',
         created_at: payload.created_at || new Date().toISOString(),
       };
 
@@ -1209,6 +1410,7 @@ const createSupabaseClient = () => {
       const membership = {
         workspace_id: workspaceId,
         user_id: memberUserId,
+        app_user_id: payload?.app_user_id || null,
         role: normalizeWorkspaceRole(payload?.role),
         created_at: payload?.created_at || new Date().toISOString(),
       };
@@ -1221,14 +1423,14 @@ const createSupabaseClient = () => {
       return firstOrNull(rows) || membership;
     },
 
-    async listLeads(user, sort = '-created_date') {
+    async listLeads(user, sort = '-created_at') {
       const workspaceId = getUserWorkspaceId(user);
       const rows = await request('leads', {
         method: 'GET',
         query: {
           workspace_id: `eq.${workspaceId}`,
           deleted_at: 'is.null',
-          ...(sort === '-created_date' ? { order: 'created_date.desc' } : {}),
+          ...((sort === '-created_date' || sort === '-created_at') ? { order: 'created_at.desc' } : {}),
         },
       });
 
@@ -1249,13 +1451,39 @@ const createSupabaseClient = () => {
           return [];
         }
 
-        const users = await request('users', {
-          method: 'GET',
-          query: {
-            workspace_id: `eq.${workspaceId}`,
-            order: 'created_at.asc',
-          },
-        });
+        const appUserIds = [...new Set(
+          memberRows
+            .map((row) => String(row?.app_user_id || '').trim())
+            .filter(Boolean)
+        )];
+        const membershipUserIds = [...new Set(
+          memberRows
+            .map((row) => String(row?.user_id || '').trim())
+            .filter(Boolean)
+        )];
+
+        const usersByAppId = appUserIds.length > 0
+          ? await request('users', {
+              method: 'GET',
+              query: {
+                id: `in.(${appUserIds.join(',')})`,
+                order: 'created_at.asc',
+              },
+            }).catch(() => [])
+          : [];
+
+        const usersByAuthId =
+          (!Array.isArray(usersByAppId) || usersByAppId.length === 0) && membershipUserIds.length > 0
+            ? await request('users', {
+                method: 'GET',
+                query: {
+                  supabase_auth_id: `in.(${membershipUserIds.join(',')})`,
+                  order: 'created_at.asc',
+                },
+              }).catch(() => [])
+            : [];
+
+        const users = Array.isArray(usersByAppId) && usersByAppId.length > 0 ? usersByAppId : usersByAuthId;
 
         return memberRows.map((row) => mapWorkspaceMember(row, Array.isArray(users) ? users : [], user));
       } catch {
@@ -1300,14 +1528,18 @@ const createSupabaseClient = () => {
       const normalizedEmail = normalizeEmail(payload.email);
       const role = normalizeWorkspaceRole(payload.role, 'member');
       const existingUser = await this.findUserByEmail(normalizedEmail);
+      const existingMembership = existingUser
+        ? await this.findFirstWorkspaceMembershipForUser(existingUser).catch(() => null)
+        : null;
+      const existingUserWorkspaceId = String(existingMembership?.workspace_id || '').trim();
 
-      if (existingUser?.workspace_id === workspaceId) {
+      if (existingUserWorkspaceId === workspaceId) {
         const error = new Error('This user is already a member of your workspace.');
         error.status = 409;
         throw error;
       }
 
-      if (existingUser && existingUser.workspace_id !== workspaceId) {
+      if (existingUser && existingUserWorkspaceId && existingUserWorkspaceId !== workspaceId) {
         const error = new Error('This email already belongs to another workspace account.');
         error.status = 409;
         throw error;
@@ -1413,13 +1645,23 @@ const createSupabaseClient = () => {
       const updated = firstOrNull(rows);
       if (!updated) return null;
 
-      const users = await request('users', {
-        method: 'GET',
-        query: {
-          workspace_id: `eq.${workspaceId}`,
-          order: 'created_at.asc',
-        },
-      });
+      const users = updated?.app_user_id
+        ? await request('users', {
+            method: 'GET',
+            query: {
+              id: `eq.${updated.app_user_id}`,
+              limit: '1',
+            },
+          }).catch(() => [])
+        : updated?.user_id
+          ? await request('users', {
+              method: 'GET',
+              query: {
+                supabase_auth_id: `eq.${updated.user_id}`,
+                limit: '1',
+              },
+            }).catch(() => [])
+          : [];
 
       return mapWorkspaceMember(updated, Array.isArray(users) ? users : [], user);
     },
@@ -1432,7 +1674,7 @@ const createSupabaseClient = () => {
       const ALLOWED_FILTER_FIELDS = new Set([
         'status', 'follow_up_status', 'source_list', 'icp_profile_id',
         'industry', 'country', 'icp_category', 'final_category',
-        'llm_enriched', 'created_date', 'id',
+        'llm_enriched', 'created_at', 'id',
       ]);
 
       for (const [key, value] of Object.entries(where)) {
@@ -1450,7 +1692,7 @@ const createSupabaseClient = () => {
         {
           ...payload,
           id: payload.id || createId('lead'),
-          created_date: payload.created_date || new Date().toISOString(),
+          created_at: payload.created_at || payload.created_date || new Date().toISOString(),
         },
         user
       );
@@ -1471,7 +1713,7 @@ const createSupabaseClient = () => {
           {
             ...row,
             id: row.id || createId('lead'),
-            created_date: row.created_date || new Date().toISOString(),
+            created_at: row.created_at || row.created_date || new Date().toISOString(),
           },
           user
         )
@@ -1535,7 +1777,7 @@ const createSupabaseClient = () => {
 
     async listIcpProfiles(user) {
       const workspaceId = getUserWorkspaceId(user);
-      const rows = await request('icp_profiles', {
+      const rows = await requestIcpProfilesWithCompatibility(user, {
         method: 'GET',
         query: {
           workspace_id: `eq.${workspaceId}`,
@@ -1553,13 +1795,13 @@ const createSupabaseClient = () => {
         query[key] = `eq.${value}`;
       }
 
-      const rows = await request('icp_profiles', { method: 'GET', query });
+      const rows = await requestIcpProfilesWithCompatibility(user, { method: 'GET', query });
       return Array.isArray(rows) ? rows : [];
     },
 
     async getIcpProfileById(user, profileId) {
       const workspaceId = getUserWorkspaceId(user);
-      const rows = await request('icp_profiles', {
+      const rows = await requestIcpProfilesWithCompatibility(user, {
         method: 'GET',
         query: {
           id: `eq.${profileId}`,
@@ -1573,7 +1815,7 @@ const createSupabaseClient = () => {
 
     async getActiveIcpProfile(user) {
       const workspaceId = getUserWorkspaceId(user);
-      const activeRows = await request('icp_profiles', {
+      const activeRows = await requestIcpProfilesWithCompatibility(user, {
         method: 'GET',
         query: {
           workspace_id: `eq.${workspaceId}`,
@@ -1585,11 +1827,11 @@ const createSupabaseClient = () => {
       const active = firstOrNull(activeRows);
       if (active) return active;
 
-      const fallbackRows = await request('icp_profiles', {
+      const fallbackRows = await requestIcpProfilesWithCompatibility(user, {
         method: 'GET',
         query: {
           workspace_id: `eq.${workspaceId}`,
-          order: 'created_date.desc',
+          order: 'created_at.desc',
           limit: '1',
         },
       });
@@ -1605,7 +1847,7 @@ const createSupabaseClient = () => {
         if (!existing) return null;
       }
 
-      await request('icp_profiles', {
+      await requestIcpProfilesWithCompatibility(user, {
         method: 'PATCH',
         query: {
           workspace_id: `eq.${workspaceId}`,
@@ -1615,7 +1857,7 @@ const createSupabaseClient = () => {
       });
 
       if (payload.id) {
-        const rows = await request('icp_profiles', {
+        const rows = await requestIcpProfilesWithCompatibility(user, {
           method: 'PATCH',
           query: {
             id: `eq.${payload.id}`,
@@ -1632,12 +1874,12 @@ const createSupabaseClient = () => {
           ...payload,
           id: createId('icp'),
           is_active: true,
-          created_date: new Date().toISOString(),
+          created_at: new Date().toISOString(),
         },
         user
       );
 
-      const rows = await request('icp_profiles', {
+      const rows = await requestIcpProfilesWithCompatibility(user, {
         method: 'POST',
         body: created,
       });
@@ -1651,12 +1893,12 @@ const createSupabaseClient = () => {
           ...payload,
           id: payload.id || createId('icp'),
           is_active: payload.is_active || false,
-          created_date: payload.created_date || new Date().toISOString(),
+          created_at: payload.created_at || payload.created_date || new Date().toISOString(),
         },
         user
       );
 
-      const rows = await request('icp_profiles', {
+      const rows = await requestIcpProfilesWithCompatibility(user, {
         method: 'POST',
         body: profile,
       });
@@ -1667,7 +1909,7 @@ const createSupabaseClient = () => {
     async updateIcpProfile(user, profileId, updates) {
       const workspaceId = getUserWorkspaceId(user);
 
-      const rows = await request('icp_profiles', {
+      const rows = await requestIcpProfilesWithCompatibility(user, {
         method: 'PATCH',
         query: {
           id: `eq.${profileId}`,
@@ -1685,7 +1927,7 @@ const createSupabaseClient = () => {
       const existing = await this.getIcpProfileById(user, profileId);
       if (!existing) return null;
 
-      await request('icp_profiles', {
+      await requestIcpProfilesWithCompatibility(user, {
         method: 'DELETE',
         query: {
           id: `eq.${profileId}`,
@@ -1729,6 +1971,7 @@ const createSupabaseClient = () => {
         provider: 'supabase',
         unsupported_user_columns: [...unsupportedUserColumns],
         unsupported_lead_columns: [...unsupportedLeadColumns],
+        unsupported_icp_columns: [...unsupportedIcpColumns],
       };
     },
 
@@ -1757,46 +2000,15 @@ const createSupabaseClient = () => {
         unsupportedSet: unsupportedLeadColumns,
       });
 
+      await probeColumn({
+        table: 'icp_profiles',
+        column: 'owner_user_id',
+        unsupportedSet: unsupportedIcpColumns,
+      });
+
       return this.getDiagnostics();
     },
   };
-};
-
-const shouldAllowSupabaseLocalFallback = () => {
-  const raw = String(process.env.SUPABASE_FALLBACK_TO_LOCAL || '').trim().toLowerCase();
-  if (['1', 'true', 'yes', 'on'].includes(raw)) return true;
-  if (['0', 'false', 'no', 'off'].includes(raw)) return false;
-  return getRuntimeConfig().nodeEnv !== 'production';
-};
-
-const isSupabaseConnectionError = (error) => {
-  const code = String(error?.code || '').toUpperCase();
-  const message = String(error?.message || '').toLowerCase();
-  const directCauseCode = String(error?.cause?.code || '').toUpperCase();
-  const nestedCodes = Array.isArray(error?.cause?.errors)
-    ? error.cause.errors.map((entry) => String(entry?.code || '').toUpperCase())
-    : [];
-
-  const knownNetworkCodes = ['EACCES', 'ECONNREFUSED', 'ECONNRESET', 'ENOTFOUND', 'ETIMEDOUT', 'EAI_AGAIN'];
-
-  if (knownNetworkCodes.includes(code) || knownNetworkCodes.includes(directCauseCode)) {
-    return true;
-  }
-
-  if (nestedCodes.some((nested) => knownNetworkCodes.includes(nested))) {
-    return true;
-  }
-
-  return message.includes('fetch failed') || message.includes('network') || message.includes('socket hang up');
-};
-
-const isSupabaseRecoverableError = (error) => {
-  if (isSupabaseConnectionError(error)) {
-    return true;
-  }
-
-  const status = Number(error?.status);
-  return [401, 403, 429, 500, 502, 503, 504].includes(status);
 };
 
 const dataStoreRuntime = {
@@ -1804,55 +2016,7 @@ const dataStoreRuntime = {
   activeProvider: getDataProvider(),
   fallbackReason: null,
 };
-
-const createSupabaseFailoverStore = (supabaseStore) => {
-  if (!shouldAllowSupabaseLocalFallback()) {
-    return supabaseStore;
-  }
-
-  let fallbackActive = false;
-
-  const activateFallback = (error) => {
-    if (fallbackActive) return;
-    fallbackActive = true;
-    dataStoreRuntime.activeProvider = 'local-fallback';
-    dataStoreRuntime.fallbackReason = String(error?.message || error?.code || 'supabase_unreachable');
-    logger.warn('supabase_fallback_local_enabled', {
-      reason: dataStoreRuntime.fallbackReason,
-    });
-  };
-
-  return new Proxy(supabaseStore, {
-    get(target, prop, receiver) {
-      const targetValue = Reflect.get(target, prop, receiver);
-
-      if (typeof targetValue !== 'function') {
-        return targetValue;
-      }
-
-      return async (...args) => {
-        const localMethod = localStore[prop];
-
-        if (fallbackActive && typeof localMethod === 'function') {
-          return localMethod(...args);
-        }
-
-        try {
-          return await targetValue.apply(target, args);
-        } catch (error) {
-          if (typeof localMethod === 'function' && isSupabaseRecoverableError(error)) {
-            activateFallback(error);
-            return localMethod(...args);
-          }
-          throw error;
-        }
-      };
-    },
-  });
-};
-
-const provider =
-  getDataProvider() === 'supabase' ? createSupabaseFailoverStore(createSupabaseClient()) : localStore;
+const provider = getDataProvider() === 'supabase' ? createSupabaseClient() : localStore;
 
 export const dataStore = provider;
 export const getDataStoreRuntime = () => ({ ...dataStoreRuntime });

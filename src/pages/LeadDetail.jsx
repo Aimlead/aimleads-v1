@@ -17,6 +17,85 @@ import SignalBadge from '@/components/leads/SignalBadge';
 
 const toMetric = (value) => (Number.isFinite(Number(value)) ? Number(value) : null);
 
+const normalizeLabel = (value) =>
+  String(value || '')
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const inferSignalTypeFromKey = (value) => {
+  const key = String(value || '').toLowerCase();
+  if (['bankruptcy', 'closed', 'shutdown', 'layoff', 'churn'].some((token) => key.includes(token))) return 'negative';
+  if (['missing', 'unknown', 'unverified'].some((token) => key.includes(token))) return 'neutral';
+  return 'positive';
+};
+
+const getScoreDetails = (lead) =>
+  lead?.score_details && typeof lead.score_details === 'object' ? lead.score_details : {};
+
+const sumScoreDetailPoints = (details) =>
+  Object.values(details).reduce((sum, entry) => {
+    const points = toMetric(entry?.points);
+    return points === null ? sum : sum + points;
+  }, 0);
+
+const getBaseIcpScore = (lead) => {
+  const direct = toMetric(lead?.icp_score);
+  if (direct !== null) return direct;
+
+  const raw = toMetric(lead?.icp_raw_score);
+  if (raw !== null) return raw;
+
+  const details = getScoreDetails(lead);
+  return Object.keys(details).length > 0 ? sumScoreDetailPoints(details) : null;
+};
+
+const getIntentSignals = (lead) => {
+  const payload =
+    lead?.intent_signals && typeof lead.intent_signals === 'object'
+      ? lead.intent_signals
+      : {};
+
+  return [
+    ...(Array.isArray(payload.pre_call) ? payload.pre_call : []).map((label) => ({
+      type: 'positive',
+      label: normalizeLabel(label),
+      source: 'intent',
+      evidence: 'pre_call',
+    })),
+    ...(Array.isArray(payload.post_contact) ? payload.post_contact : []).map((label) => ({
+      type: 'positive',
+      label: normalizeLabel(label),
+      source: 'intent',
+      evidence: 'post_contact',
+    })),
+    ...(Array.isArray(payload.negative) ? payload.negative : []).map((label) => ({
+      type: 'negative',
+      label: normalizeLabel(label),
+      source: 'intent',
+      evidence: 'negative',
+    })),
+  ];
+};
+
+const getInternetSignals = (lead) => (Array.isArray(lead?.internet_signals) ? lead.internet_signals : []);
+
+const getDisplaySignals = (lead) => {
+  const legacySignals = Array.isArray(lead?.signals) ? lead.signals : [];
+  if (legacySignals.length > 0) return legacySignals;
+
+  return [
+    ...getIntentSignals(lead),
+    ...getInternetSignals(lead).map((signal) => ({
+      type: inferSignalTypeFromKey(signal?.key || signal?.label),
+      label: normalizeLabel(signal?.label || signal?.key || signal?.evidence),
+      source: signal?.source_type || 'internet',
+      evidence: signal?.evidence || signal?.key,
+      confidence: signal?.confidence,
+    })),
+  ].filter((signal) => Boolean(signal.label));
+};
+
 const categoryStyle = (cat) => {
   const key = String(cat || '').toLowerCase();
   if (key.includes('excellent')) return 'bg-violet-100 text-violet-700 border-violet-200';
@@ -132,18 +211,21 @@ export default function LeadDetail() {
     );
   }
 
-  const icpScore = toMetric(lead.icp_score);
+  const icpScore = getBaseIcpScore(lead);
   const aiScore = toMetric(lead.ai_score);
   const finalScore = toMetric(lead.final_score) ?? icpScore;
   const aiBoost = icpScore !== null && finalScore !== null ? finalScore - icpScore : null;
+  const scoreDetails = getScoreDetails(lead);
+  const scoreDetailEntries = Object.entries(scoreDetails);
+  const displaySignals = getDisplaySignals(lead);
 
   const signalGroups = {
-    positive: (lead.signals || []).filter((s) => String(s?.type || '').toLowerCase() === 'positive'),
-    negative: (lead.signals || []).filter((s) => String(s?.type || '').toLowerCase() === 'negative'),
-    neutral: (lead.signals || []).filter((s) => String(s?.type || '').toLowerCase() === 'neutral'),
+    positive: displaySignals.filter((s) => String(s?.type || '').toLowerCase() === 'positive'),
+    negative: displaySignals.filter((s) => String(s?.type || '').toLowerCase() === 'negative'),
+    neutral: displaySignals.filter((s) => String(s?.type || '').toLowerCase() === 'neutral'),
   };
 
-  const internetSignals = (lead.internet_signals || []);
+  const internetSignals = getInternetSignals(lead);
 
   return (
     <div>
@@ -227,6 +309,11 @@ export default function LeadDetail() {
                 <p>Action: <span className="text-emerald-700 font-medium">{lead.final_recommended_action || 'N/A'}</span></p>
                 {lead.suggested_action && (
                   <p className="text-brand-sky font-medium">AI Suggestion: {lead.suggested_action}</p>
+                )}
+                {scoreDetailEntries.length > 0 && (
+                  <p className="text-[11px] text-slate-500">
+                    ICP sections: {scoreDetailEntries.map(([key, entry]) => `${key} ${entry?.points > 0 ? '+' : ''}${entry?.points ?? 0}`).join(' · ')}
+                  </p>
                 )}
                 <p className="text-[11px] text-slate-400">Score final = ICP déterministe + signaux internet (web research, news, email)</p>
               </div>
@@ -353,7 +440,7 @@ export default function LeadDetail() {
 
             {/* SIGNALS TAB */}
             <TabsContent value="signals" className="mt-4">
-              {lead.signals?.length > 0 ? (
+              {displaySignals.length > 0 ? (
                 <div className="space-y-3">
                   {['positive', 'negative', 'neutral'].map((type) => {
                     const items = signalGroups[type] || [];

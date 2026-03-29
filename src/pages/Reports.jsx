@@ -39,7 +39,7 @@ const STAT_STYLE = {
 export default function Reports() {
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ['leads'],
-    queryFn: () => dataClient.leads.list('-created_date'),
+    queryFn: () => dataClient.leads.list('-created_at'),
   });
 
   if (isLoading) {

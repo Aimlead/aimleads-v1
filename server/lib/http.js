@@ -1,4 +1,9 @@
+import crypto from 'node:crypto';
 import { getRuntimeConfig } from './config.js';
+
+export const CSRF_COOKIE_NAME = 'aimleads_csrf';
+
+export const createCsrfToken = () => crypto.randomBytes(24).toString('base64url');
 
 export const getCookieOptions = (overrides = {}) => {
   const config = getRuntimeConfig();
@@ -18,18 +23,78 @@ export const getClearCookieOptions = (overrides = {}) => {
   return options;
 };
 
+export const getCsrfCookieOptions = (overrides = {}) => {
+  const config = getRuntimeConfig();
+
+  return {
+    httpOnly: false,
+    sameSite: config.isProduction ? 'strict' : 'lax',
+    secure: config.isProduction,
+    maxAge: 1000 * 60 * 60 * 8,
+    path: '/',
+    ...overrides,
+  };
+};
+
+export const getClearCsrfCookieOptions = (overrides = {}) => {
+  const { maxAge: _maxAge, ...options } = getCsrfCookieOptions(overrides);
+  return options;
+};
+
+export const setCsrfCookie = (res, token = createCsrfToken()) => {
+  res.cookie(CSRF_COOKIE_NAME, token, getCsrfCookieOptions());
+  return token;
+};
+
+export const clearCsrfCookie = (res) => {
+  res.clearCookie(CSRF_COOKIE_NAME, getClearCsrfCookieOptions());
+};
+
 const originMatchesPattern = (origin, pattern) => {
   if (!pattern.includes('*')) return origin === pattern;
   const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*');
   return new RegExp(`^${escaped}$`).test(origin);
 };
 
-export const getCorsOptions = () => {
-  const config = getRuntimeConfig();
-  const whitelist = config.corsOrigin
+const toOrigin = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return '';
+  }
+};
+
+export const getTrustedOriginPatterns = (config = getRuntimeConfig()) => {
+  const whitelist = String(config?.corsOrigin || '')
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);
+
+  if (process.env.VERCEL_URL) {
+    whitelist.push(`https://${process.env.VERCEL_URL}`);
+  }
+
+  return [...new Set(whitelist)];
+};
+
+export const isTrustedOrigin = (origin, config = getRuntimeConfig()) => {
+  const normalizedOrigin = toOrigin(origin);
+  if (!normalizedOrigin) return false;
+
+  const patterns = getTrustedOriginPatterns(config);
+  if (!config?.isProduction && patterns.length === 0) {
+    return true;
+  }
+
+  return patterns.some((pattern) => originMatchesPattern(normalizedOrigin, pattern));
+};
+
+export const getCorsOptions = () => {
+  const config = getRuntimeConfig();
+  const whitelist = getTrustedOriginPatterns(config);
 
   return {
     origin: (origin, callback) => {
@@ -39,14 +104,8 @@ export const getCorsOptions = () => {
         return;
       }
 
-      // Auto-allow the deployment's own origin (VERCEL_URL is set automatically by Vercel)
-      if (process.env.VERCEL_URL && origin === `https://${process.env.VERCEL_URL}`) {
-        callback(null, true);
-        return;
-      }
-
       // Allow origins matching the configured whitelist (supports wildcards)
-      if (whitelist.length > 0 && whitelist.some((pattern) => originMatchesPattern(origin, pattern))) {
+      if (isTrustedOrigin(origin, config)) {
         callback(null, true);
         return;
       }

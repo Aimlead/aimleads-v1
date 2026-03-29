@@ -6,7 +6,7 @@ import {
   SESSION_COOKIE_NAME,
   verifyPassword,
 } from '../lib/auth.js';
-import { getClearCookieOptions, getCookieOptions } from '../lib/http.js';
+import { clearCsrfCookie, getClearCookieOptions, getCookieOptions, setCsrfCookie } from '../lib/http.js';
 import { createId } from '../lib/utils.js';
 import { optionalAuth, requireAuth, wrapAsyncRoutes } from '../lib/middleware.js';
 import { dataStore } from '../lib/dataStore.js';
@@ -21,6 +21,7 @@ import {
   adminCreateAuthUser,
   getSupabaseAuthCookies,
   getAuthUserFromAccessToken,
+  sendPasswordResetEmail,
   setSupabaseAuthCookies,
   signInWithPassword,
   signOutSupabaseSession,
@@ -44,12 +45,11 @@ const authLimiter = createRateLimit({
 const resolveCurrentWorkspaceMember = async (user) => {
   const members = await dataStore.listWorkspaceMembers(user).catch(() => []);
   const membershipUserId = String(user?.supabase_auth_id || user?.id || '').trim();
-  const normalizedEmail = normalizeEmail(user?.email);
+  const appUserId = String(user?.id || '').trim();
 
   const currentMember =
     members.find((member) => String(member?.user_id || '').trim() === membershipUserId)
-    || members.find((member) => String(member?.app_user_id || '').trim() === String(user?.id || '').trim())
-    || members.find((member) => normalizeEmail(member?.email) === normalizedEmail)
+    || members.find((member) => String(member?.app_user_id || '').trim() === appUserId)
     || null;
 
   return {
@@ -93,7 +93,7 @@ const toApiAuthError = (error, fallbackMessage = 'Authentication failed') => {
 
 router.get('/me', optionalAuth, async (req, res) => {
   if (!req.user) {
-    return res.status(401).json({ message: 'Unauthorized' });
+    return res.json({ user: null });
   }
 
   return res.json({ user: sanitizeUser(req.user) });
@@ -172,6 +172,7 @@ router.post('/register', authLimiter, validateBody(schemas.authRegisterSchema), 
 
     const token = createSessionToken(newUser.id, getSessionSecret());
     res.cookie(SESSION_COOKIE_NAME, token, getCookieOptions());
+    setCsrfCookie(res);
 
     return res.status(201).json({ user: sanitizeUser(newUser) });
   }
@@ -186,6 +187,7 @@ router.post('/register', authLimiter, validateBody(schemas.authRegisterSchema), 
 
     const session = await signInWithPassword({ email, password });
     setSupabaseAuthCookies(res, session);
+    setCsrfCookie(res);
 
     const appUser = await ensureWorkspaceUserForAuth({
       authUser: session.user,
@@ -218,6 +220,7 @@ router.post('/login', authLimiter, validateBody(schemas.authLoginSchema), async 
     recordLoginSuccess(email);
     const token = createSessionToken(user.id, getSessionSecret());
     res.cookie(SESSION_COOKIE_NAME, token, getCookieOptions());
+    setCsrfCookie(res);
 
     return res.json({ user: sanitizeUser(user) });
   }
@@ -226,6 +229,7 @@ router.post('/login', authLimiter, validateBody(schemas.authLoginSchema), async 
     const session = await signInWithPassword({ email, password });
     recordLoginSuccess(email);
     setSupabaseAuthCookies(res, session);
+    setCsrfCookie(res);
 
     const appUser = await ensureWorkspaceUserForAuth({
       authUser: session.user,
@@ -246,12 +250,10 @@ router.post('/reset-password', authLimiter, validateBody(schemas.authResetPasswo
   // For Supabase: trigger built-in password reset email
   if (isAuthProviderSupabase()) {
     try {
-      const { supabase } = await import('../lib/supabaseAuth.js');
-      // Use admin client to send reset email
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${String(process.env.CORS_ORIGIN || 'http://localhost:5173')}/reset-password`,
+      await sendPasswordResetEmail({
+        email,
+        redirectTo: `${String(process.env.CORS_ORIGIN || 'http://localhost:5173').replace(/\/$/, '')}/reset-password`,
       });
-      if (error) throw error;
     } catch (err) {
       // Return success to prevent email enumeration, but log non-user errors
       logger.warn('reset_password_error', { message: err?.message, code: err?.code });
@@ -290,6 +292,7 @@ router.post('/reset-password/complete', authLimiter, validateBody(schemas.authCo
       expires_in: 3600,
       user: authUser,
     });
+    setCsrfCookie(res);
 
     const appUser = await ensureWorkspaceUserForAuth({
       authUser,
@@ -305,7 +308,7 @@ router.post('/reset-password/complete', authLimiter, validateBody(schemas.authCo
 
 router.get('/me/export', requireAuth, async (req, res) => {
   const user = await dataStore.findUserById(req.user.id);
-  const leads = await dataStore.listLeads(req.user, '-created_date');
+  const leads = await dataStore.listLeads(req.user, '-created_at');
 
   const exportData = {
     exported_at: new Date().toISOString(),
@@ -374,6 +377,7 @@ router.delete('/me', requireAuth, async (req, res) => {
   }
 
   res.clearCookie(SESSION_COOKIE_NAME, getClearCookieOptions());
+  clearCsrfCookie(res);
   return res.status(200).json({ ok: true, message: 'Account deleted. Workspace data was not deleted.' });
 });
 
@@ -383,10 +387,12 @@ router.post('/logout', async (req, res) => {
     await signOutSupabaseSession(accessToken);
     clearSupabaseAuthCookies(res);
     res.clearCookie(SESSION_COOKIE_NAME, getClearCookieOptions());
+    clearCsrfCookie(res);
     return res.status(204).send();
   }
 
   res.clearCookie(SESSION_COOKIE_NAME, getClearCookieOptions());
+  clearCsrfCookie(res);
   return res.status(204).send();
 });
 

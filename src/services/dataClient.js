@@ -2,12 +2,7 @@ import { FOLLOW_UP_STATUS, LEAD_STATUS } from '@/constants/leads';
 import { ROUTES } from '@/constants/routes';
 import { mockDb } from '@/services/mock/mockDb';
 
-const defaultApiBase = (() => {
-  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    return 'http://localhost:3001/api';
-  }
-  return '/api';
-})();
+const defaultApiBase = '/api';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/$/, '');
 const rawMode = (import.meta.env.VITE_DATA_MODE || 'api').toLowerCase();
@@ -19,6 +14,41 @@ export const isApiConfigured = Boolean(API_BASE_URL);
 const isAuthError = (error) => {
   const status = error?.status || error?.response?.status;
   return status === 401 || status === 403;
+};
+
+const CSRF_COOKIE_NAME = 'aimleads_csrf';
+const CSRF_SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+const readCookieValue = (name) => {
+  if (typeof document === 'undefined') return '';
+
+  const match = document.cookie
+    .split(';')
+    .map((entry) => entry.trim())
+    .find((entry) => entry.startsWith(`${name}=`));
+
+  if (!match) return '';
+  return decodeURIComponent(match.slice(name.length + 1));
+};
+
+const ensureCsrfToken = async () => {
+  let token = readCookieValue(CSRF_COOKIE_NAME);
+  if (token) return token;
+
+  try {
+    await fetch(`${API_BASE_URL}/auth/me`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    });
+  } catch {
+    // Best effort only. The write below will fail clearly if the token is still missing.
+  }
+
+  token = readCookieValue(CSRF_COOKIE_NAME);
+  return token;
 };
 
 const shouldFallback = (error, passAuthErrors = false) => {
@@ -43,14 +73,24 @@ const unwrapApiResponse = (payload) => {
 };
 
 const apiRequest = async (path, { method = 'GET', body, headers = {} } = {}) => {
+  const normalizedMethod = String(method || 'GET').toUpperCase();
+  const requestHeaders = {
+    'Content-Type': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+    ...headers,
+  };
+
+  if (!CSRF_SAFE_METHODS.has(normalizedMethod)) {
+    const csrfToken = await ensureCsrfToken();
+    if (csrfToken) {
+      requestHeaders['X-CSRF-Token'] = csrfToken;
+    }
+  }
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    method,
+    method: normalizedMethod,
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Requested-With': 'XMLHttpRequest',
-      ...headers,
-    },
+    headers: requestHeaders,
     body: body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body),
   });
 
@@ -109,8 +149,8 @@ const runWithMode = async ({ operationName, apiCall, fallbackCall, passAuthError
 
 const sortByCreatedDateDesc = (items) => {
   return [...items].sort((a, b) => {
-    const left = new Date(a.created_date || 0).getTime();
-    const right = new Date(b.created_date || 0).getTime();
+    const left = new Date(a.created_at || a.created_date || 0).getTime();
+    const right = new Date(b.created_at || b.created_date || 0).getTime();
     return right - left;
   });
 };
@@ -140,10 +180,11 @@ const leadsMockApi = {
       id: mockDb.createId(),
       status: LEAD_STATUS.TO_ANALYZE,
       follow_up_status: FOLLOW_UP_STATUS.TO_CONTACT,
-      created_date: mockDb.nowIso(),
+      created_at: mockDb.nowIso(),
       ...payload,
       website_url: sanitizeWebsite(payload.website_url),
     };
+    item.created_date = item.created_date || item.created_at;
 
     mockDb.setLeads([item, ...leads]);
     return item;
@@ -168,7 +209,7 @@ const leadsMockApi = {
     const created = rows
       .map((row) => ({
         id: mockDb.createId(),
-        created_date: mockDb.nowIso(),
+        created_at: mockDb.nowIso(),
         status: LEAD_STATUS.TO_ANALYZE,
         follow_up_status: FOLLOW_UP_STATUS.TO_CONTACT,
         company_name: row.company_name || row['company name'] || row.name,
@@ -180,6 +221,10 @@ const leadsMockApi = {
         contact_role: row.contact_role || row.role || row.title || '',
         contact_email: row.contact_email || row.email || '',
         source_list: row.source_list || row.source || '',
+      }))
+      .map((lead) => ({
+        ...lead,
+        created_date: lead.created_date || lead.created_at,
       }))
       .filter((lead) => Boolean(lead.company_name));
 
@@ -234,8 +279,9 @@ const icpMockApi = {
       ...payload,
       id: mockDb.createId(),
       is_active: true,
-      created_date: mockDb.nowIso(),
+      created_at: mockDb.nowIso(),
     };
+    created.created_date = created.created_date || created.created_at;
 
     mockDb.setIcpProfiles([created, ...normalized]);
     return created;
@@ -257,7 +303,7 @@ const apiClient = {
     deleteMe: () => apiRequest('/auth/me', { method: 'DELETE' }),
   },
   leads: {
-    list: (sort = '-created_date') => apiRequest(`/leads?sort=${encodeURIComponent(sort)}`),
+    list: (sort = '-created_at') => apiRequest(`/leads?sort=${encodeURIComponent(sort)}`),
     filter: (where = {}) => apiRequest('/leads/filter', { method: 'POST', body: { where } }),
     search: (q) => apiRequest(`/leads/search?q=${encodeURIComponent(q)}`),
     getById: (id) => apiRequest(`/leads/${id}`),
@@ -276,13 +322,10 @@ const apiClient = {
     list: () => apiRequest('/icp'),
     filter: (where = {}) => apiRequest('/icp/filter', { method: 'POST', body: { where } }),
     getActive: () => apiRequest('/icp/active'),
-    saveActive: (payload, ownerUserId) =>
+    saveActive: (payload) =>
       apiRequest('/icp/active', {
         method: 'PUT',
-        body: {
-          ...payload,
-          owner_user_id: ownerUserId,
-        },
+        body: payload,
       }),
     generateIcp: (description) => apiRequest('/icp/generate', { method: 'POST', body: { description } }),
   },
@@ -301,7 +344,6 @@ const apiClient = {
   },
   dev: {
     loadDemo: () => apiRequest('/dev/load-demo', { method: 'POST' }),
-    loadMantra: () => apiRequest('/dev/load-mantra', { method: 'POST' }),
     reanalyze: (payload = {}) => apiRequest('/dev/reanalyze', { method: 'POST', body: payload }),
     checkup: () => apiRequest('/dev/checkup'),
   },
@@ -412,7 +454,7 @@ export const dataClient = {
   },
 
   leads: {
-    async list(sort = '-created_date') {
+    async list(sort = '-created_at') {
       return runWithMode({
         operationName: 'leads.list',
         apiCall: () => apiClient.leads.list(sort),
@@ -562,10 +604,10 @@ export const dataClient = {
       });
     },
 
-    async saveActive(payload, ownerUserId) {
+    async saveActive(payload) {
       return runWithMode({
         operationName: 'icp.saveActive',
-        apiCall: () => apiClient.icp.saveActive(payload, ownerUserId),
+        apiCall: () => apiClient.icp.saveActive(payload),
         fallbackCall: () => icpMockApi.saveActive(payload),
         passAuthErrors: true,
       });
@@ -674,14 +716,41 @@ export const dataClient = {
         passAuthErrors: true,
       });
     },
-    async getIntegrationStatus() {
-      return runWithMode({
-        operationName: 'workspace.getIntegrationStatus',
-        apiCall: () => apiClient.workspace.getIntegrationStatus(),
-        fallbackCall: async () => ({ claude: false, hunter: false, newsApi: false }),
-        passAuthErrors: false,
-      });
-    },
+      async getIntegrationStatus() {
+        return runWithMode({
+          operationName: 'workspace.getIntegrationStatus',
+          apiCall: () => apiClient.workspace.getIntegrationStatus(),
+          fallbackCall: async () => ({
+            claude: false,
+            hunter: false,
+            newsApi: false,
+            supabase: {
+              configured: false,
+              url: false,
+              publishableKey: false,
+              serviceRoleKey: false,
+            },
+            runtime: {
+              nodeEnv: 'mock',
+              dataProvider: 'mock',
+              authProvider: 'mock',
+              activeProvider: 'mock',
+              fallbackReason: null,
+              apiDocsEnabled: false,
+              demoBootstrapEnabled: false,
+            },
+            security: {
+              csrfProtectionEnabled: false,
+              csrfMode: 'unknown',
+              cspEnabled: false,
+              trustedOriginsConfigured: false,
+              secureCookies: false,
+              publicBetaReady: false,
+            },
+          }),
+          passAuthErrors: false,
+        });
+      },
   },
 
   dev: {
@@ -689,13 +758,6 @@ export const dataClient = {
       runWithMode({
         operationName: 'dev.loadDemo',
         apiCall: () => apiClient.dev.loadDemo(),
-        fallbackCall: mockUnsupported,
-      }),
-
-    loadMantra: async () =>
-      runWithMode({
-        operationName: 'dev.loadMantra',
-        apiCall: () => apiClient.dev.loadMantra(),
         fallbackCall: mockUnsupported,
       }),
 

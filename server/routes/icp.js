@@ -57,10 +57,7 @@ router.get('/active', async (req, res) => {
 
 router.put('/active', validateBody(schemas.icpActiveSchema), async (req, res) => {
   const payload = req.validatedBody || {};
-  const active = await dataStore.saveActiveIcpProfile(req.user, {
-    ...payload,
-    owner_user_id: req.user.id,
-  });
+  const active = await dataStore.saveActiveIcpProfile(req.user, payload);
 
   if (!active) {
     return res.status(404).json({ message: 'ICP profile not found in your workspace' });
@@ -80,10 +77,7 @@ router.put('/active', validateBody(schemas.icpActiveSchema), async (req, res) =>
 // Create a new ICP profile
 router.post('/', validateBody(schemas.icpActiveSchema), async (req, res) => {
   const payload = req.validatedBody || {};
-  const profile = await dataStore.createIcpProfile(req.user, {
-    ...payload,
-    owner_user_id: req.user.id,
-  });
+  const profile = await dataStore.createIcpProfile(req.user, payload);
 
   writeAuditLog({
     user: req.user,
@@ -165,6 +159,5 @@ router.post('/generate', icpGenerateLimiter, validateBody(schemas.icpGenerateSch
 });
 
 export default router;
-
 
 

@@ -21,8 +21,11 @@ __write_test.txt
 tmp_real_leads.json
 reports/local-validation-*.json
 reports/local-validation-*.csv
+reports/real-lead-batch-*.json
+reports/real-lead-batch-*.csv
 
 server/data/db.json
 
 .claude/
 coverage/
+.playwright-cli/

@@ -34,6 +34,11 @@ const STAT_STYLE = {
   toAnalyze: { icon: Sparkles, bg: 'bg-sky-500' },
 };
 
+const toNumericScore = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
 const toSourceListKey = (lead) => {
   const value = String(lead?.source_list || '').trim();
   return value || LIST_KEYS.UNLISTED;
@@ -58,6 +63,7 @@ const buildAnalysisUpdatePayload = (result) => ({
   ai_confidence: result.ai_confidence,
   ai_signals: result.ai_signals,
   ai_summary: result.ai_summary,
+  scoring_weights: result.scoring_weights,
   final_score: result.final_score,
   final_category: result.final_category,
   final_priority: result.final_priority,
@@ -69,6 +75,8 @@ const buildAnalysisUpdatePayload = (result) => ({
   generated_icebreakers: result.generated_icebreakers,
   generated_icebreaker: result.generated_icebreakers?.email,
   llm_enriched: result.llm_enriched,
+  suggested_action: result.suggested_action,
+  ...(result.discovered_internet_signals ? { internet_signals: result.discovered_internet_signals } : {}),
   last_analyzed_at: new Date().toISOString(),
 });
 
@@ -90,7 +98,7 @@ export default function Dashboard() {
 
   const { data: leads = [], isLoading, isError: leadsError, refetch: refetchLeads } = useQuery({
     queryKey: ['leads'],
-    queryFn: () => dataClient.leads.list('-created_date'),
+    queryFn: () => dataClient.leads.list('-created_at'),
   });
 
   const { data: icpProfiles = [] } = useQuery({
@@ -258,7 +266,7 @@ export default function Dashboard() {
     if (!nextProfile) return;
     setIsSwitchingIcp(true);
     try {
-      await dataClient.icp.saveActive(nextProfile, user?.email || undefined);
+      await dataClient.icp.saveActive(nextProfile);
       toast.success(`Active ICP changed to ${nextProfile.name}`);
       queryClient.invalidateQueries({ queryKey: ['icpProfilesQuickSwitch'] });
       queryClient.invalidateQueries({ queryKey: ['icpConfig'] });
@@ -301,15 +309,24 @@ export default function Dashboard() {
     }
   };
 
-  const getLeadScore = (lead) => (Number.isFinite(lead.final_score) ? lead.final_score : lead.icp_score);
+  const getLeadScore = (lead) => {
+    const finalScore = toNumericScore(lead?.final_score);
+    if (finalScore !== null) return finalScore;
+    return toNumericScore(lead?.icp_score);
+  };
   const hasAnalyzedLead = activationState.hasAnalyzedLead;
-  const scoredLeads = visibleLeads.map((lead) => getLeadScore(lead)).filter((score) => Number.isFinite(score));
+  const scoredLeads = visibleLeads.map((lead) => getLeadScore(lead)).filter((score) => score !== null);
   const totalLeads = visibleLeads.length;
   const qualifiedLeads = visibleLeads.filter((lead) => lead.status === LEAD_STATUS.QUALIFIED).length;
   const toAnalyze = visibleLeads.filter((lead) => lead.status === LEAD_STATUS.TO_ANALYZE).length;
   const avgScore =
     scoredLeads.length > 0 ? Math.round(scoredLeads.reduce((acc, score) => acc + score, 0) / scoredLeads.length) : 0;
   const aiEnriched = visibleLeads.filter((l) => l.llm_enriched).length;
+  const selectedListLabel = selectedSourceList === LIST_KEYS.ALL
+    ? 'All Lists'
+    : sourceListOptions.find((option) => option.key === selectedSourceList)?.label || sourceListLabel(selectedSourceList);
+  const analyzedVisible = visibleLeads.filter((lead) => getLeadScore(lead) !== null).length;
+  const showActivationChecklist = !activationState.hasActiveIcp || totalLeads < 10;
 
   const stats = [
     { key: 'total', value: totalLeads, label: 'Total Leads' },
@@ -356,7 +373,7 @@ export default function Dashboard() {
       icon: Upload,
       title: 'Import your first lead list',
       description: leads.length > 0
-        ? `${leads.length} lead(s) already available in Smart Inbox.`
+        ? `${leads.length} lead(s) already available in Dashboard.`
         : 'Upload a CSV or Excel file to seed your workspace with prospects.',
       complete: activationState.hasImportedLeads,
       actionLabel: leads.length > 0 ? 'Review leads' : 'Import leads',
@@ -407,7 +424,7 @@ export default function Dashboard() {
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Smart Inbox</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-slate-500 mt-0.5 text-sm">ICP-first lead prioritization with AI intent reinforcement</p>
           {aiEnriched > 0 && (
             <p className="text-xs text-brand-sky mt-1 flex items-center gap-1">
@@ -483,7 +500,29 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <ActivationChecklist steps={activationSteps} />
+      {showActivationChecklist ? <ActivationChecklist steps={activationSteps} /> : null}
+
+      {!isLoading && totalLeads > 0 && (
+        <div className="mb-5 rounded-2xl border border-brand-sky/15 bg-gradient-to-r from-brand-sky/5 to-sky-50 px-4 py-3 shadow-sm">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">
+                {selectedListLabel} is live in your workspace
+              </p>
+              <p className="text-sm text-slate-500">
+                {totalLeads} leads loaded
+                {activeIcp ? ` · Active ICP: ${activeIcp.name}` : ' · No active ICP yet'}
+                {analyzedVisible > 0 ? ` · ${analyzedVisible} scored` : ' · Ready to analyze'}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+              <span className="rounded-full bg-white px-2.5 py-1 border border-slate-200">Qualified: {qualifiedLeads}</span>
+              <span className="rounded-full bg-white px-2.5 py-1 border border-slate-200">To analyze: {toAnalyze}</span>
+              <span className="rounded-full bg-white px-2.5 py-1 border border-slate-200">Avg score: {avgScore}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Error state ─────────────────────────────────────────────────── */}
       {leadsError && (

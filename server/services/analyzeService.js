@@ -46,7 +46,14 @@ const listIncludesExact = (list = [], value = '') => {
 const listIncludesPartial = (list = [], value = '') => {
   const needle = normalizeText(value);
   if (!needle) return false;
-  return list.some((entry) => needle.includes(normalizeText(entry)));
+  return list.some((entry) => {
+    const e = normalizeText(entry);
+    if (!e) return false;
+    // Require whole-word / whole-phrase match to prevent false positives.
+    // Example: 'CTO' must NOT match inside 'director' ('dire**cto**r').
+    const escaped = e.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(?:^|\\s)${escaped}(?:\\s|$)`).test(needle);
+  });
 };
 
 const toNumber = (value, fallback) => {
@@ -109,7 +116,8 @@ function normalizeScore(rawScore) {
 }
 
 function getCategory(score, thresholds = DEFAULT_CATEGORY_THRESHOLDS) {
-  if (score === 0) return ICP_CATEGORY.EXCLUDED;
+  // EXCLUDED is only set via earlyExit (hard ICP rule); score=0 here means
+  // insufficient data or all-negative criteria → Low Fit, not Excluded.
   if (score >= thresholds.excellent) return ICP_CATEGORY.EXCELLENT;
   if (score >= thresholds.strong) return ICP_CATEGORY.STRONG;
   if (score >= thresholds.medium) return ICP_CATEGORY.MEDIUM;
@@ -209,10 +217,10 @@ function buildAnalysisSummary({
     `ICP category: ${category}\n` +
     `ICP priority: P${priority}\n` +
     `ICP recommended action: ${recommendedAction}\n\n` +
-    `AI signal score: ${aiScore}/100\n` +
-    `AI confidence: ${aiConfidence}%\n` +
-    `AI boost on ICP: ${aiBoost >= 0 ? '+' : ''}${aiBoost}\n` +
-    `Final prioritization score: ${finalScore}/100 (ICP base + AI reinforcement)\n` +
+    `Signal score: ${aiScore}/100\n` +
+    `Signal confidence: ${aiConfidence}%\n` +
+    `Signal adjustment on ICP: ${aiBoost >= 0 ? '+' : ''}${aiBoost}\n` +
+    `Final prioritization score: ${finalScore}/100 (ICP base + signal adjustment)\n` +
     `Final category suggestion: ${finalCategory}\n` +
     `Final recommended action: ${finalRecommendedAction}`;
 
@@ -370,7 +378,7 @@ export async function analyzeLead({ lead, icpProfile, skipLlm = false }) {
       recommended_action: recommendedAction,
       icp_profile_id: icpProfile?.id || null,
       icp_profile_name: profileName,
-      analysis_version: 'icp-rules-v4-ai-signals-v6-llm-enriched',
+      analysis_version: 'icp-rules-v4-ai-signals-v6-llm-v2',
       ai_score: ai.aiScore,
       ai_confidence: ai.aiConfidence,
       ai_signals: ai.aiSignals,
@@ -432,20 +440,21 @@ export async function analyzeLead({ lead, icpProfile, skipLlm = false }) {
   const llmResult = llmSettled.status === 'fulfilled' ? llmSettled.value : null;
   const webDiscovery = webSettled.status === 'fulfilled' ? webSettled.value : null;
 
-  // Merge LLM-inferred intent signals + web-discovered internet signals
+  // LLM inferred signals are for display only — they must NOT enter the scoring path
+  // to avoid double-counting (inferred signals would boost aiBoost AND score_adjustment).
   const inferredSignals = llmResult?.inferred_signals || null;
   const discoveredWebSignals = webDiscovery?.signals?.length > 0 ? webDiscovery.signals : null;
 
-  const enrichedLead = {
+  // Scoring uses original lead + internet-discovered signals only (no LLM inferences)
+  const scoringLead = {
     ...lead,
-    ...(inferredSignals ? { intent_signals: inferredSignals } : {}),
     ...(discoveredWebSignals
       ? { internet_signals: [...(Array.isArray(lead.internet_signals) ? lead.internet_signals : []), ...discoveredWebSignals] }
       : {}),
   };
 
   const ai = scoreAiSignals({
-    lead: enrichedLead,
+    lead: scoringLead,
     icpScore,
     scoreDetails: details,
     blendWeights: scoringMeta.blendWeights,
@@ -461,7 +470,7 @@ export async function analyzeLead({ lead, icpProfile, skipLlm = false }) {
     recommended_action: recommendedAction,
     icp_profile_id: icpProfile?.id || null,
     icp_profile_name: profileName,
-    analysis_version: 'icp-rules-v4-ai-signals-v6-llm-enriched',
+    analysis_version: 'icp-rules-v4-ai-signals-v6-llm-v2',
     ai_score: ai.aiScore,
     ai_confidence: ai.aiConfidence,
     ai_signals: ai.aiSignals,
@@ -482,13 +491,17 @@ export async function analyzeLead({ lead, icpProfile, skipLlm = false }) {
     score_details: details,
     generated_icebreakers: buildFallbackIcebreakers(lead),
     inferred_intent_signals: inferredSignals,
-    discovered_internet_signals: discoveredWebSignals ? enrichedLead.internet_signals : null,
+    discovered_internet_signals: discoveredWebSignals ? scoringLead.internet_signals : null,
     llm_enriched: false,
   };
 
   if (llmResult) {
-    // Apply LLM score adjustment (clamp to prevent gaming)
-    const adjustment = clamp(Math.round(Number(llmResult.score_adjustment) || 0), -15, 15);
+    // LLM fine-tunes the final score within a narrow band to prevent instability.
+    // High-confidence analysis (≥60): ±8 points max.
+    // Low-confidence analysis (<60): ±4 points max (data is sparse, be conservative).
+    const rawAdj = Math.round(Number(llmResult.score_adjustment) || 0);
+    const highConfidence = (llmResult.confidence_level ?? 0) >= 60;
+    const adjustment = highConfidence ? clamp(rawAdj, -8, 8) : clamp(rawAdj, -4, 4);
     const llmFinalScore = clamp(baseResult.final_score + adjustment, 0, 100);
 
     // Recompute category/action if score changed meaningfully

@@ -75,6 +75,14 @@ export default function Team() {
   const currentRole = currentMember?.role || null;
   const canManageInvites = currentRole === 'owner' || currentRole === 'admin';
   const canManageRoles = currentRole === 'owner';
+  const membershipIssue = !isLoadingMembers && !currentMember;
+  const accessSummary = membershipIssue
+    ? 'Membership verification needed'
+    : canManageRoles
+      ? 'Full access'
+      : canManageInvites
+        ? 'Invite access only'
+        : 'Read-only';
   const inviteRoleOptions = currentRole === 'admin'
     ? INVITE_ROLE_OPTIONS.filter((option) => option.value === 'member')
     : INVITE_ROLE_OPTIONS;
@@ -203,15 +211,26 @@ export default function Team() {
             <span>Your role</span>
             <RoleBadge role={currentRole || 'member'} />
           </div>
+          <p className="text-xs font-medium text-slate-600">Access mode: {accessSummary}</p>
           <p className="text-xs text-slate-400">
-            Workspace: <span className="font-mono">{user?.workspace_id}</span>
+            {membershipIssue
+              ? 'We could not match this session to a valid workspace membership yet.'
+              : canManageRoles
+                ? 'You can manage invites, roles, ownership transfer, and access changes.'
+                : canManageInvites
+                  ? 'You can invite teammates and manage pending invites.'
+                  : 'You can use the workspace, but access changes stay read-only.'}
           </p>
         </div>
       </div>
 
-      {!isLoadingMembers && !currentMember ? (
+      {membershipIssue ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900">
-          We could not verify your workspace membership cleanly. Access management stays read-only until the membership record is repaired.
+          Membership could not be verified for the current session. Team management stays read-only until the workspace membership record is repaired.
+        </div>
+      ) : !canManageInvites ? (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+          Access mode: <span className="font-semibold">{accessSummary}</span>. Invite creation and role changes are only available to admins and owners.
         </div>
       ) : null}
 
@@ -285,7 +304,7 @@ export default function Team() {
             </>
           ) : (
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-              Only workspace owners and admins can create invites.
+              Only workspace owners and admins can create invites. Members can still use the workspace normally.
             </div>
           )}
         </CardContent>
@@ -304,7 +323,7 @@ export default function Team() {
         <CardContent className="space-y-4">
           {!canManageInvites ? (
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-              Only workspace owners and admins can view pending invites.
+              Pending invites are visible only to admins and owners.
             </div>
           ) : isLoadingInvites ? (
             <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -449,7 +468,7 @@ export default function Team() {
                       ) : null}
                       <span className="text-xs text-slate-400">
                         {member.role === 'owner'
-                          ? 'Owner actions unavailable'
+                          ? 'Transfer ownership before removing this owner'
                           : canManageRoles
                             ? 'Role managed above'
                             : 'Read only'}
@@ -462,7 +481,7 @@ export default function Team() {
           )}
 
           <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-xs text-slate-600">
-            Safe member removal is still disabled. If the current owner needs to leave, transfer ownership first, then handle the account deletion from the new ownership state.
+            Owners can transfer ownership safely before offboarding. Non-owner members can be removed without breaking workspace access.
           </div>
         </CardContent>
       </Card>

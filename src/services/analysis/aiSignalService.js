@@ -186,7 +186,6 @@ const pushSignal = (signals, { source = 'ai', type, points, label, evidence, key
 };
 
 const getCategoryFromScore = (score, thresholds = DEFAULT_CATEGORY_THRESHOLDS) => {
-  if (score === 0) return ICP_CATEGORY.EXCLUDED;
   if (score >= thresholds.excellent) return ICP_CATEGORY.EXCELLENT;
   if (score >= thresholds.strong) return ICP_CATEGORY.STRONG;
   if (score >= thresholds.medium) return ICP_CATEGORY.MEDIUM;

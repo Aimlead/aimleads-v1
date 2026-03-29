@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowRight, BarChart3, BookOpen, CheckCircle2, Sparkles, Target, Upload, X,
+  ArrowRight, BarChart3, CheckCircle2, Sparkles, Target, Upload, X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -35,9 +35,9 @@ const STEPS = [
   {
     icon: BarChart3,
     color: 'from-emerald-500 to-teal-600',
-    title: 'Track & iterate',
-    description: 'Use the Pipeline, Analytics and Reports pages to track your outreach performance and refine your ICP over time.',
-    action: { label: 'View Analytics →', href: ROUTES.analytics },
+    title: 'Review the best leads',
+    description: 'Use Pipeline to compare priority, inspect signals, and turn the strongest leads into outreach.',
+    action: { label: 'Open Pipeline →', href: ROUTES.pipeline },
   },
 ];
 

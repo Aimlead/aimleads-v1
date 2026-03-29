@@ -17,6 +17,36 @@ const resolveDisplayName = (authUser, fallback = 'New User') => {
   return String(fallback || 'New User').trim() || 'New User';
 };
 
+export const attachWorkspaceMembershipContext = async (user) => {
+  if (!user) return null;
+
+  const membership = await dataStore.findFirstWorkspaceMembershipForUser(user).catch(() => null);
+  if (!membership?.workspace_id) {
+    return {
+      ...user,
+      workspace_context: null,
+      workspace_membership_verified: false,
+      workspace_id: '',
+      current_workspace_id: '',
+      workspace_role: null,
+    };
+  }
+
+  return {
+    ...user,
+    workspace_context: {
+      workspace_id: membership.workspace_id,
+      role: membership.role || user.workspace_role || null,
+      app_user_id: membership.app_user_id || user.app_user_id || user.id || null,
+    },
+    workspace_membership_verified: true,
+    workspace_id: membership.workspace_id,
+    current_workspace_id: membership.workspace_id,
+    workspace_role: membership.role || user.workspace_role || null,
+    app_user_id: membership.app_user_id || user.app_user_id || user.id || null,
+  };
+};
+
 export const ensureWorkspaceUserForAuth = async ({ authUser, fallbackFullName = '' } = {}) => {
   if (!authUser?.id) return null;
 
@@ -43,37 +73,29 @@ export const ensureWorkspaceUserForAuth = async ({ authUser, fallbackFullName = 
       appUser = (await dataStore.updateUser(appUser.id, updates)) || { ...appUser, ...updates };
     }
 
-    return appUser;
+    return attachWorkspaceMembershipContext(appUser);
   }
 
   if (email) {
-    const byEmail = await dataStore.findUserByEmail(email);
-    if (byEmail) {
-      if (byEmail.supabase_auth_id && String(byEmail.supabase_auth_id) !== String(authUser.id)) {
-        const conflict = new Error('This email is already linked to another auth account.');
-        conflict.status = 409;
-        throw conflict;
-      }
+    appUser = await dataStore.findUserByEmail(email).catch(() => null);
+  }
 
-      const updates = {
-        supabase_auth_id: authUser.id,
-      };
+  if (appUser) {
+    const updates = {};
 
-      if (fullName && normalizeEmail(byEmail.full_name) !== normalizeEmail(fullName)) {
-        updates.full_name = fullName;
-      }
-
-      appUser = (await dataStore.updateUser(byEmail.id, updates)) || { ...byEmail, ...updates };
-
-      const pendingInvite = await dataStore.findActiveWorkspaceInviteByEmail(email).catch(() => null);
-      if (pendingInvite && pendingInvite.workspace_id === appUser.workspace_id) {
-        await dataStore.consumeWorkspaceInviteByEmail(email, {
-          accepted_by_user_id: appUser.id,
-        }).catch(() => null);
-      }
-
-      return appUser;
+    if (fullName && normalizeEmail(appUser.full_name) !== normalizeEmail(fullName)) {
+      updates.full_name = fullName;
     }
+
+    if (!appUser.supabase_auth_id || String(appUser.supabase_auth_id).trim() !== String(authUser.id).trim()) {
+      updates.supabase_auth_id = authUser.id;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      appUser = (await dataStore.updateUser(appUser.id, updates)) || { ...appUser, ...updates };
+    }
+
+    return attachWorkspaceMembershipContext(appUser);
   }
 
   const pendingInvite = email ? await dataStore.findActiveWorkspaceInviteByEmail(email).catch(() => null) : null;
@@ -94,5 +116,5 @@ export const ensureWorkspaceUserForAuth = async ({ authUser, fallbackFullName = 
     }).catch(() => null);
   }
 
-  return appUser;
+  return attachWorkspaceMembershipContext(appUser);
 };

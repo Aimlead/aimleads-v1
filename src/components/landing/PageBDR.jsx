@@ -20,13 +20,11 @@ function Topbar({ ctx }) {
   );
 }
 
-/* ── Gaston Slack/Teams demo ───────────────────────────────────────────── */
 function GastonSlack({ ctx: _ctx }) {
   const [channel, setChannel] = useState('slack');
 
   return (
     <div style={{ maxWidth: 680 }}>
-      {/* Channel toggle */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         <button
           onClick={() => setChannel('slack')}
@@ -69,7 +67,6 @@ function GastonSlack({ ctx: _ctx }) {
         </button>
       </div>
 
-      {/* Slack panel */}
       {channel === 'slack' && (
         <div>
           <div className="slack-header">
@@ -81,7 +78,6 @@ function GastonSlack({ ctx: _ctx }) {
             <div className="slack-online">En ligne</div>
           </div>
           <div className="slack-body">
-            {/* Gaston weekly report */}
             <div className="slack-msg">
               <div className="slack-msg-av gaston-av">G</div>
               <div className="slack-msg-body">
@@ -103,7 +99,6 @@ function GastonSlack({ ctx: _ctx }) {
                 <div className="slack-reaction"><span className="reac">👍 4</span><span className="reac">🔥 2</span><span className="reac">✅ 3</span></div>
               </div>
             </div>
-            {/* Marie message */}
             <div className="slack-msg">
               <div className="slack-msg-av user-av">MC</div>
               <div className="slack-msg-body">
@@ -111,7 +106,6 @@ function GastonSlack({ ctx: _ctx }) {
                 <div className="slack-msg-text">Super Gaston ! Qui sont les 12 RDV qualifiés cette semaine ?</div>
               </div>
             </div>
-            {/* Gaston leads reply */}
             <div className="slack-msg">
               <div className="slack-msg-av gaston-av">G</div>
               <div className="slack-msg-body">
@@ -138,7 +132,6 @@ function GastonSlack({ ctx: _ctx }) {
         </div>
       )}
 
-      {/* Teams panel */}
       {channel === 'teams' && (
         <div>
           <div style={{ background: 'rgba(98,100,167,.12)', border: '1px solid rgba(98,100,167,.25)', borderRadius: '14px 14px 0 0', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -270,7 +263,6 @@ export default function PageBDR({ ctx }) {
     <div>
       <Topbar ctx={ctx} />
 
-      {/* Hero */}
       <section className="hero" style={{ background: 'var(--navy)', padding: '72px 52px 80px', position: 'relative', overflow: 'hidden' }}>
         <svg style={{ position: 'absolute', top: 40, right: -30, width: 340, opacity: .06, pointerEvents: 'none' }} viewBox="0 0 340 340" fill="none">
           <g stroke="white" strokeWidth="1.2">
@@ -293,7 +285,6 @@ export default function PageBDR({ ctx }) {
             </div>
           </div>
 
-          {/* Hero right: 2×2 stats grid */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div style={{ padding: '24px 20px', background: 'rgba(90,211,140,.08)', border: '1px solid rgba(90,211,140,.15)', borderRadius: 14 }}>
               <div style={{ fontSize: 32, fontWeight: 800, color: '#5AD38C', fontFamily: 'Bricolage Grotesque, sans-serif', letterSpacing: -1 }}>24/7</div>
@@ -316,7 +307,6 @@ export default function PageBDR({ ctx }) {
       </section>
 
       <div className="content">
-        {/* Séquence BDR */}
         <div className="cards-2 rv" style={{ marginTop: 56 }} id="bdr-seq">
           <div>
             <div className="block-label">Exemple de séquence</div>
@@ -367,7 +357,6 @@ export default function PageBDR({ ctx }) {
           </div>
         </div>
 
-        {/* Mise en place */}
         <div className="section-block rv" style={{ marginTop: 64 }}>
           <div className="block-label">Mise en place</div>
           <h2 className="block-title">Opérationnel en <em>72 heures.</em></h2>
@@ -383,13 +372,11 @@ export default function PageBDR({ ctx }) {
           </div>
         </div>
 
-        {/* Gaston Slack/Teams demo */}
         <div className="section-block rv">
           <div className="block-label">Démo — Rapports Slack &amp; Teams</div>
           <GastonSlack ctx={ctx} />
         </div>
 
-        {/* CTA band */}
         <div className="cta-band rv" style={{ background: 'linear-gradient(135deg,var(--navy) 0%,#001a40 100%)' }}>
           <div>
             <h3>Simulez le ROI de votre BDR IA</h3>

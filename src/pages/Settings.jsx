@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { KeyRound, Loader2, Puzzle, Save, Settings2, ShieldCheck, Target, Users } from 'lucide-react';
+import { AlertTriangle, Database, KeyRound, Loader2, Save, ShieldCheck, Target, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -130,6 +130,59 @@ export default function Settings() {
     () => icpProfiles.find((profile) => profile.is_active) || icpProfiles[0] || null,
     [icpProfiles]
   );
+
+  const runtimeStatus = integrationStatus.runtime || {};
+  const supabaseStatus = integrationStatus.supabase || {};
+  const securityStatus = integrationStatus.security || {};
+
+  const readinessGroups = useMemo(() => {
+    const critical = [];
+    const optional = [];
+    const info = [];
+
+    if (runtimeStatus.dataProvider && runtimeStatus.dataProvider !== 'supabase') {
+      critical.push('Data provider is not Supabase yet.');
+    }
+
+    if (runtimeStatus.authProvider && runtimeStatus.authProvider !== 'supabase') {
+      critical.push('Auth provider is not Supabase yet.');
+    }
+
+    if (!integrationStatus.claude) {
+      critical.push('Anthropic is not configured, so AI reinforcement is degraded.');
+    }
+
+    if (!supabaseStatus.configured) {
+      critical.push('Supabase runtime keys are not fully configured.');
+    }
+
+    if (runtimeStatus.fallbackReason) {
+      critical.push(`Backend is currently falling back: ${runtimeStatus.fallbackReason}.`);
+    }
+
+    if (!securityStatus.publicBetaReady) {
+      critical.push('Public beta contract is not fully met yet from the current runtime/security config.');
+    }
+
+    if (runtimeStatus.demoBootstrapEnabled) {
+      optional.push('Demo bootstrap is still enabled.');
+    }
+
+    if (runtimeStatus.apiDocsEnabled) {
+      optional.push('API docs are still exposed.');
+    }
+
+    if (!securityStatus.trustedOriginsConfigured) {
+      optional.push('Trusted origins / CORS are not fully configured for production cookies.');
+    }
+
+    if (appPublicSettings?.mode) {
+      info.push(`Frontend mode: ${appPublicSettings.mode}.`);
+    }
+    info.push(`Front fallback: ${dataClient.debug.allowApiFallback ? 'enabled' : 'disabled'}.`);
+
+    return { critical, optional, info };
+  }, [appPublicSettings?.mode, integrationStatus.claude, runtimeStatus, securityStatus, supabaseStatus.configured]);
 
   const normalizedBlendPreview = useMemo(
     () => normalizeBlendWeights(scoringForm.blendWeights),
@@ -293,11 +346,11 @@ export default function Settings() {
               </div>
               <div>
                 <CardTitle>API Keys</CardTitle>
-                <CardDescription>Clés API actives pour le scoring et l'enrichissement</CardDescription>
+                <CardDescription>Etat réel des connexions nécessaires au scoring et à l'enrichissement</CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
             {[
               {
                 key: 'claude',
@@ -333,6 +386,9 @@ export default function Settings() {
               <code className="bg-slate-100 px-1 rounded text-[10px]">HUNTER_API_KEY</code>,{' '}
               <code className="bg-slate-100 px-1 rounded text-[10px]">NEWS_API_KEY</code>
             </p>
+            <p className="text-[11px] text-slate-400">
+              Hunter et NewsAPI restent optionnels. Anthropic est le connecteur critique pour le scoring IA.
+            </p>
           </CardContent>
         </Card>
 
@@ -340,16 +396,81 @@ export default function Settings() {
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-cyan-100 flex items-center justify-center">
-                <Puzzle className="w-5 h-5 text-blue-600" />
+                <Database className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <CardTitle>Integrations</CardTitle>
-                <CardDescription>Connect CRM, enrichment, and outbound tools</CardDescription>
+                <CardTitle>Runtime & Backend</CardTitle>
+                <CardDescription>Lecture directe du mode actif, de l'auth et de la readiness infra</CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-slate-500">Coming next: HubSpot, Pipedrive, and webhook connectors.</p>
+          <CardContent className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-[11px] uppercase tracking-wide text-slate-500">Data Provider</p>
+                <p className="text-sm font-semibold text-slate-800">{runtimeStatus.activeProvider || runtimeStatus.dataProvider || 'unknown'}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-[11px] uppercase tracking-wide text-slate-500">Auth Provider</p>
+                <p className="text-sm font-semibold text-slate-800">{runtimeStatus.authProvider || 'unknown'}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-[11px] uppercase tracking-wide text-slate-500">Supabase Keys</p>
+                <p className="text-sm font-semibold text-slate-800">{supabaseStatus.configured ? 'Configured' : 'Incomplete'}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-[11px] uppercase tracking-wide text-slate-500">Node Env</p>
+                <p className="text-sm font-semibold text-slate-800">{runtimeStatus.nodeEnv || 'unknown'}</p>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-[11px] uppercase tracking-wide text-slate-500">CSRF</p>
+                <p className="text-sm font-semibold text-slate-800">
+                  {securityStatus.csrfProtectionEnabled ? securityStatus.csrfMode || 'enabled' : 'disabled'}
+                </p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-[11px] uppercase tracking-wide text-slate-500">Security Headers</p>
+                <p className="text-sm font-semibold text-slate-800">
+                  {securityStatus.cspEnabled ? 'CSP enabled' : 'CSP missing'}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-slate-500" />
+                <p className="text-xs font-semibold text-slate-700">Beta readiness</p>
+              </div>
+              {readinessGroups.critical.length === 0 ? (
+                <p className="text-sm text-emerald-700">No critical runtime blockers detected from the current configuration.</p>
+              ) : (
+                readinessGroups.critical.map((flag) => (
+                  <p key={flag} className="text-sm text-rose-700">• {flag}</p>
+                ))
+              )}
+            </div>
+
+            {readinessGroups.optional.length > 0 ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-3 space-y-1">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <p className="text-xs font-semibold text-slate-700">Optional hardening</p>
+                </div>
+                {readinessGroups.optional.map((flag) => (
+                  <p key={flag} className="text-sm text-amber-700">• {flag}</p>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1">
+              <p className="text-xs font-semibold text-slate-700">Technical info</p>
+              {readinessGroups.info.map((flag) => (
+                <p key={flag} className="text-sm text-slate-600">• {flag}</p>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
@@ -365,8 +486,9 @@ export default function Settings() {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-slate-500">Invite flow and role changes now live from the Team page. Seat limits and safe offboarding still need a dedicated platform flow.</p>
+          <CardContent className="space-y-2">
+            <p className="text-sm text-slate-600">Invite flow, role changes, ownership transfer, and safe member removal are available from the Team page.</p>
+            <p className="text-xs text-slate-500">Use Team for access management. Use this page to confirm runtime and connector readiness.</p>
           </CardContent>
         </Card>
 
@@ -374,11 +496,11 @@ export default function Settings() {
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-slate-200 to-slate-100 flex items-center justify-center">
-                <Settings2 className="w-5 h-5 text-slate-700" />
+                <ShieldCheck className="w-5 h-5 text-slate-700" />
               </div>
               <div>
-                <CardTitle>Runtime Mode</CardTitle>
-                <CardDescription>Current data mode and backend connectivity</CardDescription>
+                <CardTitle>Workspace Mode</CardTitle>
+                <CardDescription>Current frontend mode and backend connectivity policy</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -388,7 +510,7 @@ export default function Settings() {
               Mode: <span className="font-semibold">{appPublicSettings?.mode || 'mock'}</span>
             </p>
             <p className="text-sm text-slate-500">
-              In API mode, data stays strictly backend-sourced. Use mock data only with VITE_DATA_MODE=mock.
+              In API mode, data stays strictly backend-sourced. Use mock mode only for local product exploration.
             </p>
             <p className="text-xs text-slate-500">
               Front fallback: <span className="font-semibold">{dataClient.debug.allowApiFallback ? 'enabled' : 'disabled'}</span>

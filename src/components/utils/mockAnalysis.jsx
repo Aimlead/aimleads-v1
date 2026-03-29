@@ -32,7 +32,12 @@ const listIncludesExact = (list = [], value = '') => {
 const listIncludesPartial = (list = [], value = '') => {
   const needle = normalizeText(value);
   if (!needle) return false;
-  return list.some((entry) => needle.includes(normalizeText(entry)));
+  return list.some((entry) => {
+    const normalizedEntry = normalizeText(entry);
+    if (!normalizedEntry) return false;
+    const escaped = normalizedEntry.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(?:^|\\s)${escaped}(?:\\s|$)`).test(needle);
+  });
 };
 
 const toNumber = (value, fallback) => {
@@ -60,9 +65,18 @@ const resolveScoringMeta = (icpProfile) => {
 };
 
 const getSectionScores = (icpProfile, sectionName) => {
+  const custom = icpProfile.weights?.[sectionName]?.scores || {};
+  const base = DEFAULT_SCORE_WEIGHTS[sectionName];
+  const weightMultiplier = Number(icpProfile.weights?.[sectionName]?.weight);
+  const multiplier = Number.isFinite(weightMultiplier) && weightMultiplier > 0
+    ? clamp(weightMultiplier / 100, 0.1, 3.0)
+    : 1;
+
   return {
-    ...DEFAULT_SCORE_WEIGHTS[sectionName],
-    ...(icpProfile.weights?.[sectionName]?.scores || {}),
+    parfait: Math.round((custom.parfait ?? base.parfait) * multiplier),
+    partiel: Math.round((custom.partiel ?? base.partiel) * multiplier),
+    aucun: Math.round((custom.aucun ?? base.aucun) * multiplier),
+    exclu: custom.exclu ?? base.exclu,
   };
 };
 
@@ -79,7 +93,6 @@ function normalizeScore(rawScore) {
 }
 
 function getCategory(score, thresholds = DEFAULT_CATEGORY_THRESHOLDS) {
-  if (score === 0) return ICP_CATEGORY.EXCLUDED;
   if (score >= thresholds.excellent) return ICP_CATEGORY.EXCELLENT;
   if (score >= thresholds.strong) return ICP_CATEGORY.STRONG;
   if (score >= thresholds.medium) return ICP_CATEGORY.MEDIUM;
@@ -140,8 +153,8 @@ function buildAnalysisSummary({
     `ICP category: ${category}\n` +
     `ICP priority: P${priority}\n` +
     `ICP recommended action: ${recommendedAction}\n\n` +
-    `AI signal score: ${aiScore}/100\n` +
-    `AI confidence: ${aiConfidence}%\n` +
+    `Signal score: ${aiScore}/100\n` +
+    `Signal confidence: ${aiConfidence}%\n` +
     `Final prioritization score: ${finalScore}/100 (ICP ${blendWeights.icp}% + AI ${blendWeights.ai}%)\n` +
     `Final category suggestion: ${finalCategory}`
   );
@@ -324,14 +337,19 @@ export async function mockAnalyzeLead(payload) {
     }
   }
 
-  if (icp_profile.weights?.structure && lead.company_size) {
+  const companySize = Number(lead.company_size);
+  if (icp_profile.weights?.structure && Number.isFinite(companySize)) {
     const { primaire, secondaire } = icp_profile.weights.structure;
     const scores = getSectionScores(icp_profile, 'structure');
+    const primaryMin = Number(primaire?.min ?? 0);
+    const primaryMax = Number(primaire?.max ?? 999999);
+    const secondaryMin = Number(secondaire?.min ?? primaryMin);
+    const secondaryMax = Number(secondaire?.max ?? primaryMax);
 
-    if (lead.company_size >= primaire?.min && lead.company_size <= primaire?.max) {
+    if (companySize >= primaryMin && companySize <= primaryMax) {
       rawScore += scores.parfait;
       details.structure = { match: 'parfait', points: scores.parfait };
-    } else if (lead.company_size >= secondaire?.min && lead.company_size <= secondaire?.max) {
+    } else if (companySize >= secondaryMin && companySize <= secondaryMax) {
       rawScore += scores.partiel;
       details.structure = { match: 'partiel', points: scores.partiel };
     } else {

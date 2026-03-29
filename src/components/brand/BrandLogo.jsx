@@ -44,7 +44,7 @@ function AimMark({ className }) {
   );
 }
 
-/* ─── "AImlead" wordmark as styled HTML ─────────────────────────────────── */
+/* ─── "AimLead" wordmark as styled HTML ─────────────────────────────────── */
 function AimWordmark({ className }) {
   return (
     <span
@@ -61,7 +61,7 @@ function AimWordmark({ className }) {
         lineHeight: 1,
       }}
     >
-      AImlead
+      AimLead
     </span>
   );
 }

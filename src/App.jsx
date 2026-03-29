@@ -23,12 +23,8 @@ const Pipeline = lazy(() => import('@/pages/Pipeline'));
 const Team = lazy(() => import('@/pages/Team.jsx'));
 const ICP = lazy(() => import('@/pages/ICP'));
 const Pricing = lazy(() => import('@/pages/Pricing'));
-const Reports = lazy(() => import('@/pages/Reports'));
 const Settings = lazy(() => import('@/pages/Settings'));
 const AuditLog = lazy(() => import('@/pages/AuditLog'));
-const Segments = lazy(() => import('@/pages/Segments'));
-const Outreach = lazy(() => import('@/pages/Outreach'));
-const Help = lazy(() => import('@/pages/Help'));
 const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 
@@ -45,6 +41,14 @@ function FullscreenLoader() {
     <div className="fixed inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm">
       <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
     </div>
+  );
+}
+
+function AuthScope() {
+  return (
+    <AuthProvider>
+      <Outlet />
+    </AuthProvider>
   );
 }
 
@@ -91,30 +95,27 @@ function AppRoutes() {
       <Route path={ROUTES.pricing} element={<Pricing />} />
       <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
       <Route path={ROUTES.resetPassword} element={<ResetPassword />} />
-      <Route
-        path={ROUTES.login}
-        element={
-          <PublicOnlyGuard>
-            <Login />
-          </PublicOnlyGuard>
-        }
-      />
+      <Route element={<AuthScope />}>
+        <Route
+          path={ROUTES.login}
+          element={
+            <PublicOnlyGuard>
+              <Login />
+            </PublicOnlyGuard>
+          }
+        />
 
-      <Route element={<PrivateGuard />}>
-        <Route path={ROUTES.dashboard} element={<Dashboard />} />
-        <Route path={ROUTES.analytics} element={<Analytics />} />
-        <Route path={ROUTES.pipeline} element={<Pipeline />} />
-        <Route path={ROUTES.reports} element={<Reports />} />
-        <Route path={ROUTES.icp} element={<ICP />} />
-        <Route path={ROUTES.settings} element={<Settings />} />
-        <Route path={ROUTES.accountSettings} element={<AccountSettings />} />
-        <Route path={ROUTES.team} element={<Team />} />
-        <Route path={ROUTES.leadDetail} element={<LeadDetail />} />
-        <Route path={ROUTES.leads} element={<Navigate to={ROUTES.dashboard} replace />} />
-        <Route path={ROUTES.auditLog} element={<AuditLog />} />
-        <Route path={ROUTES.segments} element={<Segments />} />
-        <Route path={ROUTES.outreach} element={<Outreach />} />
-        <Route path={ROUTES.help} element={<Help />} />
+        <Route element={<PrivateGuard />}>
+          <Route path={ROUTES.dashboard} element={<Dashboard />} />
+          <Route path={ROUTES.analytics} element={<Analytics />} />
+          <Route path={ROUTES.pipeline} element={<Pipeline />} />
+          <Route path={ROUTES.icp} element={<ICP />} />
+          <Route path={ROUTES.settings} element={<Settings />} />
+          <Route path={ROUTES.accountSettings} element={<AccountSettings />} />
+          <Route path={ROUTES.team} element={<Team />} />
+          <Route path={ROUTES.leadDetail} element={<LeadDetail />} />
+          <Route path={ROUTES.auditLog} element={<AuditLog />} />
+        </Route>
       </Route>
 
       <Route path="*" element={<PageNotFound />} />
@@ -125,15 +126,13 @@ function AppRoutes() {
 function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <QueryClientProvider client={queryClientInstance}>
-          <Router>
-            <NavigationTracker />
-            <AppRoutes />
-          </Router>
-          <Toaster />
-        </QueryClientProvider>
-      </AuthProvider>
+      <QueryClientProvider client={queryClientInstance}>
+        <Router>
+          <NavigationTracker />
+          <AppRoutes />
+        </Router>
+        <Toaster />
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }

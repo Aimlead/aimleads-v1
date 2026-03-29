@@ -1,8 +1,10 @@
+import crypto from 'node:crypto';
 import { SESSION_COOKIE_NAME, verifyToken } from './auth.js';
 import { dataStore } from './dataStore.js';
-import { getSessionSecret, isAuthProviderSupabase } from './config.js';
+import { getRuntimeConfig, getSessionSecret, isAuthProviderSupabase } from './config.js';
+import { CSRF_COOKIE_NAME, isTrustedOrigin, setCsrfCookie } from './http.js';
 import { resolveSupabaseSessionFromRequest } from './supabaseAuth.js';
-import { ensureWorkspaceUserForAuth } from './workspaceUser.js';
+import { attachWorkspaceMembershipContext, ensureWorkspaceUserForAuth } from './workspaceUser.js';
 
 const HTTP_METHODS = ['use', 'get', 'post', 'put', 'patch', 'delete', 'options', 'head', 'all'];
 
@@ -49,7 +51,7 @@ const optionalAuthLegacy = async (req, _res) => {
   }
 
   const user = await dataStore.findUserById(payload.sub);
-  return user || null;
+  return user ? attachWorkspaceMembershipContext(user) : null;
 };
 
 const optionalAuthSupabase = async (req, res) => {
@@ -77,11 +79,63 @@ export async function optionalAuth(req, res, next) {
 
 const CSRF_SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
+const toOrigin = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return '';
+  }
+};
+
+const tokensMatch = (left, right) => {
+  const a = String(left || '').trim();
+  const b = String(right || '').trim();
+  if (!a || !b) return false;
+
+  const leftBuffer = Buffer.from(a);
+  const rightBuffer = Buffer.from(b);
+  if (leftBuffer.length !== rightBuffer.length) return false;
+
+  return crypto.timingSafeEqual(leftBuffer, rightBuffer);
+};
+
+export function ensureCsrfCookie(req, res, next) {
+  const existing = String(req.cookies?.[CSRF_COOKIE_NAME] || '').trim();
+  const token = existing || setCsrfCookie(res);
+  req.csrfToken = token;
+  return next();
+}
+
+export const isTrustedMutationRequest = (req, config = getRuntimeConfig()) => {
+  if (CSRF_SAFE_METHODS.has(req.method)) return true;
+
+  const requested = String(req.headers['x-requested-with'] || '').trim().toLowerCase();
+  const requestOrigin = toOrigin(req.headers.origin) || toOrigin(req.headers.referer);
+  const csrfCookie = String(req.cookies?.[CSRF_COOKIE_NAME] || '').trim();
+  const csrfHeader = String(req.headers['x-csrf-token'] || '').trim();
+  const hasValidCsrfToken = tokensMatch(csrfCookie, csrfHeader);
+
+  if (!config.isProduction && process.env.NODE_ENV === 'test') {
+    return requested === 'xmlhttprequest' || Boolean(requestOrigin);
+  }
+
+  if (!hasValidCsrfToken) {
+    return false;
+  }
+
+  if (!config.isProduction) {
+    return requested === 'xmlhttprequest' || Boolean(requestOrigin);
+  }
+
+  return Boolean(requestOrigin && isTrustedOrigin(requestOrigin, config));
+};
+
 export function csrfProtection(req, res, next) {
-  if (CSRF_SAFE_METHODS.has(req.method)) return next();
-  const requested = req.headers['x-requested-with'];
-  if (requested && requested.toLowerCase() === 'xmlhttprequest') return next();
-  return res.status(403).json({ message: 'Forbidden: missing CSRF header' });
+  if (isTrustedMutationRequest(req)) return next();
+  return res.status(403).json({ message: 'Forbidden: invalid CSRF token or untrusted request origin' });
 }
 
 export async function requireAuth(req, res, next) {

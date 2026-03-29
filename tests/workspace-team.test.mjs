@@ -114,7 +114,7 @@ test('invited teammate joins the inviter workspace and clears pending invite', a
   assert.equal(invitesAfterJoin.payload?.data?.length, 0);
 });
 
-test('owner can update a member role and safe offboarding stays blocked for now', async () => {
+test('owner can update a member role and safely remove the teammate from workspace access', async () => {
   const owner = await registerAndGetCookie('role-owner');
   const teammateEmail = `teammate.${crypto.randomUUID()}@aimleads.local`;
 
@@ -146,16 +146,18 @@ test('owner can update a member role and safe offboarding stays blocked for now'
     cookie: owner.cookie,
   });
 
-  assert.equal(removed.response.status, 400);
-  assert.equal(
-    removed.payload?.message,
-    'Safe member removal is not supported yet. This account-to-workspace model still needs a deeper tenancy pass.'
-  );
+  assert.equal(removed.response.status, 200);
+  assert.equal(removed.payload?.data?.removed_from_workspace, true);
+  assert.equal(removed.payload?.data?.email, teammateEmail);
 
   const membersAfterRemoval = await request('/workspace/members', { cookie: owner.cookie });
   assert.equal(membersAfterRemoval.response.status, 200);
-  assert.equal(membersAfterRemoval.payload?.data?.length, 2);
-  assert.equal(membersAfterRemoval.payload?.data?.some((member) => member.email === teammateEmail), true);
+  assert.equal(membersAfterRemoval.payload?.data?.length, 1);
+  assert.equal(membersAfterRemoval.payload?.data?.some((member) => member.email === teammateEmail), false);
+
+  const removedMemberInvites = await request('/workspace/invites', { cookie: teammate.cookie });
+  assert.equal(removedMemberInvites.response.status, 403);
+  assert.equal(removedMemberInvites.payload?.message, 'Unable to verify your workspace membership.');
 });
 
 test('owner can transfer ownership and the former owner can then delete their account safely', async () => {

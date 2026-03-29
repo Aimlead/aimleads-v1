@@ -72,7 +72,7 @@ export default function Analytics() {
 
   const { data: allLeads = [], isLoading } = useQuery({
     queryKey: ['leads'],
-    queryFn: () => dataClient.leads.list('-created_date'),
+    queryFn: () => dataClient.leads.list('-created_at'),
   });
 
   const leads = useMemo(() => {
@@ -86,7 +86,7 @@ export default function Analytics() {
 
   const stats = useMemo(() => {
     const total = leads.length;
-    const qualified = leads.filter((l) => l.status === LEAD_STATUS.QUALIFIED || l.final_status === 'Qualified').length;
+    const qualified = leads.filter((l) => l.status === LEAD_STATUS.QUALIFIED).length;
     const scoredLeads = leads.filter((l) => Number.isFinite(l.final_score) || Number.isFinite(l.icp_score));
     const avgScore =
       scoredLeads.length > 0
@@ -145,7 +145,7 @@ export default function Analytics() {
       groups[key].total += 1;
       const score = Number.isFinite(lead.final_score) ? lead.final_score : lead.icp_score;
       if (Number.isFinite(score)) groups[key].scoreSum += score;
-      if (lead.status === LEAD_STATUS.QUALIFIED || lead.final_status === 'Qualified') groups[key].qualified += 1;
+      if (lead.status === LEAD_STATUS.QUALIFIED) groups[key].qualified += 1;
     }
     return Object.values(groups)
       .map((g) => ({
@@ -239,7 +239,7 @@ export default function Analytics() {
         >
           <Zap className="w-5 h-5 flex-shrink-0" />
           <p className="text-sm font-medium">
-            <span className="font-bold">{stats.llmEnriched} leads</span> enriched with AI reasoning (Claude / GPT-4o) — personalized icebreakers and score adjustments applied.
+            <span className="font-bold">{stats.llmEnriched} leads</span> enriched with AI reasoning, verified internet signals, and tailored score adjustments.
           </p>
         </motion.div>
       )}

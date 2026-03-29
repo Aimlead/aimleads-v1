@@ -12,6 +12,7 @@ import { generateOutreachSequence, sequenceGeneratorAvailable } from '../service
 import { findEmailForLead } from '../services/hunterService.js';
 import { fetchCompanyNewsFindings } from '../services/newsService.js';
 import { researchCompanyOnWeb } from '../services/claudeWebResearchService.js';
+import { toLeadAnalysisUpdatePayload } from '../services/leadAnalysisPersistence.js';
 
 // Per-user limits for expensive LLM operations
 const sequenceLimiter = createUserRateLimit({
@@ -62,38 +63,6 @@ const toLeadPayload = (row) => ({
   contact_role: row.contact_role || row.role || row.title || '',
   contact_email: row.contact_email || row.email || '',
   source_list: row.source_list || row.source || '',
-});
-
-const toLeadAnalysisUpdatePayload = (result) => ({
-  status: result.final_status || result.status,
-  icp_score: result.icp_score,
-  icp_raw_score: result.icp_raw_score,
-  icp_category: result.category,
-  icp_priority: result.priority,
-  recommended_action: result.recommended_action,
-  icp_profile_id: result.icp_profile_id,
-  icp_profile_name: result.icp_profile_name,
-  analysis_version: result.analysis_version,
-  ai_score: result.ai_score,
-  ai_confidence: result.ai_confidence,
-  ai_signals: result.ai_signals,
-  ai_summary: result.ai_summary,
-  scoring_weights: result.scoring_weights,
-  final_score: result.final_score,
-  final_category: result.final_category,
-  final_priority: result.final_priority,
-  final_recommended_action: result.final_recommended_action,
-  final_status: result.final_status,
-  signals: result.signals,
-  score_details: result.score_details,
-  analysis_summary: result.analysis_summary,
-  generated_icebreakers: result.generated_icebreakers,
-  generated_icebreaker: result.generated_icebreakers?.email,
-  // Persist inferred intent signals so future re-analyses reuse them
-  ...(result.inferred_intent_signals ? { intent_signals: result.inferred_intent_signals } : {}),
-  // Persist web-discovered internet signals (merged with existing)
-  ...(result.discovered_internet_signals ? { internet_signals: result.discovered_internet_signals } : {}),
-  last_analyzed_at: new Date().toISOString(),
 });
 
 const normalizeSignalPayload = (item, lead) => {
@@ -279,7 +248,7 @@ router.post('/import', importLimiter, validateBody(schemas.leadImportSchema), as
 
   const created = rows
     .map((row) => ({
-      created_date: new Date().toISOString(),
+      created_at: new Date().toISOString(),
       status: 'To Analyze',
       follow_up_status: 'To Contact',
       ...toLeadPayload(row),
@@ -320,7 +289,7 @@ router.get('/export', async (req, res) => {
     'contact_name', 'contact_role', 'contact_email', 'source_list',
     'status', 'follow_up_status', 'icp_score', 'ai_score', 'final_score',
     'icp_category', 'final_category', 'final_status', 'final_recommended_action',
-    'notes', 'created_date', 'last_analyzed_at',
+    'notes', 'created_at', 'last_analyzed_at',
   ];
 
   const escape = (val) => {

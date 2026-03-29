@@ -113,7 +113,7 @@ export const getActivationSnapshot = (input = {}) => {
       description: 'Run one real analysis to generate score, signals, and recommendations.',
       completed: state.hasAnalyzedLead,
       actionKey: 'inbox',
-      actionLabel: 'Open Smart Inbox',
+      actionLabel: 'Open Dashboard',
     },
     {
       id: 'follow-up',
@@ -151,24 +151,24 @@ export const getPostImportAction = (input = {}) => {
     return {
       actionKey: 'inbox',
       title: 'Next step: analyze your first lead',
-      description: 'Open the Smart Inbox and run the first analysis from the table below.',
-      label: 'Open Smart Inbox',
+      description: 'Open the Dashboard and run the first analysis from the table below.',
+      label: 'Open Dashboard',
     };
   }
 
   if (!state.hasOutreachAsset) {
     return {
-      actionKey: 'outreach',
-      title: 'Next step: prepare outreach',
-      description: 'Open Outreach to generate a first usable sequence from your lead data.',
-      label: 'Open Outreach',
+      actionKey: 'pipeline',
+      title: 'Next step: review AI-ready leads',
+      description: 'Open Pipeline to review the first score, signals, and usable icebreakers together.',
+      label: 'Open Pipeline',
     };
   }
 
   return {
-    actionKey: 'analytics',
-    title: 'Next step: review performance',
-    description: 'You have the basics in place. Start monitoring what converts.',
-    label: 'Open Analytics',
+    actionKey: 'pipeline',
+    title: 'Next step: review the best leads',
+    description: 'Open Pipeline to compare priority, signals, and outreach readiness on your strongest leads.',
+    label: 'Open Pipeline',
   };
 };

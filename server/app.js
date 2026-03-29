@@ -14,7 +14,7 @@ import analyticsInsightsRoutes from './routes/analyticsInsights.js';
 import devRoutes from './routes/dev.js';
 import publicRoutes from './routes/public.js';
 import { getCorsOptions } from './lib/http.js';
-import { csrfProtection } from './lib/middleware.js';
+import { csrfProtection, ensureCsrfCookie } from './lib/middleware.js';
 import { bootstrapDb, bootstrapSupabaseDemoUser, bootstrapWorkspaceDemoData } from './services/bootstrap.js';
 import { dataStore, getDataStoreRuntime } from './lib/dataStore.js';
 import { createRateLimit } from './lib/rateLimit.js';
@@ -28,6 +28,7 @@ import {
 import { getAuthProvider, getDataProvider, getRuntimeConfig, validateRuntimeConfig } from './lib/config.js';
 
 const app = express();
+app.disable('x-powered-by');
 
 let config;
 try {
@@ -37,7 +38,7 @@ try {
   throw startupError;
 }
 
-if (getDataProvider() === 'local') {
+if (!config.isProduction && getDataProvider() === 'local') {
   await bootstrapDb();
 
   const demoUser = await dataStore.findUserByEmail('demo@aimleads.local');
@@ -65,7 +66,7 @@ if (getDataProvider() === 'supabase' && config.demoBootstrapEnabled) {
   });
 }
 
-app.set('trust proxy', 1);
+app.set('trust proxy', config.trustProxy);
 
 app.use(compression());
 app.use(requestIdMiddleware);
@@ -73,6 +74,7 @@ app.use(securityHeadersMiddleware);
 app.use(cors(getCorsOptions()));
 app.use(express.json({ limit: '2mb' }));
 app.use(cookieParser());
+app.use('/api', ensureCsrfCookie);
 app.use(requestLoggingMiddleware);
 
 const apiRateLimit = createRateLimit({
@@ -86,8 +88,9 @@ const apiRateLimit = createRateLimit({
 app.use('/api', apiRateLimit);
 app.use('/api', csrfProtection);
 
-// API documentation (available in all environments)
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
+if (config.apiDocsEnabled) {
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
+}
 
 app.get('/api/health', async (_req, res) => {
   const runtime = getDataStoreRuntime();

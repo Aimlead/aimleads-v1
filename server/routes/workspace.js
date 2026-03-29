@@ -1,8 +1,10 @@
 import express from 'express';
 import { requireAuth, wrapAsyncRoutes } from '../lib/middleware.js';
-import { dataStore } from '../lib/dataStore.js';
+import { dataStore, getDataStoreRuntime } from '../lib/dataStore.js';
+import { getAuthProvider, getDataProvider, getRuntimeConfig } from '../lib/config.js';
 import { schemas, validateBody } from '../lib/validation.js';
 import { writeAuditLog } from '../lib/auditLog.js';
+import { getUserWorkspaceId } from '../lib/scope.js';
 
 const router = express.Router();
 wrapAsyncRoutes(router);
@@ -13,12 +15,11 @@ const MANAGE_ROLES_ROLES = new Set(['owner']);
 const resolveCurrentWorkspaceAccess = async (user) => {
   const members = await dataStore.listWorkspaceMembers(user);
   const membershipUserId = String(user?.supabase_auth_id || user?.id || '').trim();
-  const normalizedEmail = String(user?.email || '').trim().toLowerCase();
+  const appUserId = String(user?.id || '').trim();
 
   const currentMember =
     members.find((member) => String(member.user_id || '').trim() === membershipUserId)
-    || members.find((member) => String(member.app_user_id || '').trim() === String(user?.id || '').trim())
-    || members.find((member) => String(member.email || '').trim().toLowerCase() === normalizedEmail)
+    || members.find((member) => String(member.app_user_id || '').trim() === appUserId)
     || null;
 
   return {
@@ -32,7 +33,7 @@ const deny = (res, message = 'Forbidden') => res.status(403).json({ message });
 
 router.get('/members', requireAuth, async (req, res) => {
   const user = req.user;
-  const workspaceId = user.workspace_id;
+  const workspaceId = getUserWorkspaceId(user);
 
   try {
     const members = await dataStore.listWorkspaceMembers(user);
@@ -242,23 +243,113 @@ router.post('/members/:memberUserId/transfer-ownership', requireAuth, async (req
 });
 
 router.delete('/members/:memberUserId', requireAuth, async (req, res) => {
-  const { currentRole } = await resolveCurrentWorkspaceAccess(req.user);
+  const { currentRole, currentMember, members } = await resolveCurrentWorkspaceAccess(req.user);
   if (!currentRole) {
     return deny(res, 'Unable to verify your workspace membership.');
   }
   if (!MANAGE_ROLES_ROLES.has(currentRole)) {
     return deny(res, 'Only workspace owners can remove members.');
   }
-  return res.status(400).json({
-    message: 'Safe member removal is not supported yet. This account-to-workspace model still needs a deeper tenancy pass.',
+
+  const memberUserId = String(req.params.memberUserId || '').trim();
+  const currentMembershipUserId = String(currentMember?.user_id || req.user?.supabase_auth_id || req.user?.id || '').trim();
+  if (!memberUserId) {
+    return res.status(400).json({ message: 'Member not found' });
+  }
+
+  if (memberUserId === currentMembershipUserId) {
+    return res.status(400).json({ message: 'Use account deletion to remove yourself from the workspace.' });
+  }
+
+  const targetMember =
+    members.find((member) => String(member.user_id || '').trim() === memberUserId)
+    || members.find((member) => String(member.app_user_id || '').trim() === memberUserId);
+
+  if (!targetMember) {
+    return res.status(404).json({ message: 'Member not found' });
+  }
+
+  if (targetMember.role === 'owner') {
+    const ownerCount = members.filter((member) => member.role === 'owner').length;
+    if (ownerCount <= 1) {
+      return res.status(400).json({ message: 'Transfer ownership before removing the last owner account.' });
+    }
+  }
+
+  const removed = await dataStore.deleteWorkspaceMembership(
+    req.user,
+    String(targetMember.user_id || memberUserId).trim()
+  );
+
+  if (!removed) {
+    return res.status(404).json({ message: 'Member not found' });
+  }
+
+  await writeAuditLog({
+    user: req.user,
+    action: 'delete',
+    resourceType: 'workspace_member',
+    resourceId: targetMember.user_id || memberUserId,
+    changes: {
+      email: targetMember.email,
+      role: targetMember.role,
+      removed_from_workspace: true,
+    },
+  });
+
+  return res.json({
+    data: {
+      ...targetMember,
+      removed_from_workspace: true,
+    },
   });
 });
 
 router.get('/integration-status', requireAuth, (req, res) => {
+  const config = getRuntimeConfig();
+  const runtime = getDataStoreRuntime();
+  const supabaseConfigured = Boolean(
+    process.env.SUPABASE_URL
+    && (process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY)
+    && process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+
   res.json({
     claude: Boolean(process.env.ANTHROPIC_API_KEY),
     hunter: Boolean(process.env.HUNTER_API_KEY),
     newsApi: Boolean(process.env.NEWS_API_KEY),
+    supabase: {
+      configured: supabaseConfigured,
+      url: Boolean(process.env.SUPABASE_URL),
+      publishableKey: Boolean(process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY),
+      serviceRoleKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+    },
+    runtime: {
+      nodeEnv: config.nodeEnv,
+      dataProvider: getDataProvider(),
+      authProvider: getAuthProvider(),
+      activeProvider: runtime.activeProvider,
+      fallbackReason: runtime.fallbackReason,
+      apiDocsEnabled: config.apiDocsEnabled,
+      demoBootstrapEnabled: config.demoBootstrapEnabled,
+    },
+    security: {
+      csrfProtectionEnabled: true,
+      csrfMode: 'double-submit-token',
+      cspEnabled: true,
+      trustedOriginsConfigured: Boolean(config.corsOrigin || process.env.VERCEL_URL),
+      secureCookies: Boolean(config.isProduction),
+      publicBetaReady: Boolean(
+        supabaseConfigured
+        && process.env.ANTHROPIC_API_KEY
+        && (config.corsOrigin || process.env.VERCEL_URL)
+        && getDataProvider() === 'supabase'
+        && getAuthProvider() === 'supabase'
+        && !runtime.fallbackReason
+        && !config.demoBootstrapEnabled
+        && !config.apiDocsEnabled
+      ),
+    },
   });
 });
 

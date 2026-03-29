@@ -186,7 +186,8 @@ const pushSignal = (signals, { source = 'ai', type, points, label, evidence, key
 };
 
 const getCategoryFromScore = (score, thresholds = DEFAULT_CATEGORY_THRESHOLDS) => {
-  if (score === 0) return ICP_CATEGORY.EXCLUDED;
+  // EXCLUDED is derived from hasIcpExclusion (hard ICP rule), not from score=0.
+  // score=0 without exclusion means insufficient data or all-negative signals → Low Fit.
   if (score >= thresholds.excellent) return ICP_CATEGORY.EXCELLENT;
   if (score >= thresholds.strong) return ICP_CATEGORY.STRONG;
   if (score >= thresholds.medium) return ICP_CATEGORY.MEDIUM;
@@ -661,7 +662,11 @@ export function scoreAiSignals({ lead, icpScore = 0, scoreDetails = {}, blendWei
     finalScore = Math.min(finalScore, 49);
   }
 
-  const finalCategory = getCategoryFromScore(finalScore, resolvedThresholds);
+  // Hard ICP exclusion always yields EXCLUDED regardless of score.
+  // Score-based category never returns EXCLUDED — that distinction is explicit here.
+  const finalCategory = hasIcpExclusion
+    ? ICP_CATEGORY.EXCLUDED
+    : getCategoryFromScore(finalScore, resolvedThresholds);
   const finalPriority = getPriorityFromCategory(finalCategory);
 
   const finalRecommendedAction = hasIcpExclusion

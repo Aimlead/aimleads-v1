@@ -1,7 +1,6 @@
 import WaveCanvas from './WaveCanvas';
 import AnimatedBtn from './AnimatedBtn';
 
-/* ── SVG icons for product cards ─────────────────────────────────────── */
 function IconConseil() {
   return (
     <svg width="32" height="32" viewBox="0 0 44 44" fill="none" stroke="rgba(245,240,232,.85)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -44,7 +43,6 @@ function IconBDR() {
   );
 }
 
-/* ── Product card ─────────────────────────────────────────────────────── */
 function ProductCard({ num, icon, title, description, iconBg, iconBorder, onClick }) {
   return (
     <a
@@ -70,13 +68,10 @@ function ProductCard({ num, icon, title, description, iconBg, iconBorder, onClic
   );
 }
 
-/* ── Page Home ────────────────────────────────────────────────────────── */
 export default function PageHome({ ctx }) {
   return (
     <div style={{ minHeight: '100vh' }}>
-      {/* ── Geo Hero ── */}
       <section className="geo-hero">
-        {/* Floating shapes */}
         <div className="geo-shapes">
           <div className="geo-shape geo-s1" />
           <div className="geo-shape geo-s2" />
@@ -85,27 +80,22 @@ export default function PageHome({ ctx }) {
           <div className="geo-shape geo-s5" />
         </div>
 
-        {/* Central content */}
         <div className="geo-content">
-          {/* Badge */}
           <div className="geo-badge">
             <span className="geo-badge-dot" />
             <span className="geo-badge-txt">IA accessible aux PME &amp; ETI</span>
           </div>
 
-          {/* Title */}
           <h1 className="geo-title">
             <span className="geo-title-line1">L'IA qui travaille.</span>
             <span className="geo-title-line2">Pendant que vous scalez.</span>
           </h1>
 
-          {/* Subtitle */}
           <p className="geo-sub">
             AImlead rend l'intelligence artificielle concrète et rentable — de la formation Claude
             à l'automatisation complète de votre prospection.
           </p>
 
-          {/* CTAs */}
           <div className="geo-ctas">
             <AnimatedBtn variant="sky" size="lg" onClick={ctx.openBooking}>
               Audit offert — Démarrer
@@ -115,7 +105,6 @@ export default function PageHome({ ctx }) {
             </AnimatedBtn>
           </div>
 
-          {/* Product cards */}
           <div className="geo-cards">
             <div className="product-cards-home">
               <ProductCard
@@ -150,7 +139,6 @@ export default function PageHome({ ctx }) {
         </div>
       </section>
 
-      {/* ── Stats strip ── */}
       <div className="home-stats-strip">
         <div className="hss-item rv">
           <span className="hss-val">3<span className="hss-x">×</span></span>
@@ -168,7 +156,6 @@ export default function PageHome({ ctx }) {
         </div>
       </div>
 
-      {/* ── Blocages ── */}
       <div className="home-blocages">
         <div className="hb-intro rv">
           <div className="block-label" style={{ color: 'rgba(255,255,255,.35)' }}>
@@ -209,7 +196,6 @@ export default function PageHome({ ctx }) {
         </div>
       </div>
 
-      {/* ── CTA Final ── */}
       <div className="home-cta-final rv">
         <div className="hcf-pill hcf-p1" />
         <div className="hcf-pill hcf-p2" />

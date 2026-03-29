@@ -7,7 +7,6 @@ import BrandLogo from '@/components/brand/BrandLogo';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/lib/AuthContext';
 
-/* ─── Animated floating shape ───────────────────────────────────────────── */
 function GeoShape({ className, delay = 0 }) {
   return (
     <motion.div
@@ -22,7 +21,6 @@ function GeoShape({ className, delay = 0 }) {
   );
 }
 
-/* ─── Product card ───────────────────────────────────────────────────────── */
 function ProductCard({ icon: Icon, label, title, description, color, delay }) {
   return (
     <motion.div
@@ -31,7 +29,6 @@ function ProductCard({ icon: Icon, label, title, description, color, delay }) {
       transition={{ duration: 0.55, delay }}
       className="relative group rounded-2xl overflow-hidden border border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.07] transition-all duration-300 p-6"
     >
-      {/* Glow on hover */}
       <div
         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
         style={{ background: `radial-gradient(ellipse 60% 50% at 50% 0%, ${color}15 0%, transparent 70%)` }}
@@ -51,7 +48,6 @@ function ProductCard({ icon: Icon, label, title, description, color, delay }) {
   );
 }
 
-/* ─── Stat ───────────────────────────────────────────────────────────────── */
 function Stat({ value, label }) {
   return (
     <div className="text-center">
@@ -61,7 +57,6 @@ function Stat({ value, label }) {
   );
 }
 
-/* ─── Main component ─────────────────────────────────────────────────────── */
 export default function Home() {
   const navigate = useNavigate();
   const { isAuthenticated, isLoadingAuth, navigateToLogin } = useAuth();
@@ -109,7 +104,6 @@ export default function Home() {
       className="min-h-screen overflow-x-hidden"
       style={{ background: '#030d1a', fontFamily: 'Outfit, system-ui, sans-serif' }}
     >
-      {/* ── Ambient background ── */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div
           style={{
@@ -122,7 +116,6 @@ export default function Home() {
         />
       </div>
 
-      {/* ── Floating geometric shapes ── */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <GeoShape
           delay={0}
@@ -146,7 +139,6 @@ export default function Home() {
         />
       </div>
 
-      {/* ── Header ── */}
       <header className="relative z-10">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
@@ -192,7 +184,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* ── Hero ── */}
       <section className="relative z-10 flex items-center justify-center min-h-[88vh] px-6">
         <div className="max-w-3xl mx-auto text-center">
           <motion.div
@@ -200,7 +191,6 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-8 text-sm font-medium"
               style={{ background: 'rgba(58,141,255,.10)', border: '1px solid rgba(58,141,255,.25)', color: '#3A8DFF' }}>
               <span className="w-2 h-2 rounded-full bg-brand-mint animate-pulse" />
@@ -245,7 +235,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Stats bar ── */}
       <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -260,7 +249,6 @@ export default function Home() {
         </div>
       </motion.section>
 
-      {/* ── Products ── */}
       <section id="produits" className="relative z-10 py-24 px-6">
         <div className="max-w-6xl mx-auto">
           <motion.div
@@ -286,7 +274,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Benefits ── */}
       <section className="relative z-10 py-20 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="rounded-3xl p-10 md:p-14 border border-white/[0.07]"
@@ -331,7 +318,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Final CTA ── */}
       <section className="relative z-10 py-24 px-6 text-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -359,7 +345,6 @@ export default function Home() {
         </motion.div>
       </section>
 
-      {/* ── Footer ── */}
       <footer className="relative z-10 border-t border-white/[0.06] py-8 px-6">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <BrandLogo variant="full" tone="light" className="h-6 w-auto opacity-60" />

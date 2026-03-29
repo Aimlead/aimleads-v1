@@ -1,29 +1,39 @@
-﻿const normalize = (value) => String(value || '').trim().toLowerCase();
+export const getUserWorkspaceContext = (user) => {
+  if (!user) {
+    return {
+      workspaceId: '',
+      role: null,
+      appUserId: null,
+    };
+  }
 
-export const getUserWorkspaceId = (user) => {
-  if (!user) return '';
-  return user.workspace_id || `ws_${user.id}`;
+  const context = user.workspace_context || user.membership || null;
+  if (context?.workspace_id) {
+    return {
+      workspaceId: String(context.workspace_id).trim(),
+      role: context.role || user.workspace_role || null,
+      appUserId: context.app_user_id || user.app_user_id || user.id || null,
+    };
+  }
+
+  return {
+    workspaceId: '',
+    role: null,
+    appUserId: user.app_user_id || user.id || null,
+  };
 };
 
-const ownerMatchesUser = (ownerUserId, user) => {
-  const owner = normalize(ownerUserId);
-  if (!owner) return false;
-  return owner === normalize(user?.id) || owner === normalize(user?.email);
+export const getUserWorkspaceId = (user) => {
+  return getUserWorkspaceContext(user).workspaceId;
 };
 
 export const isRecordScopedToUser = (record, user) => {
   if (!record || !user) return false;
 
   const workspaceId = getUserWorkspaceId(user);
-  if (record.workspace_id) {
-    return record.workspace_id === workspaceId;
-  }
+  const recordWorkspaceId = String(record.workspace_id || '').trim();
 
-  if (record.owner_user_id) {
-    return ownerMatchesUser(record.owner_user_id, user);
-  }
-
-  return false;
+  return Boolean(workspaceId && recordWorkspaceId && recordWorkspaceId === workspaceId);
 };
 
 export const filterByUserScope = (items = [], user) => {
@@ -33,7 +43,6 @@ export const filterByUserScope = (items = [], user) => {
 export const withUserScope = (payload, user) => {
   return {
     ...payload,
-    owner_user_id: user.id,
     workspace_id: getUserWorkspaceId(user),
   };
 };

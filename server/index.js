@@ -1,9 +1,10 @@
-﻿import dotenv from 'dotenv';
-dotenv.config({ override: true });
-import { initSentry } from './lib/sentry.js';
+import 'dotenv/config';
+
+const { initSentry } = await import('./lib/sentry.js');
 initSentry();
-import app from './app.js';
-import { logger } from './lib/observability.js';
+
+const { default: app } = await import('./app.js');
+const { logger } = await import('./lib/observability.js');
 
 const port = Number(process.env.API_PORT || process.env.PORT || 3001);
 
@@ -19,7 +20,7 @@ server.on('error', (error) => {
   process.exitCode = 1;
 });
 
-// ─── Graceful shutdown ────────────────────────────────────────────────────────
+// Graceful shutdown
 const SHUTDOWN_TIMEOUT_MS = 10_000;
 
 const shutdown = (signal) => {

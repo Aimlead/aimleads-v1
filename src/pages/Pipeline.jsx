@@ -126,7 +126,7 @@ export default function Pipeline() {
 
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ['leads'],
-    queryFn: () => dataClient.leads.list('-created_date'),
+    queryFn: () => dataClient.leads.list('-created_at'),
   });
 
   const stageMap = useMemo(() => {

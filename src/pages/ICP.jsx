@@ -5,14 +5,13 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { dataClient } from '@/services/dataClient';
-import { useAuth } from '@/lib/AuthContext';
 
 const SECTION_DEFAULTS = {
   industrie: { weight: 100, scores: { parfait: 30, partiel: 15, aucun: -30, exclu: -100 } },
@@ -20,6 +19,24 @@ const SECTION_DEFAULTS = {
   typeClient: { weight: 100, scores: { parfait: 25, partiel: 10, aucun: -40 } },
   structure: { weight: 100, scores: { parfait: 15, partiel: 10, aucun: -20 } },
   geo: { weight: 100, scores: { parfait: 15, partiel: 5, aucun: -10 } },
+};
+
+const getIcpGenerationErrorMessage = (error) => {
+  const message = String(error?.message || '').toLowerCase();
+
+  if (message.includes('credit balance is too low') || message.includes('credit') || message.includes('billing')) {
+    return 'Génération impossible : crédits Anthropic insuffisants. Recharge le compte puis réessaie.';
+  }
+
+  if (message.includes('anthropic_api_key') || message.includes('api key') || message.includes('not configured')) {
+    return 'Génération impossible : la clé Anthropic n’est pas configurée côté backend.';
+  }
+
+  if (message.includes('circuit breaker')) {
+    return 'La génération IA est momentanément désactivée après plusieurs échecs. Attends un instant puis réessaie.';
+  }
+
+  return error?.message || 'Génération échouée. Vérifie Anthropic et réessaie.';
 };
 
 const createDefaultFormData = () => ({
@@ -179,21 +196,23 @@ function SectionCard({ icon: Icon, title, color, children }) {
 }
 
 export default function ICP() {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState(createDefaultFormData());
   const [genOpen, setGenOpen] = useState(false);
   const [genDescription, setGenDescription] = useState('');
+  const [generateError, setGenerateError] = useState('');
 
   const generateMutation = useMutation({
     mutationFn: (description) => dataClient.icp.generateIcp(description),
     onSuccess: (data) => {
       if (!data) {
+        setGenerateError('Génération impossible : vérifie la configuration Anthropic côté backend.');
         toast.error('Génération impossible — vérifiez que ANTHROPIC_API_KEY est configuré.');
         return;
       }
+      setGenerateError('');
       setFormData((previous) => ({
         ...previous,
         name: data.name || previous.name,
@@ -208,7 +227,11 @@ export default function ICP() {
       setGenDescription('');
       toast.success(`ICP "${data.name}" généré — vérifiez et sauvegardez.`);
     },
-    onError: () => toast.error('Génération échouée. Réessayez.'),
+    onError: (error) => {
+      const message = getIcpGenerationErrorMessage(error);
+      setGenerateError(message);
+      toast.error(message);
+    },
   });
 
   const { data: icpProfiles = [], isLoading } = useQuery({
@@ -274,7 +297,7 @@ export default function ICP() {
     }
     setSaving(true);
     try {
-      await dataClient.icp.saveActive(formData, user?.email);
+      await dataClient.icp.saveActive(formData);
       toast.success('ICP profile saved. Re-analyze leads to apply the new weights.');
       setEditing(false);
       queryClient.invalidateQueries({ queryKey: ['icpConfig'] });
@@ -373,17 +396,20 @@ export default function ICP() {
       </div>
 
       {/* ── AI Generate Dialog ──────────────────────────── */}
-      <Dialog open={genOpen} onOpenChange={setGenOpen}>
+      <Dialog open={genOpen} onOpenChange={(open) => {
+        setGenOpen(open);
+        if (!open) setGenerateError('');
+      }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-brand-sky" />
               Générer un ICP avec l'IA
             </DialogTitle>
+            <DialogDescription>
+              Décrivez votre client idéal en langage naturel. Claude remplira automatiquement les industries, rôles, taille d'entreprise et géographie.
+            </DialogDescription>
           </DialogHeader>
-          <p className="text-sm text-slate-500">
-            Décrivez votre client idéal en langage naturel. Claude remplira automatiquement les industries, rôles, taille d'entreprise et géographie.
-          </p>
           <Textarea
             value={genDescription}
             onChange={(e) => setGenDescription(e.target.value)}
@@ -391,6 +417,14 @@ export default function ICP() {
             rows={5}
             className="resize-none"
           />
+          <p className="text-xs text-slate-500">
+            Si la génération échoue, vérifie d’abord Anthropic : clé backend, crédits disponibles, ou circuit breaker temporaire.
+          </p>
+          {generateError ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-sm text-amber-900">
+              {generateError}
+            </div>
+          ) : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => setGenOpen(false)}>
               Annuler
@@ -730,7 +764,7 @@ export default function ICP() {
                 </div>
               </div>
               <p className="text-xs text-slate-500 mt-3">
-                Leads below the Medium threshold are marked as Low Fit or Excluded.
+                Leads below the Medium threshold are marked as Low Fit. Excluded should only come from hard exclusion rules.
               </p>
             </CardContent>
           </Card>

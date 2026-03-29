@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/routes';
 import {
-  BarChart3, BookOpen, ClipboardList, FileText, Kanban,
-  LayoutDashboard, LifeBuoy, Settings, Sparkles, Tag, Target, Users,
+  BarChart3, Kanban,
+  LayoutDashboard, ScrollText, Settings, Sparkles, Target, Users,
 } from 'lucide-react';
 import BrandLogo from '@/components/brand/BrandLogo';
 
@@ -13,14 +13,10 @@ export const sidebarNavigation = [
   { name: 'Dashboard', href: ROUTES.dashboard, icon: LayoutDashboard, group: 'main', shortcut: '1' },
   { name: 'Pipeline', href: ROUTES.pipeline, icon: Kanban, group: 'main', shortcut: '2' },
   { name: 'Analytics', href: ROUTES.analytics, icon: BarChart3, group: 'main', shortcut: '3' },
-  { name: 'Reports', href: ROUTES.reports, icon: FileText, group: 'main', shortcut: '4' },
-  { name: 'Segments', href: ROUTES.segments, icon: Tag, group: 'main' },
-  { name: 'Outreach', href: ROUTES.outreach, icon: BookOpen, group: 'main' },
   { name: 'ICP Profile', href: ROUTES.icp, icon: Target, group: 'config' },
   { name: 'Team', href: ROUTES.team, icon: Users, group: 'config' },
-  { name: 'Audit Log', href: ROUTES.auditLog, icon: ClipboardList, group: 'config' },
-  { name: 'Help Center', href: ROUTES.help, icon: LifeBuoy, group: 'config' },
   { name: 'Settings', href: ROUTES.settings, icon: Settings, group: 'config' },
+  { name: 'Audit Log', href: ROUTES.auditLog, icon: ScrollText, group: 'config' },
 ];
 
 const GROUP_LABELS = {
@@ -133,7 +129,7 @@ export default function Sidebar({ mobile = false, onNavigate, onOpenPalette }) {
           </div>
           <div className="min-w-0">
             <p className="text-xs font-semibold text-brand-sky">AI Scoring Active</p>
-            <p className="text-[10px] text-brand-sky/60 truncate">Claude · Web Research</p>
+            <p className="text-[10px] text-brand-sky/60 truncate">ICP · Signals · Prioritization</p>
           </div>
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0 animate-pulse" />
         </div>

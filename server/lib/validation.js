@@ -4,8 +4,8 @@ const nonEmptyString = z.string().trim().min(1).max(500);
 
 const optionalString = z.string().trim().max(2000).optional();
 
-const numericOrNull = z.union([z.number(), z.string(), z.null(), z.undefined()]).transform((value) => {
-  if (value === null || value === undefined || value === '') return null;
+const numericOrNull = z.union([z.number(), z.string(), z.null()]).transform((value) => {
+  if (value === null || value === '') return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 });
@@ -15,7 +15,7 @@ const leadBaseSchema = z
     company_name: nonEmptyString,
     website_url: optionalString,
     industry: optionalString,
-    company_size: numericOrNull,
+    company_size: numericOrNull.optional(),
     country: optionalString,
     contact_name: optionalString,
     contact_role: optionalString,
@@ -40,7 +40,7 @@ const leadPatchSchema = z.object({
   company_name: z.string().trim().min(1).max(500).optional(),
   website_url: z.string().trim().max(2000).optional(),
   industry: z.string().trim().max(200).optional(),
-  company_size: numericOrNull,
+  company_size: numericOrNull.optional(),
   country: z.string().trim().max(100).optional(),
   contact_name: z.string().trim().max(300).optional(),
   contact_role: z.string().trim().max(300).optional(),
@@ -71,6 +71,43 @@ const leadPatchSchema = z.object({
     )
     .max(200)
     .optional(),
+  icp_score: numericOrNull.optional(),
+  icp_raw_score: numericOrNull.optional(),
+  icp_category: z.string().trim().max(120).optional(),
+  icp_priority: numericOrNull.optional(),
+  recommended_action: z.string().trim().max(300).optional(),
+  icp_profile_id: z.string().trim().max(200).optional(),
+  icp_profile_name: z.string().trim().max(500).optional(),
+  analysis_version: z.string().trim().max(200).optional(),
+  ai_score: numericOrNull.optional(),
+  ai_confidence: numericOrNull.optional(),
+  ai_signals: z.array(z.any()).max(500).optional(),
+  ai_summary: z.string().trim().max(10000).optional(),
+  scoring_weights: z.record(z.any()).optional(),
+  final_score: numericOrNull.optional(),
+  final_category: z.string().trim().max(120).optional(),
+  final_priority: numericOrNull.optional(),
+  final_recommended_action: z.string().trim().max(300).optional(),
+  final_status: z.string().trim().max(120).optional(),
+  signals: z.array(z.any()).max(1000).optional(),
+  score_details: z.record(z.any()).optional(),
+  analysis_summary: z.string().trim().max(20000).optional(),
+  generated_icebreakers: z
+    .object({
+      email: z.string().trim().max(10000).optional(),
+      linkedin: z.string().trim().max(5000).optional(),
+      call: z.string().trim().max(5000).optional(),
+    })
+    .passthrough()
+    .optional(),
+  generated_icebreaker: z.string().trim().max(10000).optional(),
+  llm_enriched: z.boolean().optional(),
+  llm_provider: z.string().trim().max(120).optional(),
+  llm_score_adjustment: numericOrNull.optional(),
+  llm_confidence: numericOrNull.optional(),
+  suggested_action: z.string().trim().max(500).optional(),
+  last_analyzed_at: z.string().trim().max(120).optional(),
+  auto_signal_metadata: z.record(z.any()).optional(),
 });
 
 const scoreMapSchema = z.object({
@@ -158,7 +195,6 @@ const icpActiveSchema = z
     id: z.string().trim().optional(),
     name: nonEmptyString,
     description: z.string().trim().optional(),
-    owner_user_id: z.string().trim().optional(),
     weights: icpWeightsSchema,
   })
   .passthrough();

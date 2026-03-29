@@ -2,8 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/constants/routes';
-import { CircleHelp, Menu, Search, UserCog } from 'lucide-react';
-import NotificationsPanel from '@/components/layout/NotificationsPanel';
+import { Menu, Search, UserCog } from 'lucide-react';
 
 export default function Header({ user, onSignOut, onOpenMobileNav, onOpenPalette }) {
   return (
@@ -36,20 +35,6 @@ export default function Header({ user, onSignOut, onOpenMobileNav, onOpenPalette
         {/* Right */}
         <div className="flex items-center gap-1.5">
           <span className="text-sm text-white/40 hidden lg:block mr-2">{user?.email}</span>
-
-          <NotificationsPanel />
-
-          <Link to={ROUTES.help}>
-            <Button
-              variant="ghost"
-              size="icon"
-              title="Help Center"
-              aria-label="Help Center"
-              className="w-9 h-9 rounded-xl text-white/40 hover:text-white/80"
-            >
-              <CircleHelp className="w-4 h-4" />
-            </Button>
-          </Link>
 
           <Link to={ROUTES.accountSettings}>
             <Button

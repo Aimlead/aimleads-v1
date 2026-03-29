@@ -18,10 +18,10 @@ const PRESET_SEGMENTS = [
   {
     id: 'seg-qualified',
     name: 'Qualified — Ready to contact',
-    description: 'Leads with final_status = Qualified',
+    description: 'Leads currently marked as Qualified',
     icon: TrendingUp,
     color: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-    filter: (leads) => leads.filter((l) => l.final_status === 'Qualified' || l.status === 'Qualified'),
+    filter: (leads) => leads.filter((l) => l.status === 'Qualified'),
   },
   {
     id: 'seg-hot',
@@ -107,7 +107,7 @@ function CustomSegmentBuilder({ leads, onSave, onCancel }) {
 
   const preview = useMemo(() => {
     return leads.filter((l) => {
-      if (status && l.status !== status && l.final_status !== status) return false;
+      if (status && l.status !== status) return false;
       if (followUp && l.follow_up_status !== followUp) return false;
       if (minScore && (l.final_score ?? l.icp_score ?? 0) < Number(minScore)) return false;
       if (industry && !String(l.industry || '').toLowerCase().includes(industry.toLowerCase())) return false;
@@ -179,7 +179,7 @@ const loadCustomSegments = () => {
         icon: Tag,
         filter: (ls) => ls.filter((l) => {
           const f = seg.filterCriteria || {};
-          if (f.status && l.status !== f.status && l.final_status !== f.status) return false;
+          if (f.status && l.status !== f.status) return false;
           if (f.followUp && l.follow_up_status !== f.followUp) return false;
           if (f.minScore && (l.final_score ?? l.icp_score ?? 0) < Number(f.minScore)) return false;
           if (f.industry && !String(l.industry || '').toLowerCase().includes(f.industry.toLowerCase())) return false;
@@ -214,13 +214,13 @@ export default function Segments() {
       ...seg,
       id: `custom-${Date.now()}`,
       icon: Tag,
-      color: 'bg-brand-sky/5 text-brand-sky border-brand-sky/15',
-      filterCriteria: seg.filter,
-      filter: (ls) => ls.filter((l) => {
-        const f = seg.filter || {};
-        if (f.status && l.status !== f.status && l.final_status !== f.status) return false;
-        if (f.followUp && l.follow_up_status !== f.followUp) return false;
-        if (f.minScore && (l.final_score ?? l.icp_score ?? 0) < Number(f.minScore)) return false;
+        color: 'bg-brand-sky/5 text-brand-sky border-brand-sky/15',
+        filterCriteria: seg.filter,
+        filter: (ls) => ls.filter((l) => {
+          const f = seg.filter || {};
+          if (f.status && l.status !== f.status) return false;
+          if (f.followUp && l.follow_up_status !== f.followUp) return false;
+          if (f.minScore && (l.final_score ?? l.icp_score ?? 0) < Number(f.minScore)) return false;
         if (f.industry && !String(l.industry || '').toLowerCase().includes(f.industry.toLowerCase())) return false;
         return true;
       }),
@@ -276,7 +276,7 @@ export default function Segments() {
         <div>
           <p className="text-xs text-slate-400">Qualified</p>
           <p className="text-xl font-bold text-emerald-600">
-            {leads.filter((l) => l.final_status === 'Qualified' || l.status === 'Qualified').length}
+            {leads.filter((l) => l.status === 'Qualified').length}
           </p>
         </div>
         {isLoading && <Loader2 className="w-4 h-4 text-slate-300 animate-spin ml-auto" />}
