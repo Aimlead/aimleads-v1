@@ -59,7 +59,7 @@ export default function AppShell({ children }) {
 
       <CommandPalette open={paletteOpen} onClose={closePalette} />
 
-      <main id="main-content" className="pt-16 px-4 md:px-6 py-8 md:ml-64">
+      <main id="main-content" className="pt-16 px-4 md:px-6 py-6 md:py-8 md:ml-64 pb-safe-area-bottom">
         <ErrorBoundary>
           <motion.div
             key={location.pathname}

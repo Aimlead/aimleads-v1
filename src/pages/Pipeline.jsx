@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { ExternalLink, Loader2, Mail, Phone } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, Loader2, Mail, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
@@ -123,6 +123,7 @@ export default function Pipeline() {
   const queryClient = useQueryClient();
   const dragLeadRef = useRef(null);
   const [draggingOver, setDraggingOver] = useState(null);
+  const [mobileStageIndex, setMobileStageIndex] = useState(0);
 
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ['leads'],
@@ -195,68 +196,133 @@ export default function Pipeline() {
     );
   }
 
+  const mobileStage = PIPELINE_STAGES[mobileStageIndex];
+  const mobileStageLeads = mobileStage ? (stageMap[mobileStage.id] || []) : [];
+
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Pipeline</h1>
-        <p className="text-slate-500 mt-1">
-          Drag leads through your sales stages — {leads.length} total leads
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Pipeline</h1>
+        <p className="text-slate-500 mt-1 text-sm">
+          {leads.length} total leads across all stages
         </p>
       </div>
 
-      {/* Kanban Board */}
-      <div className="flex gap-4 overflow-x-auto pb-4" style={{ minHeight: '70vh' }}>
-        {PIPELINE_STAGES.map((stage) => {
-          const stageLeads = stageMap[stage.id] || [];
-          const isDragTarget = draggingOver === stage.id;
-          return (
-            <div
-              key={stage.id}
-              className={cn(
-                `flex-shrink-0 w-[260px] rounded-2xl border-2 flex flex-col transition-all duration-150`,
-                isDragTarget ? 'border-brand-sky bg-brand-sky/5 scale-[1.01]' : stage.color
-              )}
-              onDragOver={(e) => handleDragOver(e, stage.id)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, stage.id)}
-            >
-              <div className="p-3 border-b border-slate-200/60">
-                <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${stage.dot}`} />
-                  <span className="text-sm font-semibold text-slate-700">{stage.label}</span>
-                  <span className="ml-auto text-xs text-slate-500 font-medium bg-white px-1.5 py-0.5 rounded-full border">
-                    {stageLeads.length}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex-1 p-2 space-y-2 overflow-y-auto">
-                {stageLeads.length === 0 ? (
-                  <div className={cn('text-center py-8 text-xs transition-colors', isDragTarget ? 'text-brand-sky' : 'text-slate-400')}>
-                    {isDragTarget ? 'Drop here' : 'No leads'}
-                  </div>
-                ) : (
-                  stageLeads.map((lead) => (
-                    <LeadCard
-                      key={lead.id}
-                      lead={lead}
-                      onOpen={handleOpenLead}
-                      onStageChange={handleStageChange}
-                      onDragStart={handleDragStart}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {leads.length === 0 && (
+      {leads.length === 0 ? (
         <div className="text-center py-20 text-slate-500">
           <p className="text-lg font-semibold">No leads yet</p>
           <p className="text-sm mt-1">Import leads from the Dashboard to populate your pipeline</p>
         </div>
+      ) : (
+        <>
+          {/* ── Mobile: one stage at a time with prev/next ───────────── */}
+          <div className="md:hidden">
+            <div className="flex items-center justify-between mb-3">
+              <button
+                onClick={() => setMobileStageIndex((i) => Math.max(0, i - 1))}
+                disabled={mobileStageIndex === 0}
+                className="p-2 rounded-xl bg-white border border-slate-200 disabled:opacity-30 transition-opacity"
+              >
+                <ChevronLeft className="w-4 h-4 text-slate-600" />
+              </button>
+
+              <div className="flex-1 mx-3">
+                <div className={cn('rounded-2xl border-2 px-4 py-2 flex items-center justify-between', mobileStage?.color)}>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${mobileStage?.dot}`} />
+                    <span className="text-sm font-semibold text-slate-700">{mobileStage?.label}</span>
+                  </div>
+                  <span className="text-xs text-slate-500 font-medium bg-white px-1.5 py-0.5 rounded-full border">
+                    {mobileStageLeads.length}
+                  </span>
+                </div>
+                <div className="flex justify-center gap-1 mt-2">
+                  {PIPELINE_STAGES.map((s, i) => (
+                    <button
+                      key={s.id}
+                      onClick={() => setMobileStageIndex(i)}
+                      className={cn('w-1.5 h-1.5 rounded-full transition-colors', i === mobileStageIndex ? 'bg-brand-sky' : 'bg-slate-200')}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={() => setMobileStageIndex((i) => Math.min(PIPELINE_STAGES.length - 1, i + 1))}
+                disabled={mobileStageIndex === PIPELINE_STAGES.length - 1}
+                className="p-2 rounded-xl bg-white border border-slate-200 disabled:opacity-30 transition-opacity"
+              >
+                <ChevronRight className="w-4 h-4 text-slate-600" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {mobileStageLeads.length === 0 ? (
+                <div className="text-center py-12 text-sm text-slate-400 bg-white rounded-2xl border border-slate-200">
+                  No leads in this stage
+                </div>
+              ) : (
+                mobileStageLeads.map((lead) => (
+                  <LeadCard
+                    key={lead.id}
+                    lead={lead}
+                    onOpen={handleOpenLead}
+                    onStageChange={handleStageChange}
+                    onDragStart={handleDragStart}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* ── Desktop: full kanban board ───────────────────────────── */}
+          <div className="hidden md:flex gap-4 overflow-x-auto pb-4" style={{ minHeight: '70vh' }}>
+            {PIPELINE_STAGES.map((stage) => {
+              const stageLeads = stageMap[stage.id] || [];
+              const isDragTarget = draggingOver === stage.id;
+              return (
+                <div
+                  key={stage.id}
+                  className={cn(
+                    `flex-shrink-0 w-[260px] rounded-2xl border-2 flex flex-col transition-all duration-150`,
+                    isDragTarget ? 'border-brand-sky bg-brand-sky/5 scale-[1.01]' : stage.color
+                  )}
+                  onDragOver={(e) => handleDragOver(e, stage.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, stage.id)}
+                >
+                  <div className="p-3 border-b border-slate-200/60">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${stage.dot}`} />
+                      <span className="text-sm font-semibold text-slate-700">{stage.label}</span>
+                      <span className="ml-auto text-xs text-slate-500 font-medium bg-white px-1.5 py-0.5 rounded-full border">
+                        {stageLeads.length}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 p-2 space-y-2 overflow-y-auto">
+                    {stageLeads.length === 0 ? (
+                      <div className={cn('text-center py-8 text-xs transition-colors', isDragTarget ? 'text-brand-sky' : 'text-slate-400')}>
+                        {isDragTarget ? 'Drop here' : 'No leads'}
+                      </div>
+                    ) : (
+                      stageLeads.map((lead) => (
+                        <LeadCard
+                          key={lead.id}
+                          lead={lead}
+                          onOpen={handleOpenLead}
+                          onStageChange={handleStageChange}
+                          onDragStart={handleDragStart}
+                        />
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );
