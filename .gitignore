@@ -27,6 +27,8 @@ reports/real-lead-batch-*.csv
 
 server/data/db.json
 
-.claude/
+.claude/projects/
+.claude/todos/
+.claude/statsig/
 coverage/
 .playwright-cli/
