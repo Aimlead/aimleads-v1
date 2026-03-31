@@ -52,9 +52,20 @@ export default function Header({ user, onSignOut, onOpenMobileNav, onOpenPalette
             variant="outline"
             size="sm"
             onClick={onSignOut}
-            className="text-white/60 border-white/10 hover:border-white/20 rounded-xl text-xs h-8"
+            className="text-white/60 border-white/10 hover:border-white/20 rounded-xl text-xs h-8 hidden sm:inline-flex"
           >
             Sign out
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onSignOut}
+            aria-label="Sign out"
+            className="sm:hidden w-9 h-9 rounded-xl text-white/40 hover:text-white/80"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
+            </svg>
           </Button>
         </div>
       </div>

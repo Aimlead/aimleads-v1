@@ -167,19 +167,19 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Analytics</h1>
-          <p className="text-slate-500 mt-1">Lead scoring performance and pipeline insights</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Analytics</h1>
+          <p className="text-slate-500 mt-1 text-sm">Lead scoring performance and pipeline insights</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
           {DATE_RANGES.map((range) => (
             <button
               key={range.days}
               type="button"
               onClick={() => setDateRangeDays(dateRangeDays === range.days ? null : range.days)}
-              className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+              className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
                 dateRangeDays === range.days
                   ? 'bg-brand-sky text-white border-brand-sky'
                   : 'bg-white text-slate-600 border-slate-200 hover:border-brand-sky/40 hover:text-brand-sky'

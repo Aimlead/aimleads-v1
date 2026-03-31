@@ -127,6 +127,16 @@
 .aimlead-btn-mint:hover { color: #001F4D; box-shadow: 0 8px 28px rgba(90,211,140,.35); }
 .aimlead-btn-mint > * { position: relative; z-index: 1; }
 
+/* ── Mobile / iOS safe areas ── */
+@layer utilities {
+  .pb-safe-area-bottom {
+    padding-bottom: max(2rem, env(safe-area-inset-bottom));
+  }
+  .pt-safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
 /* ── Login page ── */
 .login-page {
   min-height: 100vh;

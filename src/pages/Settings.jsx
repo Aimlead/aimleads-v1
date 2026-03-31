@@ -313,7 +313,7 @@ export default function Settings() {
   return (
     <div className="max-w-5xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Settings</h1>
         <p className="text-slate-500 mt-1">Configuration center for ICP, integrations, and workspace options</p>
       </div>
 
@@ -589,7 +589,7 @@ export default function Settings() {
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-slate-800">ICP Category Thresholds</h3>
-              <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid gap-3 grid-cols-3">
                 <ScoringNumberInput
                   label="Excellent >="
                   value={scoringForm.icpThresholds.excellent}
@@ -613,7 +613,7 @@ export default function Settings() {
 
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-slate-800">Final Category Thresholds (ICP + AI)</h3>
-              <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid gap-3 grid-cols-3">
                 <ScoringNumberInput
                   label="Excellent >="
                   value={scoringForm.finalThresholds.excellent}

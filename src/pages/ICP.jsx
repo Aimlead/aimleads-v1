@@ -350,9 +350,9 @@ export default function ICP() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="flex items-start gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-start gap-4 mb-8">
         <div className="flex-1">
-          <h1 className="text-3xl font-bold text-slate-900">ICP Profile</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">ICP Profile</h1>
           <p className="text-slate-500 mt-1">
             Define your Ideal Customer Profile and tune scoring weights
           </p>
@@ -364,18 +364,20 @@ export default function ICP() {
         </div>
 
         {!editing ? (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 shrink-0">
             <Button
               variant="outline"
               onClick={() => setGenOpen(true)}
               className="gap-2"
             >
               <Sparkles className="w-4 h-4" />
-              Générer avec l'IA
+              <span className="hidden sm:inline">Générer avec l'IA</span>
+              <span className="sm:hidden">IA</span>
             </Button>
             <Button onClick={() => setEditing(true)} className="gap-2 bg-gradient-to-r from-brand-sky to-brand-sky-2">
               <Edit className="w-4 h-4" />
-              Edit Profile
+              <span className="hidden sm:inline">Edit Profile</span>
+              <span className="sm:hidden">Edit</span>
             </Button>
           </div>
         ) : (
@@ -541,7 +543,7 @@ export default function ICP() {
 
           {/* Company Size */}
           <SectionCard icon={Target} title="Company Size" color="bg-amber-500">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Min employees (primary)</Label>
                 <Input
@@ -686,8 +688,8 @@ export default function ICP() {
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-xl bg-violet-50 border border-violet-200 p-4 text-center">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-violet-50 border border-violet-200 p-3 sm:p-4 text-center">
                   <p className="text-xs uppercase tracking-wide text-violet-600 font-semibold mb-1">ICP Weight</p>
                   <p className="text-3xl font-bold text-violet-700">{icpWeight}%</p>
                 </div>
@@ -725,7 +727,7 @@ export default function ICP() {
               </p>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label className="text-emerald-700 font-semibold">Excellent ≥</Label>
                   <Input
