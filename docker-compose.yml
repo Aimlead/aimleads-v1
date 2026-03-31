@@ -6,12 +6,13 @@ services:
     image: aimleads:latest
     container_name: aimleads
     restart: unless-stopped
-    ports:
-      - "80:3010"
+    # Secrets and runtime config loaded from .env file (never commit .env)
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - API_PORT=3010
-      - TRUST_PROXY=true
+      - TRUST_PROXY=1
       - CORS_ORIGIN=https://aimlead.io
       - VITE_API_BASE_URL=https://aimlead.io/api
       - DATA_PROVIDER=supabase
@@ -20,3 +21,10 @@ services:
       - ENABLE_API_DOCS=false
       - SUPABASE_FALLBACK_TO_LOCAL=false
       - VITE_ALLOW_API_FALLBACK=0
+    ports:
+      - "80:3010"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

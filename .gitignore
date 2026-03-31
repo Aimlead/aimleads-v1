@@ -1,6 +1,7 @@
 #env
 .env
 .env.*
+!.env.example
 node_modules
 dist
 dist-ssr
@@ -26,6 +27,8 @@ reports/real-lead-batch-*.csv
 
 server/data/db.json
 
-.claude/
+.claude/projects/
+.claude/todos/
+.claude/statsig/
 coverage/
 .playwright-cli/

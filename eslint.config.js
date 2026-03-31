@@ -6,7 +6,7 @@ import unusedImports from 'eslint-plugin-unused-imports';
 
 export default [
   {
-    ignores: ['dist/**', 'node_modules/**', '.npm-cache/**', 'server/data/**', 'reports/**'],
+    ignores: ['dist/**', 'node_modules/**', '.npm-cache/**', 'server/data/**', 'reports/**', 'scripts/**'],
   },
   js.configs.recommended,
   {

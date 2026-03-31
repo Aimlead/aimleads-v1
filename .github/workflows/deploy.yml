@@ -1,8 +1,7 @@
-name: Deploy to Vercel
+name: Deploy to Vercel (DISABLED - app is now on Hostinger/Docker)
 
 on:
-  push:
-    branches: [main, master]
+  workflow_dispatch: # manual trigger only
 
 jobs:
   deploy:

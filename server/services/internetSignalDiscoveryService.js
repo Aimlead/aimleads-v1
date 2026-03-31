@@ -1,3 +1,5 @@
+import { validateOutboundUrl } from '../lib/ssrf.js';
+
 const DEFAULT_TIMEOUT_MS = 3500;
 const DEFAULT_MAX_PAGES = 3;
 const MAX_HTML_CHARS = 280000;
@@ -11,7 +13,7 @@ const WEBSITE_SIGNAL_RULES = [
     expressions: [
       /\bseries\s+[abcde]\b/i,
       /\bfunding round\b/i,
-      /\braised\s+(?:[$€£]\s?)?\d/i,
+      /\braised\s+(?:[$ï¿½ï¿½]\s?)?\d/i,
       /\blevee?\s+de\s+fonds?\b/i,
       /\bseed round\b/i,
     ],
@@ -47,7 +49,7 @@ const WEBSITE_SIGNAL_RULES = [
       /\bappointed\b/i,
       /\bjoins as\b/i,
       /\bnew (?:cio|cto|ciso|head of it)\b/i,
-      /\bnomm[ée]\b/i,
+      /\bnomm[ï¿½e]\b/i,
       /\bprise de poste\b/i,
     ],
   },
@@ -87,7 +89,7 @@ const WEBSITE_SIGNAL_RULES = [
   {
     key: 'closed_or_dead',
     confidence: 95,
-    expressions: [/\bceased operations\b/i, /\bcompany closed\b/i, /\bshutdown\b/i, /\bferm[ée] definitivement\b/i],
+    expressions: [/\bceased operations\b/i, /\bcompany closed\b/i, /\bshutdown\b/i, /\bferm[ï¿½e] definitivement\b/i],
   },
 ];
 
@@ -262,6 +264,18 @@ export async function discoverInternetSignals({ lead, maxPages = DEFAULT_MAX_PAG
   }
 
   if (websiteUrl && fetchFn) {
+    // SSRF protection: validate the base URL before generating candidates
+    const ssrfCheck = await validateOutboundUrl(websiteUrl);
+    if (!ssrfCheck.safe) {
+      warnings.push(`ssrf_blocked:${ssrfCheck.reason}`);
+      return {
+        pages_scanned: 0,
+        findings: [],
+        signals: roleDerivedSignals(lead),
+        warnings,
+      };
+    }
+
     const candidates = buildCandidateUrls({ websiteUrl, maxPages: boundedMaxPages });
 
     for (const url of candidates) {

@@ -99,15 +99,18 @@ Company: ${companyName}${websitePart}${industryPart}${countryPart}
 Search the web for recent news (last 6 months): funding rounds, notable hires or departures, product launches, expansion announcements, job postings signaling growth, or any events that indicate a buying opportunity. Then call extract_company_intelligence with your structured findings.`;
 
   try {
-    const message = await anthropicClient.messages.create({
-      model: ANTHROPIC_MODEL,
-      max_tokens: 2000,
-      tools: [
-        { type: 'web_search_20250305', name: 'web_search', max_uses: 3 },
-        EXTRACT_INTELLIGENCE_TOOL,
-      ],
-      messages: [{ role: 'user', content: userMessage }],
-    });
+    const message = await anthropicClient.messages.create(
+      {
+        model: ANTHROPIC_MODEL,
+        max_tokens: 2000,
+        tools: [
+          { type: 'web_search_20250305', name: 'web_search', max_uses: 3 },
+          EXTRACT_INTELLIGENCE_TOOL,
+        ],
+        messages: [{ role: 'user', content: userMessage }],
+      },
+      { timeout: 45000 }
+    );
 
     const toolUse = message.content?.find(
       (block) => block.type === 'tool_use' && block.name === 'extract_company_intelligence'
