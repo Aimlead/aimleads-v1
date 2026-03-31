@@ -164,6 +164,10 @@ export default function Settings() {
       critical.push('Public beta contract is not fully met yet from the current runtime/security config.');
     }
 
+    if (securityStatus.circuit_breaker_open) {
+      critical.push('Le circuit breaker LLM est ouvert — le scoring IA est temporairement suspendu. Il se réouvre automatiquement après 60 secondes.');
+    }
+
     if (runtimeStatus.demoBootstrapEnabled) {
       optional.push('Demo bootstrap is still enabled.');
     }
@@ -182,7 +186,7 @@ export default function Settings() {
     info.push(`Front fallback: ${dataClient.debug.allowApiFallback ? 'enabled' : 'disabled'}.`);
 
     return { critical, optional, info };
-  }, [appPublicSettings?.mode, integrationStatus.claude, runtimeStatus, securityStatus, supabaseStatus.configured]);
+  }, [appPublicSettings?.mode, integrationStatus.claude, runtimeStatus, securityStatus, securityStatus.circuit_breaker_open, supabaseStatus.configured]);
 
   const normalizedBlendPreview = useMemo(
     () => normalizeBlendWeights(scoringForm.blendWeights),

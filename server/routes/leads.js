@@ -458,8 +458,8 @@ router.post('/:leadId/discover-signals', discoverLimiter, async (req, res) => {
     ? { contact_email: hunterResult.email }
     : {};
 
-  // Build hunter signal if email was found
-  const hunterSignals = hunterResult?.email
+  // Build hunter signal only when the email is genuinely new (avoid duplicating an existing field value)
+  const hunterSignals = hunterResult?.email && !lead.contact_email
     ? [{
         key: 'email_found',
         evidence: `Email professionnel trouvé via Hunter.io : ${hunterResult.email}`,
@@ -508,6 +508,15 @@ router.post('/:leadId/discover-signals', discoverLimiter, async (req, res) => {
 
   updatedLead = analyzedLead;
 
+  const providerStatus = {
+    website: (discovered.signals || []).length > 0 ? 'ok' : 'no_results',
+    hunter: !process.env.HUNTER_API_KEY ? 'skipped' : (hunterResult?.email ? 'ok' : 'no_results'),
+    news: !process.env.NEWS_API_KEY ? 'skipped' : (newsFindings.length > 0 ? 'ok' : 'no_results'),
+    web_research: !process.env.ANTHROPIC_API_KEY
+      ? 'skipped'
+      : ((webResearch.signals || []).length > 0 || (webResearch.findings || []).length > 0 ? 'ok' : 'no_results'),
+  };
+
   return res.json({
     data: {
       lead: normalizeLeadForResponse(updatedLead),
@@ -518,10 +527,12 @@ router.post('/:leadId/discover-signals', discoverLimiter, async (req, res) => {
       ingested_signals: normalizedSignals.length,
       extracted_from_findings: extractedSignals.length,
       news_signals: newsSignals.length,
+      web_research_signals: (webResearch.signals || []).length,
       hunter_email: hunterResult?.email || null,
       pages_scanned: discovered.pages_scanned || 0,
       warnings: discovered.warnings || [],
       reanalyzed,
+      provider_status: providerStatus,
     },
   });
 });
