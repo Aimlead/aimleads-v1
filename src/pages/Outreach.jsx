@@ -422,10 +422,10 @@ export default function Outreach() {
     if (isNew) {
       const newT = { ...data, id: String(Date.now()) };
       setTemplates((prev) => [newT, ...prev]);
-      toast.success('Template created!');
+      toast.success('Template créé !');
     } else {
       setTemplates((prev) => prev.map((t) => t.id === editing.id ? { ...t, ...data } : t));
-      toast.success('Template updated!');
+      toast.success('Template mis à jour !');
     }
     setEditing(null);
     setIsNew(false);
@@ -434,7 +434,7 @@ export default function Outreach() {
   const handleDelete = (id) => {
     setTemplates((prev) => prev.filter((t) => t.id !== id));
     if (selected?.id === id) setSelected(null);
-    toast.success('Template deleted');
+    toast.success('Template supprimé');
   };
 
   return (

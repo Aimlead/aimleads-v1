@@ -5,6 +5,7 @@ import { getAuthProvider, getDataProvider, getRuntimeConfig } from '../lib/confi
 import { schemas, validateBody } from '../lib/validation.js';
 import { writeAuditLog } from '../lib/auditLog.js';
 import { getUserWorkspaceId } from '../lib/scope.js';
+import { getCircuitBreakerStatus } from '../services/llmService.js';
 
 const router = express.Router();
 wrapAsyncRoutes(router);
@@ -307,28 +308,46 @@ router.delete('/members/:memberUserId', requireAuth, async (req, res) => {
 
 router.get('/integration-status', requireAuth, (req, res) => {
   const config = getRuntimeConfig();
-  const supabaseConfigured = Boolean(
-    process.env.SUPABASE_URL
-    && (process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY)
-    && process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
+
+  const supabaseUrl = Boolean(config.supabase.url);
+  const supabasePublishableKey = Boolean(config.supabase.publishableKey);
+  const supabaseServiceRoleKey = Boolean(config.supabase.serviceRoleKey);
+  const supabaseConfigured = supabaseUrl && supabaseServiceRoleKey;
+  const hasCorsOrigin = Boolean(config.corsOrigin || process.env.VERCEL_URL);
+  const cbStatus = getCircuitBreakerStatus();
 
   res.json({
-    enrichment_available: Boolean(process.env.ANTHROPIC_API_KEY),
-    email_discovery_available: Boolean(process.env.HUNTER_API_KEY),
-    news_signals_available: Boolean(process.env.NEWS_API_KEY),
-    supabase_configured: supabaseConfigured,
+    claude: Boolean(process.env.ANTHROPIC_API_KEY),
+    hunter: Boolean(process.env.HUNTER_API_KEY),
+    newsApi: Boolean(process.env.NEWS_API_KEY),
+    supabase: {
+      configured: supabaseConfigured,
+      url: supabaseUrl,
+      publishableKey: supabasePublishableKey,
+      serviceRoleKey: supabaseServiceRoleKey,
+    },
+    runtime: {
+      nodeEnv: config.nodeEnv,
+      dataProvider: config.dataProvider,
+      authProvider: config.authProvider,
+      activeProvider: config.dataProvider,
+      fallbackReason: null,
+      demoBootstrapEnabled: config.demoBootstrapEnabled,
+      apiDocsEnabled: config.apiDocsEnabled,
+    },
     security: {
       secureCookies: Boolean(config.isProduction),
+      trustedOriginsConfigured: hasCorsOrigin,
       publicBetaReady: Boolean(
         supabaseConfigured
         && process.env.ANTHROPIC_API_KEY
-        && (config.corsOrigin || process.env.VERCEL_URL)
+        && hasCorsOrigin
         && getDataProvider() === 'supabase'
         && getAuthProvider() === 'supabase'
         && !config.demoBootstrapEnabled
         && !config.apiDocsEnabled
       ),
+      circuit_breaker_open: cbStatus.isOpen,
     },
   });
 });

@@ -125,6 +125,7 @@ const getInternetSignalsFromLead = (lead) => {
       evidence: String(entry?.evidence || entry?.url || '').trim(),
       confidence: normalizeInternetSignalConfidence(entry?.confidence),
       found_at: entry?.found_at || entry?.foundAt || undefined,
+      source_type: entry?.source_type || null,
     }))
     .filter((entry) => Boolean(entry.key));
 };
@@ -145,6 +146,46 @@ const signalTypeClass = (type) => {
   return 'text-slate-700 bg-slate-50 border-slate-200';
 };
 
+const SOURCE_LABEL = {
+  hunter_io: 'HUNTER',
+  news_api: 'NEWS',
+  claude_web_research: 'CLAUDE',
+  website_scraping: 'WEB',
+};
+
+const PROVIDER_STATUS_FR = {
+  ok: null,
+  no_results: 'aucun résultat',
+  skipped: 'non configuré',
+};
+
+const buildDiscoverToast = (response) => {
+  const discovered = Number(response?.discovered_signals || 0);
+  const news = Number(response?.news_signals || 0);
+  const webResearch = Number(response?.web_research_signals || 0);
+  const hunterEmail = response?.hunter_email;
+  const providerStatus = response?.provider_status || {};
+
+  const total = discovered + news + webResearch + (hunterEmail ? 1 : 0);
+
+  if (total === 0) {
+    const skipped = Object.entries(providerStatus)
+      .filter(([, s]) => s !== 'ok')
+      .map(([provider, status]) => `${provider}: ${PROVIDER_STATUS_FR[status] || status}`)
+      .join(', ');
+    return skipped
+      ? `Aucun signal trouvé (${skipped})`
+      : 'Aucun nouveau signal détecté sur ce passage';
+  }
+
+  const parts = [];
+  if (discovered > 0) parts.push(`Web: ${discovered}`);
+  if (news > 0) parts.push(`News: ${news}`);
+  if (webResearch > 0) parts.push(`Claude: ${webResearch}`);
+  if (hunterEmail) parts.push(`Email: ${hunterEmail}`);
+  return `${total} signal(s) détecté(s) — ${parts.join(', ')}`;
+};
+
 export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated }) {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(null);
@@ -158,6 +199,7 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
   const [discoveringSignals, setDiscoveringSignals] = useState(false);
   const [showManualOverrides, setShowManualOverrides] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  const [lastScanMeta, setLastScanMeta] = useState(null);
 
   // Track initial values to detect unsaved changes
   const initialRef = useRef({ followUpStatus: '', notes: '', intentSignals: {}, internetSignals: [] });
@@ -173,6 +215,7 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
       setIntentSignals(is);
       setInternetSignals(nets);
       setInternetSignalDraft(createInternetSignalDraft());
+      setLastScanMeta(lead.auto_signal_metadata || null);
       initialRef.current = { followUpStatus: fs, notes: n, intentSignals: is, internetSignals: nets };
     }
   }, [lead]);
@@ -284,6 +327,9 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
     if (response?.lead) {
       setIntentSignals(getIntentSignalsFromLead(response.lead));
       setInternetSignals(getInternetSignalsFromLead(response.lead));
+      if (response.lead.auto_signal_metadata) {
+        setLastScanMeta(response.lead.auto_signal_metadata);
+      }
     }
     onLeadUpdated?.();
     return response;
@@ -295,16 +341,16 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
     setDiscoveringSignals(true);
     try {
       const response = await runSignalDiscovery({ reanalyze: false });
-      const discoveredCount = Number(response?.discovered_signals || 0);
-
-      if (discoveredCount > 0) {
-        toast.success(`${discoveredCount} signal(s) internet detecte(s)`);
+      const message = buildDiscoverToast(response);
+      const hasResults = (Number(response?.discovered_signals || 0) + Number(response?.news_signals || 0) + Number(response?.web_research_signals || 0)) > 0 || response?.hunter_email;
+      if (hasResults) {
+        toast.success(message);
       } else {
-        toast('Aucun nouveau signal internet detecte sur ce passage');
+        toast(message);
       }
     } catch (error) {
       console.warn('Auto-discover signals failed', error);
-      toast.error('Failed to auto-detect internet signals');
+      toast.error('Échec de la détection automatique des signaux internet');
     } finally {
       setDiscoveringSignals(false);
     }
@@ -317,16 +363,11 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
     try {
       const response = await runSignalDiscovery({ reanalyze: true });
       const score = response?.analysis?.final_score ?? response?.lead?.final_score ?? response?.lead?.icp_score;
-      const discoveredCount = Number(response?.discovered_signals || 0);
-
-      if (discoveredCount > 0) {
-        toast.success(`Signals saved + re-analyzed. Score ${score ?? '-'}. ${discoveredCount} signal(s) auto-trouves.`);
-      } else {
-        toast.success(`Signals saved + re-analyzed. Score ${score ?? '-'}.`);
-      }
+      const signalMsg = buildDiscoverToast(response);
+      toast.success(`Sauvegardé + ré-analysé. Score : ${score ?? '-'}. ${signalMsg}`);
     } catch (error) {
       console.warn('Save and analyze failed', error);
-      toast.error('Failed to save signals and re-analyze');
+      toast.error('Échec de la sauvegarde et ré-analyse');
     } finally {
       setSavingAndAnalyzing(false);
     }
@@ -464,9 +505,17 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
 
           <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-slate-500">
-                Force un nouveau scan du site pour trouver des signaux internet frais.
-              </p>
+              <div>
+                <p className="text-xs text-slate-500">
+                  Force un nouveau scan du site pour trouver des signaux internet frais.
+                </p>
+                {lastScanMeta?.last_discovery_at && (
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Dernier scan : {new Date(lastScanMeta.last_discovery_at).toLocaleString()}
+                    {lastScanMeta.pages_scanned > 0 ? ` — ${lastScanMeta.pages_scanned} page(s)` : ''}
+                  </p>
+                )}
+              </div>
               <Button
                 type="button"
                 variant="outline"
@@ -533,27 +582,35 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
                 {internetSignals.map((entry, index) => {
                   const label = LABEL_BY_SIGNAL_KEY[entry.key] || entry.key;
                   const foundAt = formatFoundAt(entry.found_at);
+                  const sourceLabel = entry.source_type ? SOURCE_LABEL[entry.source_type] : null;
                   return (
                     <div
                       key={`${entry.key}-${index}`}
                       className="flex items-start justify-between gap-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2"
                     >
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold text-slate-800">{label}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="text-xs font-semibold text-slate-800">{label}</p>
+                          {sourceLabel && (
+                            <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-slate-200 text-slate-500 tracking-wide">
+                              {sourceLabel}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[11px] text-slate-500 break-all">
-                          {entry.evidence || 'No evidence URL'} | confidence {entry.confidence}%
+                          {entry.evidence || 'Pas d\'URL de preuve'} | confiance {entry.confidence}%
                         </p>
-                        {foundAt ? <p className="text-[11px] text-slate-400 mt-0.5">Found: {foundAt}</p> : null}
+                        {foundAt ? <p className="text-[11px] text-slate-400 mt-0.5">Détecté : {foundAt}</p> : null}
                       </div>
                       <Button type="button" variant="ghost" size="sm" onClick={() => removeInternetSignalAt(index)}>
-                        Remove
+                        Retirer
                       </Button>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <p className="text-xs text-slate-500">Aucune preuve internet ajoutee.</p>
+              <p className="text-xs text-slate-500">Aucune preuve internet ajoutée.</p>
             )}
           </div>
 

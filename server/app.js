@@ -105,6 +105,11 @@ app.get('/api/health', async (_req, res) => {
   return res.json({
     status: dbStatus === 'ok' ? 'ok' : 'degraded',
     timestamp: new Date().toISOString(),
+    providers: {
+      claude: Boolean(process.env.ANTHROPIC_API_KEY),
+      hunter: Boolean(process.env.HUNTER_API_KEY),
+      newsApi: Boolean(process.env.NEWS_API_KEY),
+    },
   });
 });
 

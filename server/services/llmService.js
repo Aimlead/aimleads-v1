@@ -311,3 +311,11 @@ export async function enrichWithLlm(lead, icpProfile, deterministicResult, webRe
 
 export const llmAvailable = hasAnyLLM;
 export const llmProviders = { anthropic: hasAnthropic };
+
+export function getCircuitBreakerStatus() {
+  return {
+    isOpen: circuitBreaker.isOpen(),
+    failures: circuitBreaker.failures,
+    openUntil: circuitBreaker.openUntil > 0 ? new Date(circuitBreaker.openUntil).toISOString() : null,
+  };
+}
