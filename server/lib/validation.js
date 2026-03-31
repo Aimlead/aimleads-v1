@@ -4,6 +4,26 @@ const nonEmptyString = z.string().trim().min(1).max(500);
 
 const optionalString = z.string().trim().max(2000).optional();
 
+// URL fields must be http(s) when provided
+const urlString = z
+  .string()
+  .trim()
+  .max(2000)
+  .refine(
+    (val) => {
+      if (!val) return true;
+      try {
+        const normalized = /^https?:\/\//i.test(val) ? val : `https://${val}`;
+        const url = new URL(normalized);
+        return url.protocol === 'http:' || url.protocol === 'https:';
+      } catch {
+        return false;
+      }
+    },
+    { message: 'Must be a valid HTTP or HTTPS URL' }
+  )
+  .optional();
+
 const numericOrNull = z.union([z.number(), z.string(), z.null()]).transform((value) => {
   if (value === null || value === '') return null;
   const parsed = Number(value);
@@ -13,7 +33,7 @@ const numericOrNull = z.union([z.number(), z.string(), z.null()]).transform((val
 const leadBaseSchema = z
   .object({
     company_name: nonEmptyString,
-    website_url: optionalString,
+    website_url: urlString,
     industry: optionalString,
     company_size: numericOrNull.optional(),
     country: optionalString,

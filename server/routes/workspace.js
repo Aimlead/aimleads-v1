@@ -307,7 +307,6 @@ router.delete('/members/:memberUserId', requireAuth, async (req, res) => {
 
 router.get('/integration-status', requireAuth, (req, res) => {
   const config = getRuntimeConfig();
-  const runtime = getDataStoreRuntime();
   const supabaseConfigured = Boolean(
     process.env.SUPABASE_URL
     && (process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY)
@@ -315,29 +314,11 @@ router.get('/integration-status', requireAuth, (req, res) => {
   );
 
   res.json({
-    claude: Boolean(process.env.ANTHROPIC_API_KEY),
-    hunter: Boolean(process.env.HUNTER_API_KEY),
-    newsApi: Boolean(process.env.NEWS_API_KEY),
-    supabase: {
-      configured: supabaseConfigured,
-      url: Boolean(process.env.SUPABASE_URL),
-      publishableKey: Boolean(process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY),
-      serviceRoleKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
-    },
-    runtime: {
-      nodeEnv: config.nodeEnv,
-      dataProvider: getDataProvider(),
-      authProvider: getAuthProvider(),
-      activeProvider: runtime.activeProvider,
-      fallbackReason: runtime.fallbackReason,
-      apiDocsEnabled: config.apiDocsEnabled,
-      demoBootstrapEnabled: config.demoBootstrapEnabled,
-    },
+    enrichment_available: Boolean(process.env.ANTHROPIC_API_KEY),
+    email_discovery_available: Boolean(process.env.HUNTER_API_KEY),
+    news_signals_available: Boolean(process.env.NEWS_API_KEY),
+    supabase_configured: supabaseConfigured,
     security: {
-      csrfProtectionEnabled: true,
-      csrfMode: 'double-submit-token',
-      cspEnabled: true,
-      trustedOriginsConfigured: Boolean(config.corsOrigin || process.env.VERCEL_URL),
       secureCookies: Boolean(config.isProduction),
       publicBetaReady: Boolean(
         supabaseConfigured
@@ -345,7 +326,6 @@ router.get('/integration-status', requireAuth, (req, res) => {
         && (config.corsOrigin || process.env.VERCEL_URL)
         && getDataProvider() === 'supabase'
         && getAuthProvider() === 'supabase'
-        && !runtime.fallbackReason
         && !config.demoBootstrapEnabled
         && !config.apiDocsEnabled
       ),

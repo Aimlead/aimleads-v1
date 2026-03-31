@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /api/
+Disallow: /api/v1/
+
+Allow: /
+
+Sitemap: https://aimlead.io/sitemap.xml

@@ -74,7 +74,7 @@ app.use(compression());
 app.use(requestIdMiddleware);
 app.use(securityHeadersMiddleware);
 app.use(cors(getCorsOptions()));
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '512kb' }));
 app.use(cookieParser());
 app.use('/api', ensureCsrfCookie);
 app.use(requestLoggingMiddleware);
@@ -95,7 +95,6 @@ if (config.apiDocsEnabled) {
 }
 
 app.get('/api/health', async (_req, res) => {
-  const runtime = getDataStoreRuntime();
   let dbStatus = 'ok';
   try {
     // Lightweight DB ping: find a non-existent user — succeeds if DB is reachable
@@ -105,13 +104,6 @@ app.get('/api/health', async (_req, res) => {
   }
   return res.json({
     status: dbStatus === 'ok' ? 'ok' : 'degraded',
-    service: 'aimleads-api',
-    database: dbStatus,
-    provider: runtime.configuredProvider,
-    auth_provider: getAuthProvider(),
-    active_provider: runtime.activeProvider,
-    fallback_reason: runtime.fallbackReason,
-    node_env: getRuntimeConfig().nodeEnv,
     timestamp: new Date().toISOString(),
   });
 });

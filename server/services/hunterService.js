@@ -12,6 +12,7 @@
  */
 
 import { logger } from '../lib/observability.js';
+import { validateOutboundUrl } from '../lib/ssrf.js';
 
 const HUNTER_API_KEY = process.env.HUNTER_API_KEY;
 const BASE_URL = 'https://api.hunter.io/v2';
@@ -84,6 +85,13 @@ export async function findEmailForLead(lead) {
   const domain = extractDomain(lead);
   if (!domain) {
     logger.debug('hunter_skip', { reason: 'no_domain', company: lead.company_name });
+    return null;
+  }
+
+  // SSRF protection: validate the domain before making outbound requests
+  const ssrfCheck = await validateOutboundUrl(`https://${domain}`);
+  if (!ssrfCheck.safe) {
+    logger.warn('hunter_skip', { reason: `ssrf_blocked:${ssrfCheck.reason}`, company: lead.company_name });
     return null;
   }
 
