@@ -1,7 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowRight, BrainCircuit, MessageSquare, TrendingUp, Zap, Target, BarChart3, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowRight, BrainCircuit, Menu, MessageSquare, TrendingUp, X, Zap, Target, BarChart3, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BrandLogo from '@/components/brand/BrandLogo';
 import { ROUTES } from '@/constants/routes';
@@ -60,8 +60,10 @@ function Stat({ value, label }) {
 export default function Home() {
   const navigate = useNavigate();
   const { isAuthenticated, isLoadingAuth, navigateToLogin } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleCta = () => {
+    setMobileMenuOpen(false);
     if (isAuthenticated) {
       navigate(ROUTES.dashboard);
     } else {
@@ -139,52 +141,105 @@ export default function Home() {
         />
       </div>
 
-      <header className="relative z-10">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
-            <BrandLogo variant="full" tone="light" className="h-8 w-auto max-w-[180px]" />
+      <header className="relative z-20">
+        <div className="max-w-7xl mx-auto px-5 lg:px-8">
+          <div className="flex items-center justify-between h-18 py-4">
+            <BrandLogo variant="full" tone="light" className="h-7 w-auto max-w-[160px]" />
+
+            {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-8">
               <a href="#produits" className="text-sm text-white/50 hover:text-white transition-colors">Produits</a>
               <Link to={ROUTES.pricing} className="text-sm text-white/50 hover:text-white transition-colors">Tarifs</Link>
             </nav>
-            <div className="flex items-center gap-3">
+
+            {/* Desktop CTA */}
+            <div className="hidden md:flex items-center gap-3">
               {!isLoadingAuth && (
                 isAuthenticated ? (
                   <Link to={ROUTES.dashboard}>
-                    <Button
-                      className="gap-2 text-sm font-semibold"
-                      style={{ background: '#3A8DFF', color: '#fff' }}
-                    >
-                      Dashboard
-                      <ArrowRight className="w-4 h-4" />
+                    <Button className="gap-2 text-sm font-semibold" style={{ background: '#3A8DFF', color: '#fff' }}>
+                      Dashboard <ArrowRight className="w-4 h-4" />
                     </Button>
                   </Link>
                 ) : (
                   <>
-                    <Button
-                      variant="ghost"
-                      onClick={navigateToLogin}
-                      className="text-sm text-white/60 hover:text-white hover:bg-white/10"
-                    >
+                    <Button variant="ghost" onClick={navigateToLogin} className="text-sm text-white/60 hover:text-white hover:bg-white/10">
                       Connexion
                     </Button>
-                    <Button
-                      onClick={handleCta}
-                      className="gap-2 text-sm font-semibold"
-                      style={{ background: '#3A8DFF', color: '#fff' }}
-                    >
-                      Démarrer
-                      <ArrowRight className="w-4 h-4" />
+                    <Button onClick={handleCta} className="gap-2 text-sm font-semibold" style={{ background: '#3A8DFF', color: '#fff' }}>
+                      Démarrer <ArrowRight className="w-4 h-4" />
                     </Button>
                   </>
                 )
               )}
             </div>
+
+            {/* Mobile: CTA + hamburger */}
+            <div className="flex md:hidden items-center gap-2">
+              {!isLoadingAuth && !isAuthenticated && (
+                <Button onClick={handleCta} size="sm" className="gap-1.5 text-sm font-semibold px-4" style={{ background: '#3A8DFF', color: '#fff' }}>
+                  Démarrer
+                </Button>
+              )}
+              {!isLoadingAuth && isAuthenticated && (
+                <Link to={ROUTES.dashboard}>
+                  <Button size="sm" className="gap-1.5 text-sm font-semibold px-4" style={{ background: '#3A8DFF', color: '#fff' }}>
+                    Dashboard
+                  </Button>
+                </Link>
+              )}
+              <button
+                onClick={() => setMobileMenuOpen((v) => !v)}
+                className="w-9 h-9 flex items-center justify-center rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
+
+          {/* Mobile dropdown menu */}
+          <AnimatePresence>
+            {mobileMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.18 }}
+                className="md:hidden pb-4 border-t border-white/[0.07] pt-4 space-y-1"
+              >
+                <a
+                  href="#produits"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/[0.06] transition-colors text-sm font-medium"
+                >
+                  <Target className="w-4 h-4 text-brand-sky" />
+                  Produits
+                </a>
+                <Link
+                  to={ROUTES.pricing}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/[0.06] transition-colors text-sm font-medium"
+                >
+                  <BarChart3 className="w-4 h-4 text-brand-mint" />
+                  Tarifs
+                </Link>
+                {!isLoadingAuth && !isAuthenticated && (
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); navigateToLogin(); }}
+                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/[0.06] transition-colors text-sm font-medium text-left"
+                  >
+                    <ArrowRight className="w-4 h-4 text-white/40" />
+                    Connexion
+                  </button>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </header>
 
-      <section className="relative z-10 flex items-center justify-center min-h-[88vh] px-6">
+      <section className="relative z-10 flex items-center justify-center min-h-[80vh] px-5">
         <div className="max-w-3xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -198,7 +253,7 @@ export default function Home() {
             </div>
 
             <h1
-              className="text-5xl sm:text-6xl lg:text-[72px] font-heading font-extrabold text-white leading-[1.08] tracking-tight mb-6"
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-[72px] font-heading font-extrabold text-white leading-[1.1] tracking-tight mb-6"
               style={{ fontFamily: 'Bricolage Grotesque, system-ui, sans-serif' }}
             >
               L'IA qui travaille.<br />
