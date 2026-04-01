@@ -9,6 +9,7 @@ import PageBDR from './PageBDR';
 import PageRessources from './PageRessources';
 import PageMentions from './PageMentions';
 import { ROUTES } from '@/constants/routes';
+import BrandLogo from '@/components/brand/BrandLogo';
 
 const NAV_ITEMS = [
   {
@@ -151,8 +152,7 @@ export default function LandingLayout() {
           className="sb-logo"
           onClick={(e) => { e.preventDefault(); changePage('home'); }}
         >
-          <img src="/logo-avatar.png" alt="AImlead" />
-          <span className="sb-logo-text">AImlead</span>
+          <BrandLogo variant="full" className="sb-logo-brand" />
         </a>
 
         {/* Se connecter */}
