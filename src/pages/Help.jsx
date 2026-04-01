@@ -42,7 +42,7 @@ export default function Help() {
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-sky/10 text-brand-sky">
               <LifeBuoy className="h-5 w-5" />
             </div>
-            <h1 className="text-3xl font-bold text-slate-900">Help Center</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Help Center</h1>
           </div>
           <p className="mt-2 max-w-3xl text-sm text-slate-500">
             The fastest way to unblock onboarding, account access, import quality, and team collaboration without hunting through settings.
