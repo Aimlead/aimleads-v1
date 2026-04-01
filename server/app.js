@@ -147,8 +147,20 @@ app.use('/api', (_req, res) => {
 if (config.isProduction) {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const distPath = path.join(__dirname, '..', 'dist');
-  app.use(express.static(distPath, { maxAge: '30d' }));
+  // Hashed assets (JS/CSS bundles) → long cache; everything else → no cache
+  app.use(express.static(distPath, {
+    maxAge: '30d',
+    setHeaders(res, filePath) {
+      // index.html and unversioned assets must never be cached so deploys take effect immediately
+      if (filePath.endsWith('index.html') || filePath.endsWith('.svg') || filePath.endsWith('.webmanifest')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      }
+    },
+  }));
   app.get('*', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }
