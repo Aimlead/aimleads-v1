@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/constants/routes';
 import { Menu, Search, UserCog } from 'lucide-react';
+import BrandLogo from '@/components/brand/BrandLogo';
 
 export default function Header({ user, onSignOut, onOpenMobileNav, onOpenPalette }) {
   return (
@@ -20,6 +21,9 @@ export default function Header({ user, onSignOut, onOpenMobileNav, onOpenPalette
           >
             <Menu className="w-5 h-5" />
           </Button>
+
+          {/* Brand mark on mobile */}
+          <BrandLogo variant="mark" className="md:hidden h-7" />
 
           {/* Search trigger (desktop) */}
           <button

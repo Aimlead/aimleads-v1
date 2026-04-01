@@ -92,7 +92,7 @@ export default function PageHome({ ctx }) {
           </h1>
 
           <p className="geo-sub">
-            AImlead rend l'intelligence artificielle concrète et rentable — de la formation Claude
+            aimlead rend l'intelligence artificielle concrète et rentable — de la formation Claude
             à l'automatisation complète de votre prospection.
           </p>
 
@@ -160,7 +160,7 @@ export default function PageHome({ ctx }) {
         <div className="hb-intro rv">
           <div className="block-label" style={{ color: 'rgba(255,255,255,.35)' }}>
             <span style={{ display: 'inline-block', width: 20, height: 1.5, background: 'rgba(255,255,255,.25)', marginRight: 10, verticalAlign: 'middle' }} />
-            Pourquoi AImlead
+            Pourquoi aimlead
           </div>
           <h2 style={{ fontFamily: "'Bricolage Grotesque',sans-serif", fontWeight: 800, fontSize: 'clamp(28px,3.5vw,46px)', letterSpacing: -1.2, lineHeight: 1.08, color: 'var(--white)', marginBottom: 0 }}>
             Trois blocages.<br /><em style={{ fontStyle: 'normal', color: 'var(--sky)' }}>Une solution.</em>
