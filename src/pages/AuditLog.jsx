@@ -168,8 +168,8 @@ export default function AuditLog() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
           <Input
             value={search}
@@ -180,7 +180,7 @@ export default function AuditLog() {
         </div>
 
         <Select value={actionFilter} onValueChange={setActionFilter}>
-          <SelectTrigger className="w-36 h-9 rounded-xl text-sm">
+          <SelectTrigger className="w-full sm:w-36 h-9 rounded-xl text-sm">
             <Filter className="w-3.5 h-3.5 text-slate-400 mr-1.5" />
             <SelectValue placeholder="Action" />
           </SelectTrigger>
@@ -194,7 +194,7 @@ export default function AuditLog() {
         </Select>
 
         <Select value={resourceFilter} onValueChange={setResourceFilter}>
-          <SelectTrigger className="w-36 h-9 rounded-xl text-sm">
+          <SelectTrigger className="w-full sm:w-36 h-9 rounded-xl text-sm">
             <SelectValue placeholder="Resource" />
           </SelectTrigger>
           <SelectContent>

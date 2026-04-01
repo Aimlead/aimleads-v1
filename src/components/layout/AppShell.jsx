@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
+import MobileBottomNav from '@/components/layout/MobileBottomNav';
 import CommandPalette from '@/components/CommandPalette';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { useAuth } from '@/lib/AuthContext';
@@ -11,7 +11,6 @@ import { ROUTES } from '@/constants/routes';
 
 
 export default function AppShell({ children }) {
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -32,6 +31,8 @@ export default function AppShell({ children }) {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
+  const handleSignOut = () => logout(() => navigate(ROUTES.home));
+
   return (
     <div className="min-h-screen" style={{ background: 'hsl(var(--background))' }}>
       {/* Skip to main */}
@@ -42,24 +43,19 @@ export default function AppShell({ children }) {
         Skip to main content
       </a>
 
+      {/* Desktop sidebar */}
       <Sidebar onOpenPalette={openPalette} />
-
-      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="p-0 w-[280px] bg-brand-navy border-r border-white/5">
-          <Sidebar mobile onNavigate={() => setMobileOpen(false)} onOpenPalette={() => { setMobileOpen(false); openPalette(); }} />
-        </SheetContent>
-      </Sheet>
 
       <Header
         user={user}
-        onSignOut={() => logout(() => navigate(ROUTES.home))}
-        onOpenMobileNav={() => setMobileOpen(true)}
+        onSignOut={handleSignOut}
         onOpenPalette={openPalette}
       />
 
       <CommandPalette open={paletteOpen} onClose={closePalette} />
 
-      <main id="main-content" className="pt-16 px-4 md:px-6 py-6 md:py-8 md:ml-64 pb-safe-area-bottom">
+      {/* pb-24 on mobile leaves room above bottom nav (56px bar + safe area) */}
+      <main id="main-content" className="pt-16 px-4 md:px-6 py-6 md:py-8 md:ml-64 pb-24 md:pb-8">
         <ErrorBoundary>
           <motion.div
             key={location.pathname}
@@ -71,6 +67,9 @@ export default function AppShell({ children }) {
           </motion.div>
         </ErrorBoundary>
       </main>
+
+      {/* Mobile bottom navigation — hidden on md+ */}
+      <MobileBottomNav onSignOut={handleSignOut} />
     </div>
   );
 }
