@@ -22,6 +22,10 @@ const Analytics = lazy(() => import('@/pages/Analytics'));
 const Pipeline = lazy(() => import('@/pages/Pipeline'));
 const Team = lazy(() => import('@/pages/Team.jsx'));
 const ICP = lazy(() => import('@/pages/ICP'));
+const Outreach = lazy(() => import('@/pages/Outreach'));
+const Segments = lazy(() => import('@/pages/Segments'));
+const Reports = lazy(() => import('@/pages/Reports'));
+const Help = lazy(() => import('@/pages/Help'));
 const Pricing = lazy(() => import('@/pages/Pricing'));
 const Settings = lazy(() => import('@/pages/Settings'));
 const AuditLog = lazy(() => import('@/pages/AuditLog'));
@@ -110,6 +114,10 @@ function AppRoutes() {
           <Route path={ROUTES.analytics} element={<Analytics />} />
           <Route path={ROUTES.pipeline} element={<Pipeline />} />
           <Route path={ROUTES.icp} element={<ICP />} />
+          <Route path={ROUTES.outreach} element={<Outreach />} />
+          <Route path={ROUTES.segments} element={<Segments />} />
+          <Route path={ROUTES.reports} element={<Reports />} />
+          <Route path={ROUTES.help} element={<Help />} />
           <Route path={ROUTES.settings} element={<Settings />} />
           <Route path={ROUTES.accountSettings} element={<AccountSettings />} />
           <Route path={ROUTES.team} element={<Team />} />

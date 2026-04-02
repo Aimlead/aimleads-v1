@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { ClipboardList, Download, Filter, Loader2, Mail, RefreshCcw, Search, Shield, Sparkles, Tag, Trash2, TrendingUp, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ClipboardList, Download, Filter, Loader2, Mail, RefreshCcw, Search, Shield, Sparkles, Tag, Trash2, TrendingUp, Users } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { dataClient } from '@/services/dataClient';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ const RESOURCE_META = {
   lead_export: { label: 'Lead Export', icon: Download },
 };
 
+const PAGE_SIZE = 50;
 const ACTION_ORDER = ['create', 'update', 'delete', 'export'];
 const RESOURCE_FILTER_OPTIONS = [
   { value: 'lead', label: 'Leads' },
@@ -99,6 +100,7 @@ export default function AuditLog() {
   const [search, setSearch] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
   const [resourceFilter, setResourceFilter] = useState('all');
+  const [page, setPage] = useState(1);
 
   const { data: entries = [], isLoading, refetch, isFetching } = useQuery({
     queryKey: ['audit-log'],
@@ -117,6 +119,10 @@ export default function AuditLog() {
     }
     return true;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -173,13 +179,13 @@ export default function AuditLog() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
           <Input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search changes…"
             className="pl-9 rounded-xl text-sm h-9"
           />
         </div>
 
-        <Select value={actionFilter} onValueChange={setActionFilter}>
+        <Select value={actionFilter} onValueChange={(v) => { setActionFilter(v); setPage(1); }}>
           <SelectTrigger className="w-full sm:w-36 h-9 rounded-xl text-sm">
             <Filter className="w-3.5 h-3.5 text-slate-400 mr-1.5" />
             <SelectValue placeholder="Action" />
@@ -193,7 +199,7 @@ export default function AuditLog() {
           </SelectContent>
         </Select>
 
-        <Select value={resourceFilter} onValueChange={setResourceFilter}>
+        <Select value={resourceFilter} onValueChange={(v) => { setResourceFilter(v); setPage(1); }}>
           <SelectTrigger className="w-full sm:w-36 h-9 rounded-xl text-sm">
             <SelectValue placeholder="Resource" />
           </SelectTrigger>
@@ -210,7 +216,7 @@ export default function AuditLog() {
             variant="ghost"
             size="sm"
             className="text-slate-500 h-9"
-            onClick={() => { setSearch(''); setActionFilter('all'); setResourceFilter('all'); }}
+            onClick={() => { setSearch(''); setActionFilter('all'); setResourceFilter('all'); setPage(1); }}
           >
             Clear filters
           </Button>
@@ -244,14 +250,39 @@ export default function AuditLog() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.slice(0, 100).map((entry, i) => (
-                  <AuditRow key={entry.id || i} entry={entry} delay={i * 0.02} />
+                {paginated.map((entry, i) => (
+                  <AuditRow key={entry.id || i} entry={entry} delay={i * 0.015} />
                 ))}
               </tbody>
             </table>
-            {filtered.length > 100 && (
-              <div className="px-5 py-3 text-center text-xs text-slate-400 border-t border-slate-50">
-                Showing first 100 of {filtered.length} entries
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-5 py-3 border-t border-slate-50">
+                <p className="text-xs text-slate-400">
+                  {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length} entries
+                </p>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 w-7 p-0 rounded-lg"
+                    disabled={safePage <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </Button>
+                  <span className="text-xs text-slate-500 px-2">
+                    Page {safePage} / {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 w-7 p-0 rounded-lg"
+                    disabled={safePage >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
               </div>
             )}
           </div>

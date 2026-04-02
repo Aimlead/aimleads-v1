@@ -128,6 +128,11 @@ const COLUMN_MAP = {
   mail: 'contact_email',
   notes: 'notes',
   source: 'source_list',
+  client_type: 'client_type',
+  'type client': 'client_type',
+  'type de client': 'client_type',
+  'client type': 'client_type',
+  typeclient: 'client_type',
 };
 
 const normalizeRow = (row) => {
@@ -277,7 +282,7 @@ export default function ImportCSVDialog({
           <DialogTitle>Import Leads</DialogTitle>
           <DialogDescription>
             Supports <strong>CSV</strong> and <strong>Excel (XLSX/XLS)</strong>. Required column: <code className="text-xs bg-slate-100 px-1 rounded">company_name</code>.
-            Optional: website_url, industry, company_size, country, contact_name, contact_role, contact_email, notes, source_list.
+            Optional: website_url, industry, company_size, country, client_type, contact_name, contact_role, contact_email, notes, source_list.
           </DialogDescription>
         </DialogHeader>
 

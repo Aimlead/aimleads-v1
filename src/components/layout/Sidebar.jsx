@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/routes';
 import {
-  BarChart3, Kanban,
-  LayoutDashboard, ScrollText, Settings, Sparkles, Target, Users,
+  BarChart3, BookOpen, FileBarChart2, Kanban,
+  LayoutDashboard, Mail, ScrollText, Settings, Sparkles, Tag, Target, Users,
 } from 'lucide-react';
 import BrandLogo from '@/components/brand/BrandLogo';
 
@@ -13,10 +13,14 @@ export const sidebarNavigation = [
   { name: 'Dashboard', href: ROUTES.dashboard, icon: LayoutDashboard, group: 'main', shortcut: '1' },
   { name: 'Pipeline', href: ROUTES.pipeline, icon: Kanban, group: 'main', shortcut: '2' },
   { name: 'Analytics', href: ROUTES.analytics, icon: BarChart3, group: 'main', shortcut: '3' },
+  { name: 'Reports', href: ROUTES.reports, icon: FileBarChart2, group: 'main' },
+  { name: 'Segments', href: ROUTES.segments, icon: Tag, group: 'main' },
+  { name: 'Outreach', href: ROUTES.outreach, icon: Mail, group: 'main' },
   { name: 'ICP Profile', href: ROUTES.icp, icon: Target, group: 'config' },
   { name: 'Team', href: ROUTES.team, icon: Users, group: 'config' },
   { name: 'Settings', href: ROUTES.settings, icon: Settings, group: 'config' },
   { name: 'Audit Log', href: ROUTES.auditLog, icon: ScrollText, group: 'config' },
+  { name: 'Help', href: ROUTES.help, icon: BookOpen, group: 'config' },
 ];
 
 const GROUP_LABELS = {
