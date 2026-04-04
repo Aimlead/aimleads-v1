@@ -124,7 +124,7 @@ export default function AuditLog() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center">
               <ClipboardList className="w-4 h-4 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-slate-900">Audit Log</h1>

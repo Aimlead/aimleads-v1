@@ -98,12 +98,12 @@ const getDisplaySignals = (lead) => {
 
 const categoryStyle = (cat) => {
   const key = String(cat || '').toLowerCase();
-  if (key.includes('excellent')) return 'bg-violet-100 text-violet-700 border-violet-200';
-  if (key.includes('strong')) return 'bg-blue-100 text-blue-700 border-blue-200';
-  if (key.includes('medium')) return 'bg-amber-100 text-amber-700 border-amber-200';
-  if (key.includes('low')) return 'bg-rose-100 text-rose-600 border-rose-200';
-  if (key.includes('excluded')) return 'bg-gray-100 text-gray-600 border-gray-200';
-  return 'bg-slate-100 text-slate-600 border-slate-200';
+  if (key.includes('excellent')) return 'bg-violet-50 text-violet-700 border-violet-200';
+  if (key.includes('strong')) return 'bg-blue-50 text-blue-700 border-blue-200';
+  if (key.includes('medium')) return 'bg-amber-50 text-amber-700 border-amber-200';
+  if (key.includes('low')) return 'bg-rose-50 text-rose-600 border-rose-200';
+  if (key.includes('excluded')) return 'bg-gray-50 text-gray-500 border-gray-200';
+  return 'bg-slate-50 text-slate-500 border-slate-200';
 };
 
 const formatDate = (value) => {

@@ -89,7 +89,7 @@ export default function Pricing() {
               <Card
                 key={plan.name}
                 className={`relative shadow-sm ${
-                  plan.popular ? 'border-2 border-brand-sky shadow-lg shadow-brand-sky/10' : 'border border-slate-200'
+                  plan.popular ? 'border-2 border-brand-sky shadow-md shadow-brand-sky/10' : 'border border-slate-200'
                 }`}
               >
                 {plan.popular && (

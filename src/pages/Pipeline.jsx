@@ -63,7 +63,7 @@ function LeadCard({ lead, onOpen, onStageChange, onDragStart }) {
       animate={{ opacity: 1, scale: 1 }}
       draggable
       onDragStart={(e) => { e.stopPropagation(); onDragStart(lead); }}
-      className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing group"
+      className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm hover:shadow-sm transition-shadow cursor-grab active:cursor-grabbing group"
       onClick={() => onOpen(lead)}
     >
       <div className="flex items-start justify-between gap-2 mb-2">

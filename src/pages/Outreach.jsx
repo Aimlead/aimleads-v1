@@ -88,7 +88,7 @@ function TemplateCard({ template, onEdit, onDelete, isSelected, onClick }) {
       className={cn(
         'group relative bg-white rounded-2xl border p-4 cursor-pointer transition-all duration-200',
         isSelected
-          ? 'border-brand-sky/20 shadow-md ring-1 ring-brand-sky/20'
+          ? 'border-brand-sky/20 shadow-sm ring-1 ring-brand-sky/20'
           : 'border-slate-100 hover:border-slate-200 hover:shadow-sm'
       )}
     >
@@ -488,7 +488,7 @@ export default function Outreach() {
                   className={cn(
                     'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all',
                     channelFilter === ch
-                      ? 'bg-slate-900 text-white border-slate-900'
+                      ? 'bg-white text-white border-slate-900'
                       : 'text-slate-600 border-slate-200 hover:border-slate-300 bg-white'
                   )}
                 >

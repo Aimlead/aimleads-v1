@@ -29,7 +29,7 @@ function ProductCard({ icon: Icon, label, title, description, color, delay }) {
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.55, delay }}
-      className="relative group rounded-2xl overflow-hidden border border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.07] transition-all duration-300 p-6"
+      className="relative group rounded-2xl overflow-hidden border border-slate-200 bg-white/[0.04] hover:bg-white/[0.07] transition-all duration-300 p-6"
     >
       <div
         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
@@ -148,11 +148,11 @@ export default function Home() {
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
         <SheetContent
           side="left"
-          className="p-0 w-[300px] border-r border-white/[0.07] flex flex-col"
+          className="p-0 w-[300px] border-r border-slate-200 flex flex-col"
           style={{ background: '#030d1a' }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-5 border-b border-white/[0.07]">
+          <div className="flex items-center justify-between px-5 py-5 border-b border-slate-200">
             <BrandLogo variant="full" tone="light" className="h-6 w-auto max-w-[130px]" />
             <button
               onClick={() => setDrawerOpen(false)}
@@ -202,7 +202,7 @@ export default function Home() {
                   onClick={() => setDrawerOpen(false)}
                   className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/[0.05] text-white/70 hover:text-white transition-colors text-sm font-medium"
                 >
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-white/[0.06] border border-white/10">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-white/[0.06] border border-slate-200">
                     <BarChart3 className="w-4 h-4 text-white/40" />
                   </div>
                   Tarifs
@@ -212,7 +212,7 @@ export default function Home() {
           </div>
 
           {/* Footer CTAs */}
-          <div className="px-3 pb-6 pt-3 border-t border-white/[0.07] space-y-2" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1rem)' }}>
+          <div className="px-3 pb-6 pt-3 border-t border-slate-200 space-y-2" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1rem)' }}>
             {!isLoadingAuth && (
               isAuthenticated ? (
                 <Link to={ROUTES.dashboard} onClick={() => setDrawerOpen(false)}>
@@ -330,7 +330,7 @@ export default function Home() {
               <Button
                 size="lg"
                 onClick={handleCta}
-                className="w-full sm:w-auto gap-2 text-base font-semibold px-8 py-6 rounded-xl shadow-lg"
+                className="w-full sm:w-auto gap-2 text-base font-semibold px-8 py-6 rounded-xl shadow-md"
                 style={{ background: '#3A8DFF', color: '#fff', boxShadow: '0 8px 32px rgba(58,141,255,.35)' }}
               >
                 Analyser mes leads
@@ -396,7 +396,7 @@ export default function Home() {
       <section className="relative z-10 py-14 sm:py-20 px-5">
         <div className="max-w-5xl mx-auto">
           <div
-            className="rounded-2xl sm:rounded-3xl p-7 sm:p-10 md:p-14 border border-white/[0.07]"
+            className="rounded-2xl sm:rounded-3xl p-7 sm:p-10 md:p-14 border border-slate-200"
             style={{ background: 'linear-gradient(135deg, rgba(0,31,77,.8) 0%, rgba(0,39,94,.6) 100%)' }}
           >
             <div className="grid md:grid-cols-2 gap-8 sm:gap-10 items-center">

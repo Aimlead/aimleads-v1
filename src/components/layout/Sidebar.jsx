@@ -45,7 +45,7 @@ export default function Sidebar({ mobile = false, onNavigate, onOpenPalette }) {
       )}
     >
       {/* Brand */}
-      <div className="h-16 flex items-center px-5 border-b border-white/[0.07]">
+      <div className="h-16 flex items-center px-5 border-b border-slate-200">
         <BrandLogo variant="full" tone="light" className="h-7 w-auto max-w-[140px]" />
       </div>
 
@@ -53,7 +53,7 @@ export default function Sidebar({ mobile = false, onNavigate, onOpenPalette }) {
       <div className="px-3 pt-4 pb-2">
         <button
           onClick={onOpenPalette}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/[0.05] hover:bg-white/10 border border-white/[0.08] text-white/40 text-sm transition-all duration-150 group"
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/[0.05] hover:bg-white/10 border border-slate-200 text-white/40 text-sm transition-all duration-150 group"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
@@ -69,7 +69,7 @@ export default function Sidebar({ mobile = false, onNavigate, onOpenPalette }) {
           const items = sidebarNavigation.filter((item) => item.group === group);
           return (
             <div key={group}>
-              <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/25">
+              <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-white/20">
                 {GROUP_LABELS[group]}
               </p>
               <div className="space-y-0.5">
@@ -123,7 +123,7 @@ export default function Sidebar({ mobile = false, onNavigate, onOpenPalette }) {
 
       {/* AI Badge */}
       <div className="px-3 py-4 border-t border-white/[0.06]">
-        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-brand-sky/10 border border-brand-sky/20">
+        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
           <div className="w-6 h-6 rounded-lg bg-brand-sky/20 flex items-center justify-center flex-shrink-0">
             <Sparkles className="w-3.5 h-3.5 text-brand-sky" />
           </div>

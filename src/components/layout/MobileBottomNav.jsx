@@ -39,7 +39,7 @@ export default function MobileBottomNav({ onSignOut }) {
     <>
       {/* ── Bottom tab bar ───────────────────────────────────────────── */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.08]"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200"
         style={{
           background: 'rgba(0,20,55,0.97)',
           backdropFilter: 'blur(20px)',
@@ -119,7 +119,7 @@ export default function MobileBottomNav({ onSignOut }) {
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent
           side="bottom"
-          className="p-0 border-t border-white/[0.08] rounded-t-2xl"
+          className="p-0 border-t border-slate-200 rounded-t-2xl"
           style={{ background: 'rgba(0,20,55,0.98)' }}
         >
           <div

@@ -61,7 +61,7 @@ function SegmentCard({ segment, leads, onClick }) {
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       onClick={onClick}
-      className="group bg-white rounded-2xl border border-slate-100 p-5 cursor-pointer hover:border-slate-200 hover:shadow-md transition-all duration-200"
+      className="group bg-white rounded-2xl border border-slate-100 p-5 cursor-pointer hover:border-slate-200 hover:shadow-sm transition-all duration-200"
     >
       <div className="flex items-start gap-3">
         <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center border flex-shrink-0', segment.color)}>
