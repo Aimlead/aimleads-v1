@@ -55,7 +55,7 @@ export default function AppShell({ children }) {
       <CommandPalette open={paletteOpen} onClose={closePalette} />
 
       {/* pb-24 on mobile leaves room above bottom nav (56px bar + safe area) */}
-      <main id="main-content" className="pt-16 px-4 md:px-6 py-6 md:py-8 md:ml-64 pb-24 md:pb-8">
+              <main id="main-content" className="pt-20 px-4 md:px-6 py-6 md:py-8 md:ml-64 pb-24 md:pb-8">
         <ErrorBoundary>
           <motion.div
             key={location.pathname}

@@ -381,7 +381,7 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
     { key: 'call', label: 'Call', icon: Phone, content: lead.generated_icebreakers?.call },
   ].filter((item) => item.content);
 
-  const icpScore = toMetricValue(lead.icp_score);
+const icpScore = toMetricValue(lead.icp_score ?? lead.score_details?.icp_score);
   const aiScore = toMetricValue(lead.ai_score);
   const finalScore = toMetricValue(lead.final_score) ?? icpScore;
   const aiBoost = icpScore !== null && finalScore !== null ? finalScore - icpScore : null;
@@ -451,7 +451,7 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
 
         <div className="rounded-xl border border-slate-200 p-4 mb-4 bg-white">
           <div className="flex items-center gap-5">
-            <ScoreGauge score={finalScore} size="small" />
+            <ScoreGauge score={finalScore} size="small" category={lead.final_category} />
             <div className="flex-1 grid grid-cols-2 gap-2">
               <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                 <p className="text-[11px] uppercase tracking-wide text-slate-500">ICP Base</p>

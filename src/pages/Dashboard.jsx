@@ -46,7 +46,7 @@ const toSourceListKey = (lead) => {
 
 const sourceListLabel = (key) => {
   if (key === LIST_KEYS.UNLISTED) return 'Unlisted';
-  return key;
+    return key.replace(/_/g, ' ').replace(/\b\d{4}\b.*/g, '').trim().replace(/\b\w/g, c => c.toUpperCase()) || key;
 };
 
 const buildAnalysisUpdatePayload = (result) => ({

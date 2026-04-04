@@ -6,18 +6,26 @@ import { cn } from '@/lib/utils';
  * Circular gauge displaying an ICP/AI/final score.
  * @param {{ score: number|null, size: 'large'|'small', label: string }} props
  */
-export default function ScoreGauge({ score, size = 'large', label = 'Score' }) {
+export default function ScoreGauge({ score, size = 'large', label = 'Score', category = null }) {}
   const normalizedScore = score ?? 0;
   const circumference = 2 * Math.PI * 45;
   const strokeDashoffset = circumference - (normalizedScore / 100) * circumference;
 
   const getScoreColor = (value) => {
-    if (value > 75) return { stroke: '#10b981', text: 'text-emerald-600', label: 'Good fit' };
+        if (value > 75) return { stroke: '#10b981', text: 'text-emerald-600', label: 'Good fit' };
     if (value >= 50) return { stroke: '#f97316', text: 'text-orange-600', label: 'Medium fit' };
     return { stroke: '#f43f5e', text: 'text-rose-600', label: 'Low fit' };
   };
 
-  const config = getScoreColor(normalizedScore);
+    const getCategoryColor = (cat) => {
+          const k = String(cat || '').toLowerCase();
+              if (k.includes('excellent') || k.includes('strong')) return { stroke: '#10b981', text: 'text-emerald-600', label: cat };
+                  if (k.includes('medium')) return { stroke: '#f97316', text: 'text-orange-600', label: cat };
+                      if (k.includes('low') || k.includes('excluded')) return { stroke: '#f43f5e', text: 'text-rose-600', label: cat };
+                          return null;
+                            };
+                              const config = (category ? getCategoryColor(category) : null) || getScoreColor(normalizedScore);
+    }
   const dimensions = size === 'large' ? 'w-40 h-40' : 'w-24 h-24';
   const textSize = size === 'large' ? 'text-4xl' : 'text-xl';
 
