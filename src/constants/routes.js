@@ -13,6 +13,36 @@ export const ROUTES = {
   auditLog: '/audit',
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
+    billing: '/billing',export const ROUTES = {
+        home: '/',
+          login: '/login',
+            dashboard: '/dashboard',
+              analytics: '/analytics',
+                pipeline: '/pipeline',
+                  icp: '/icp',
+                    settings: '/settings',
+                      accountSettings: '/account',
+                        team: '/team',
+                          pricing: '/pricing',
+                            leadDetail: '/leads/:leadId',
+                              auditLog: '/audit',
+                                forgotPassword: '/forgot-password',
+                                  resetPassword: '/reset-password',
+                                    billing: '/billing',
+                                    };
+
+                                    export const PAGE_ROUTE_MAP = {
+                                      Home: ROUTES.home,
+                                        Login: ROUTES.login,
+                                          Dashboard: ROUTES.dashboard,
+                                            ICP: ROUTES.icp,
+                                              Settings: ROUTES.settings,
+                                                Pricing: ROUTES.pricing,
+                                                  LeadDetail: ROUTES.leadDetail,
+                                                    AuditLog: ROUTES.auditLog,
+                                                      Billing: ROUTES.billing,
+                                                      };
+    }
 };
 
 export const PAGE_ROUTE_MAP = {
