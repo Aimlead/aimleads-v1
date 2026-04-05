@@ -1,4 +1,3 @@
-}
 import React from 'react';
 import { CreditCard, CheckCircle2, ExternalLink, Zap, Users, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
