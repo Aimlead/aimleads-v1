@@ -230,7 +230,7 @@ export default function LeadDetail() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-start gap-4 mb-6" sticky top-20 bg-white z-10 py-3 -mx-6 px-6 border-b border-slate-100">
+      <div className="flex items-start gap-4 mb-6 sticky top-20 bg-white z-10 py-3 -mx-6 px-6 border-b border-slate-100">
         <Button variant="ghost" size="sm" className="gap-2 mt-1" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-4 h-4" />
           Back
