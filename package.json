@@ -23,8 +23,11 @@
     "test:ui:coverage": "vitest run --coverage",
     "export:supabase": "node scripts/export-db-for-supabase.mjs"
   },
+    "overrides": {
+          "lodash": "^4.17.21"
+    },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.80.0",
+    "@anthropic-ai/sdk" : "^0.81.0",
     "@hello-pangea/dnd": "^17.0.0",
     "@hookform/resolvers": "^4.1.2",
     "@radix-ui/react-accordion": "^1.2.3",
