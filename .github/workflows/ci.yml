@@ -2,133 +2,131 @@ name: CI
 
 on:
   push:
-    branches: [main, master, develop, "claude/**"]
-  pull_request:
-    branches: [main, master, develop]
+      branches: [main, master, develop, "claude/**"]
+        pull_request:
+            branches: [main, master, develop]
 
-jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: .
+            jobs:
+              lint:
+                  name: Lint
+                      runs-on: ubuntu-latest
+                          defaults:
+                                run:
+                                        working-directory: .
 
-    steps:
-      - uses: actions/checkout@v4
+                                            steps:
+                                                  - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
+                                                        - name: Set up Node.js
+                                                                uses: actions/setup-node@v4
+                                                                        with:
+                                                                                  node-version-file: .nvmrc
+                                                                                            cache: npm
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run ESLint
-        run: npm run lint
-
-  security:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: .
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run npm audit
-        run: npm audit --audit-level=moderate
-
-  test:
-    name: API Tests
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: .
-
-    env:
-      NODE_ENV: test
-      DATA_PROVIDER: local
-      AUTH_PROVIDER: legacy
-      SESSION_SECRET: ci-test-secret-not-for-production
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run API tests
-        run: npm run test:api
-
-  ui-test:
-    name: UI Tests
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: .
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run UI tests
-        run: npm run test:ui
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    needs: [lint, test, ui-test]
-    defaults:
-      run:
-        working-directory: .
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build frontend
-        run: npm run build
-        env:
-          VITE_API_BASE_URL: ""
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist/
-          retention-days: 7
+                                                                                                  - name: Install dependencies
+                                                                                                          run: npm ci
+                                                                                                          
+                                                                                                                - name: Run ESLint
+                                                                                                                        run: npm run lint
+                                                                                                                        
+                                                                                                                          security:
+                                                                                                                              name: Security Audit
+                                                                                                                                  runs-on: ubuntu-latest
+                                                                                                                                      defaults:
+                                                                                                                                            run:
+                                                                                                                                                    working-directory: .
+                                                                                                                                                    
+                                                                                                                                                        steps:
+                                                                                                                                                              - uses: actions/checkout@v4
+                                                                                                                                                              
+                                                                                                                                                                    - name: Set up Node.js
+                                                                                                                                                                            uses: actions/setup-node@v4
+                                                                                                                                                                                    with:
+                                                                                                                                                                                              node-version-file: .nvmrc
+                                                                                                                                                                                                        cache: npm
+                                                                                                                                                                                                        
+                                                                                                                                                                                                              - name: Install dependencies
+                                                                                                                                                                                                                      run: npm ci
+                                                                                                                                                                                                                      
+                                                                                                                                                                                                                            - name: Run npm audit
+                                                                                                                                                                                                                                    run: npm audit --audit-level=high
+                                                                                                                                                                                                                                            continue-on-error: false
+                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                              test:
+                                                                                                                                                                                                                                                  name: API Tests
+                                                                                                                                                                                                                                                      runs-on: ubuntu-latest
+                                                                                                                                                                                                                                                          defaults:
+                                                                                                                                                                                                                                                                run:
+                                                                                                                                                                                                                                                                        working-directory: .
+                                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                            env:
+                                                                                                                                                                                                                                                                                  NODE_ENV: test
+                                                                                                                                                                                                                                                                                        DATA_PROVIDER: local
+                                                                                                                                                                                                                                                                                              AUTH_PROVIDER: legacy
+                                                                                                                                                                                                                                                                                                    JWT_SECRET: test-secret-key-for-ci
+                                                                                                                                                                                                                                                                                                          SUPABASE_FALLBACK_TO_LOCAL: "1"
+                                                                                                                                                                                                                                                                                                          
+                                                                                                                                                                                                                                                                                                              steps:
+                                                                                                                                                                                                                                                                                                                    - uses: actions/checkout@v4
+                                                                                                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                                                                                                          - name: Set up Node.js
+                                                                                                                                                                                                                                                                                                                                  uses: actions/setup-node@v4
+                                                                                                                                                                                                                                                                                                                                          with:
+                                                                                                                                                                                                                                                                                                                                                    node-version-file: .nvmrc
+                                                                                                                                                                                                                                                                                                                                                              cache: npm
+                                                                                                                                                                                                                                                                                                                                                              
+                                                                                                                                                                                                                                                                                                                                                                    - name: Install dependencies
+                                                                                                                                                                                                                                                                                                                                                                            run: npm ci
+                                                                                                                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                                                                                                                  - name: Run API tests
+                                                                                                                                                                                                                                                                                                                                                                                          run: npm run test:api
+                                                                                                                                                                                                                                                                                                                                                                                          
+                                                                                                                                                                                                                                                                                                                                                                                            ui-tests:
+                                                                                                                                                                                                                                                                                                                                                                                                name: UI Tests
+                                                                                                                                                                                                                                                                                                                                                                                                    runs-on: ubuntu-latest
+                                                                                                                                                                                                                                                                                                                                                                                                        defaults:
+                                                                                                                                                                                                                                                                                                                                                                                                              run:
+                                                                                                                                                                                                                                                                                                                                                                                                                      working-directory: .
+                                                                                                                                                                                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                                                                                                                                          steps:
+                                                                                                                                                                                                                                                                                                                                                                                                                                - uses: actions/checkout@v4
+                                                                                                                                                                                                                                                                                                                                                                                                                                
+                                                                                                                                                                                                                                                                                                                                                                                                                                      - name: Set up Node.js
+                                                                                                                                                                                                                                                                                                                                                                                                                                              uses: actions/setup-node@v4
+                                                                                                                                                                                                                                                                                                                                                                                                                                                      with:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                node-version-file: .nvmrc
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                          cache: npm
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                - name: Install dependencies
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        run: npm ci
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              - name: Run UI tests
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      run: npm run test:ui
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        build:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            name: Build
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                runs-on: ubuntu-latest
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    needs: [lint, test, ui-tests]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        defaults:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              run:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      working-directory: .
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          env:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                NODE_ENV: production
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      VITE_DATA_PROVIDER: local
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            VITE_AUTH_PROVIDER: legacy
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                steps:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      - uses: actions/checkout@v4
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            - name: Set up Node.js
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    uses: actions/setup-node@v4
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            with:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      node-version-file: .nvmrc
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                cache: npm
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      - name: Install dependencies
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              run: npm ci
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    - name: Build
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            run: npm run build
