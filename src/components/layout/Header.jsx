@@ -1,8 +1,44 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/constants/routes';
-import { Search, UserCog } from 'lucide-react';
+import { Search, UserCog, Zap } from 'lucide-react';
+import { dataClient } from '@/services/dataClient';
+
+function CreditBadge() {
+  const [balance, setBalance] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    dataClient.workspace.getCredits()
+      .then((res) => {
+        if (!cancelled) setBalance(res?.data?.balance ?? null);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  if (balance === null) return null;
+
+  const isLow = balance <= 10;
+  const isEmpty = balance === 0;
+
+  return (
+    <div
+      title={`${balance} credits remaining`}
+      className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium ${
+        isEmpty
+          ? 'bg-red-50 border-red-200 text-red-600'
+          : isLow
+            ? 'bg-amber-50 border-amber-200 text-amber-700'
+            : 'bg-slate-50 border-slate-200 text-slate-500'
+      }`}
+    >
+      <Zap className={`w-3 h-3 ${isEmpty ? 'text-red-500' : isLow ? 'text-amber-500' : 'text-slate-400'}`} />
+      <span>{balance} credits</span>
+    </div>
+  );
+}
 
 export default function Header({ user, onSignOut, onOpenPalette }) {
   return (
@@ -22,6 +58,7 @@ export default function Header({ user, onSignOut, onOpenPalette }) {
         </div>
 
         <div className="flex items-center gap-1.5">
+          <CreditBadge />
           <span className="text-sm text-slate-400 hidden lg:block mr-2">{user?.email}</span>
           <Link to={ROUTES.accountSettings}>
             <Button variant="ghost" size="icon" title="Account Settings" aria-label="Account Settings" className="w-9 h-9 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100">

@@ -116,6 +116,18 @@ const apiRequest = async (path, { method = 'GET', body, headers = {} } = {}) => 
       }
     }
 
+    if (response.status === 402 && payload?.code === 'INSUFFICIENT_CREDITS') {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('aimleads:insufficient-credits', {
+          detail: {
+            balance: payload.balance ?? 0,
+            required: payload.required ?? 0,
+            action: payload.action ?? '',
+          },
+        }));
+      }
+    }
+
     throw error;
   }
 
@@ -341,6 +353,11 @@ const apiClient = {
       apiRequest(`/workspace/members/${encodeURIComponent(memberUserId)}/transfer-ownership`, { method: 'POST' }),
     removeMember: (memberUserId) => apiRequest(`/workspace/members/${encodeURIComponent(memberUserId)}`, { method: 'DELETE' }),
     getIntegrationStatus: () => apiRequest('/workspace/integration-status'),
+    getCredits: (params = {}) => {
+      const qs = new URLSearchParams(params).toString();
+      return apiRequest(`/workspace/credits${qs ? `?${qs}` : ''}`);
+    },
+    grantCredits: (payload) => apiRequest('/workspace/credits/grant', { method: 'POST', body: payload }),
   },
   dev: {
     loadDemo: () => apiRequest('/dev/load-demo', { method: 'POST' }),
@@ -716,6 +733,24 @@ export const dataClient = {
         passAuthErrors: true,
       });
     },
+    async getCredits(params = {}) {
+      return runWithMode({
+        operationName: 'workspace.getCredits',
+        apiCall: () => apiClient.workspace.getCredits(params),
+        fallbackCall: async () => ({ data: { balance: 50, costs: {}, transactions: [] } }),
+        passAuthErrors: true,
+      });
+    },
+
+    async grantCredits(payload) {
+      return runWithMode({
+        operationName: 'workspace.grantCredits',
+        apiCall: () => apiClient.workspace.grantCredits(payload),
+        fallbackCall: async () => ({ data: { success: true } }),
+        passAuthErrors: true,
+      });
+    },
+
       async getIntegrationStatus() {
         return runWithMode({
           operationName: 'workspace.getIntegrationStatus',
