@@ -6,6 +6,7 @@ import { schemas, validateBody } from '../lib/validation.js';
 import { writeAuditLog } from '../lib/auditLog.js';
 import { getUserWorkspaceId } from '../lib/scope.js';
 import { getCircuitBreakerStatus } from '../services/llmService.js';
+import { getBalance, grantCredits, getTransactionHistory, CREDIT_COSTS } from '../lib/credits.js';
 
 const router = express.Router();
 wrapAsyncRoutes(router);
@@ -304,6 +305,56 @@ router.delete('/members/:memberUserId', requireAuth, async (req, res) => {
       removed_from_workspace: true,
     },
   });
+});
+
+// ─────────────────────────────────────────────────────────────────
+// Credits
+// ─────────────────────────────────────────────────────────────────
+
+router.get('/credits', requireAuth, async (req, res) => {
+  const workspaceId = getUserWorkspaceId(req.user);
+  const limit = Math.max(1, Math.min(100, Number.parseInt(req.query.limit || '20', 10)));
+  const offset = Math.max(0, Number.parseInt(req.query.offset || '0', 10));
+
+  const [balance, transactions] = await Promise.all([
+    getBalance(workspaceId),
+    getTransactionHistory(workspaceId, { limit, offset }),
+  ]);
+
+  return res.json({
+    data: {
+      balance,
+      costs: CREDIT_COSTS,
+      transactions,
+    },
+  });
+});
+
+// Admin-only endpoint: grant credits to a workspace (sales-assisted, future Stripe webhook)
+// Requires service role or owner role — currently owner-only for simplicity.
+router.post('/credits/grant', requireAuth, async (req, res) => {
+  const { members, currentMember } = await resolveCurrentWorkspaceAccess(req.user);
+  if (!members || !currentMember || currentMember.role !== 'owner') {
+    return deny(res, 'Only the workspace owner can grant credits.');
+  }
+
+  const amount = Number.parseInt(req.body?.amount || '0', 10);
+  const description = String(req.body?.description || '').trim() || null;
+
+  if (!amount || amount <= 0 || amount > 10000) {
+    return res.status(400).json({ message: 'amount must be between 1 and 10000' });
+  }
+
+  const workspaceId = getUserWorkspaceId(req.user);
+  const result = await grantCredits(workspaceId, amount, 'grant', description, {
+    granted_by: req.user.id,
+  });
+
+  if (!result.success) {
+    return res.status(500).json({ message: result.error || 'Failed to grant credits' });
+  }
+
+  return res.json({ data: result });
 });
 
 router.get('/integration-status', requireAuth, (req, res) => {

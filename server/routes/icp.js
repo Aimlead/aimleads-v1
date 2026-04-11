@@ -1,5 +1,6 @@
 ﻿import express from 'express';
 import { requireAuth, wrapAsyncRoutes } from '../lib/middleware.js';
+import { requireCredits } from '../lib/credits.js';
 import { dataStore } from '../lib/dataStore.js';
 import { schemas, validateBody } from '../lib/validation.js';
 import { writeAuditLog } from '../lib/auditLog.js';
@@ -142,7 +143,7 @@ router.delete('/:profileId', async (req, res) => {
 
 // ─── AI: Generate ICP from natural language ───────────────────────────────────
 
-router.post('/generate', icpGenerateLimiter, validateBody(schemas.icpGenerateSchema), async (req, res) => {
+router.post('/generate', icpGenerateLimiter, requireCredits('icp_generate'), validateBody(schemas.icpGenerateSchema), async (req, res) => {
   if (!icpGeneratorAvailable) {
     return res.status(503).json({ message: 'AI ICP generation is not available (no LLM key configured).' });
   }

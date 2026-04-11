@@ -1,5 +1,6 @@
 import express from 'express';
 import { requireAuth, wrapAsyncRoutes } from '../lib/middleware.js';
+import { requireCredits } from '../lib/credits.js';
 import { dataStore } from '../lib/dataStore.js';
 import { sanitizeWebsite } from '../lib/utils.js';
 import { schemas, validateBody } from '../lib/validation.js';
@@ -380,7 +381,7 @@ router.post('/:leadId/external-signals', externalSignalsLimiter, validateBody(sc
   });
 });
 
-router.post('/:leadId/reanalyze', reanalyzeLimiter, async (req, res) => {
+router.post('/:leadId/reanalyze', reanalyzeLimiter, requireCredits('reanalyze_llm'), async (req, res) => {
   const lead = await dataStore.getLeadById(req.user, req.params.leadId);
 
   if (!lead) {
@@ -414,7 +415,7 @@ router.post('/:leadId/reanalyze', reanalyzeLimiter, async (req, res) => {
     },
   });
 });
-router.post('/:leadId/discover-signals', discoverLimiter, async (req, res) => {
+router.post('/:leadId/discover-signals', discoverLimiter, requireCredits('discover_signals'), async (req, res) => {
   const lead = await dataStore.getLeadById(req.user, req.params.leadId);
 
   if (!lead) {
@@ -610,7 +611,7 @@ router.post('/bulk-delete', validateBody(schemas.bulkDeleteSchema), async (req, 
 
 // ─── AI: Generate multi-touch outreach sequence ───────────────────────────────
 
-router.post('/:leadId/sequence', sequenceLimiter, async (req, res) => {
+router.post('/:leadId/sequence', sequenceLimiter, requireCredits('sequence'), async (req, res) => {
   if (!sequenceGeneratorAvailable) {
     return res.status(503).json({ message: 'Sequence generation is not available (no LLM key configured).' });
   }

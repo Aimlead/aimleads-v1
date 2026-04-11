@@ -4,6 +4,7 @@ export const ROUTES = {
   dashboard: '/dashboard',
   analytics: '/analytics',
   pipeline: '/pipeline',
+  outreach: '/outreach',
   icp: '/icp',
   settings: '/settings',
   accountSettings: '/account',

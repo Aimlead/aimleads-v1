@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import MobileBottomNav from '@/components/layout/MobileBottomNav';
@@ -32,6 +33,19 @@ export default function AppShell({ children }) {
   }, []);
 
   const handleSignOut = () => logout(() => navigate(ROUTES.home));
+
+  // Listen for insufficient-credits events dispatched by the data client
+  useEffect(() => {
+    const handler = (e) => {
+      const { balance = 0, required = 0, action = '' } = e.detail || {};
+      toast.error(
+        `Crédits insuffisants — il vous faut ${required} crédit${required !== 1 ? 's' : ''} pour cette action (solde: ${balance}).`,
+        { duration: 6000, description: action ? `Action: ${action}` : undefined }
+      );
+    };
+    window.addEventListener('aimleads:insufficient-credits', handler);
+    return () => window.removeEventListener('aimleads:insufficient-credits', handler);
+  }, []);
 
   return (
     <div className="min-h-screen" style={{ background: 'hsl(var(--background))' }}>

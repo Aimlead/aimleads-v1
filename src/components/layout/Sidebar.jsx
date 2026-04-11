@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/routes';
 import {
   BarChart3, Kanban,
-  LayoutDashboard, ScrollText, Settings, Sparkles, Target, Users,
+  LayoutDashboard, Mail, ScrollText, Settings, Sparkles, Target, Users,
 } from 'lucide-react';
 import BrandLogo from '@/components/brand/BrandLogo';
 
@@ -13,6 +13,7 @@ export const sidebarNavigation = [
   { name: 'Dashboard', href: ROUTES.dashboard, icon: LayoutDashboard, group: 'main', shortcut: '1' },
   { name: 'Pipeline', href: ROUTES.pipeline, icon: Kanban, group: 'main', shortcut: '2' },
   { name: 'Analytics', href: ROUTES.analytics, icon: BarChart3, group: 'main', shortcut: '3' },
+  { name: 'Outreach', href: ROUTES.outreach, icon: Mail, group: 'main', shortcut: '4' },
   { name: 'ICP Profile', href: ROUTES.icp, icon: Target, group: 'config' },
   { name: 'Team', href: ROUTES.team, icon: Users, group: 'config' },
   { name: 'Settings', href: ROUTES.settings, icon: Settings, group: 'config' },

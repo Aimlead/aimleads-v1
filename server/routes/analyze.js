@@ -1,5 +1,6 @@
 ﻿import express from 'express';
 import { requireAuth, wrapAsyncRoutes } from '../lib/middleware.js';
+import { requireCredits } from '../lib/credits.js';
 import { analyzeLead } from '../services/analyzeService.js';
 import { dataStore } from '../lib/dataStore.js';
 import { schemas, validateBody } from '../lib/validation.js';
@@ -20,7 +21,7 @@ const analyzeLimiter = createUserRateLimit({
 
 router.use(analyzeLimiter);
 
-router.post('/', validateBody(schemas.analyzeSchema), async (req, res) => {
+router.post('/', requireCredits('analyze'), validateBody(schemas.analyzeSchema), async (req, res) => {
   const payload = req.validatedBody || {};
   const lead = payload.lead || null;
 
