@@ -539,6 +539,7 @@ export async function analyzeLead({ lead, icpProfile, skipLlm = false }) {
     baseResult.llm_score_adjustment = adjustment;
     baseResult.llm_confidence = llmResult.confidence_level;
     baseResult.suggested_action = llmResult.suggested_action;
+    baseResult._token_usage = llmResult._usage || null;
     baseResult.analysis_summary = buildAnalysisSummary({
       companyName: lead.company_name,
       icpProfileName: profileName,

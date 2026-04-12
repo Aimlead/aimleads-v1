@@ -219,7 +219,12 @@ const callClaude = async (prompt) => {
     const toolUse = message.content?.find(
       (block) => block.type === 'tool_use' && block.name === 'analyze_lead'
     );
-    return toolUse?.input ?? null;
+    return {
+      result: toolUse?.input ?? null,
+      usage: message.usage
+        ? { input_tokens: message.usage.input_tokens, output_tokens: message.usage.output_tokens }
+        : null,
+    };
   } finally {
     clearTimeout(timeoutId);
   }
@@ -293,11 +298,17 @@ export async function enrichWithLlm(lead, icpProfile, deterministicResult, webRe
 
   if (hasAnthropic) {
     try {
-      const result = await callClaude(prompt);
+      const { result, usage } = await callClaude(prompt);
       if (validateLlmResult(result)) {
         circuitBreaker.recordSuccess();
-        logger.info('llm_enrich_success', { provider: 'anthropic', model: ANTHROPIC_MODEL, company: lead.company_name });
-        return { ...result, provider: 'anthropic' };
+        logger.info('llm_enrich_success', {
+          provider: 'anthropic',
+          model: ANTHROPIC_MODEL,
+          company: lead.company_name,
+          input_tokens: usage?.input_tokens,
+          output_tokens: usage?.output_tokens,
+        });
+        return { ...result, provider: 'anthropic', _usage: { ...usage, model: ANTHROPIC_MODEL } };
       }
     } catch (error) {
       circuitBreaker.recordFailure();

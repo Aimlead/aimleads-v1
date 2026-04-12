@@ -737,7 +737,7 @@ export const dataClient = {
       return runWithMode({
         operationName: 'workspace.getCredits',
         apiCall: () => apiClient.workspace.getCredits(params),
-        fallbackCall: async () => ({ data: { balance: 50, costs: {}, transactions: [] } }),
+        fallbackCall: async () => ({ data: { balance: 50, costs: {}, transactions: [], plan: { plan_slug: 'free', billing_status: 'trial', trial_ends_at: null } } }),
         passAuthErrors: true,
       });
     },
