@@ -351,18 +351,11 @@ const apiClient = {
       apiRequest(`/workspace/members/${encodeURIComponent(memberUserId)}/role`, { method: 'PATCH', body: payload }),
     transferOwnership: (memberUserId) =>
       apiRequest(`/workspace/members/${encodeURIComponent(memberUserId)}/transfer-ownership`, { method: 'POST' }),
-    removeMember: (memberUserId) => apiRequest(`/workspace/members/${encodeURIComponent(memberUserId)}`, { method: 'DELETE' }),
     getIntegrationStatus: () => apiRequest('/workspace/integration-status'),
     getCredits: (params = {}) => {
       const qs = new URLSearchParams(params).toString();
       return apiRequest(`/workspace/credits${qs ? `?${qs}` : ''}`);
     },
-    grantCredits: (payload) => apiRequest('/workspace/credits/grant', { method: 'POST', body: payload }),
-  },
-  dev: {
-    loadDemo: () => apiRequest('/dev/load-demo', { method: 'POST' }),
-    reanalyze: (payload = {}) => apiRequest('/dev/reanalyze', { method: 'POST', body: payload }),
-    checkup: () => apiRequest('/dev/checkup'),
   },
 };
 
@@ -725,28 +718,11 @@ export const dataClient = {
         passAuthErrors: true,
       });
     },
-    async removeMember(memberUserId) {
-      return runWithMode({
-        operationName: 'workspace.removeMember',
-        apiCall: () => apiClient.workspace.removeMember(memberUserId),
-        fallbackCall: mockUnsupported,
-        passAuthErrors: true,
-      });
-    },
     async getCredits(params = {}) {
       return runWithMode({
         operationName: 'workspace.getCredits',
         apiCall: () => apiClient.workspace.getCredits(params),
         fallbackCall: async () => ({ data: { balance: 50, costs: {}, transactions: [], plan: { plan_slug: 'free', billing_status: 'trial', trial_ends_at: null } } }),
-        passAuthErrors: true,
-      });
-    },
-
-    async grantCredits(payload) {
-      return runWithMode({
-        operationName: 'workspace.grantCredits',
-        apiCall: () => apiClient.workspace.grantCredits(payload),
-        fallbackCall: async () => ({ data: { success: true } }),
         passAuthErrors: true,
       });
     },
@@ -788,28 +764,6 @@ export const dataClient = {
       },
   },
 
-  dev: {
-    loadDemo: async () =>
-      runWithMode({
-        operationName: 'dev.loadDemo',
-        apiCall: () => apiClient.dev.loadDemo(),
-        fallbackCall: mockUnsupported,
-      }),
-
-    reanalyze: async (payload = {}) =>
-      runWithMode({
-        operationName: 'dev.reanalyze',
-        apiCall: () => apiClient.dev.reanalyze(payload),
-        fallbackCall: mockUnsupported,
-      }),
-
-    checkup: async () =>
-      runWithMode({
-        operationName: 'dev.checkup',
-        apiCall: () => apiClient.dev.checkup(),
-        fallbackCall: mockUnsupported,
-      }),
-  },
 };
 
 

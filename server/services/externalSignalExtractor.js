@@ -1,3 +1,5 @@
+import { clamp } from '../lib/serviceUtils.js';
+
 const SIGNAL_RULES = [
   {
     key: 'liquidation_or_bankruptcy',
@@ -109,8 +111,6 @@ const SOURCE_RELIABILITY = {
   job_board: 0.75,
   unknown: 0.7,
 };
-
-const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 const stripDiacritics = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 const normalizeText = (value) => stripDiacritics(String(value || '').toLowerCase()).replace(/\s+/g, ' ').trim();

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, Database, KeyRound, Loader2, Save, ShieldCheck, Target, Users } from 'lucide-react';
+import { AlertTriangle, CreditCard, Database, KeyRound, Loader2, Save, ShieldCheck, Target, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -521,6 +521,26 @@ export default function Settings() {
             </p>
           </CardContent>
         </Card>}
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-100 to-indigo-100 flex items-center justify-center">
+                <CreditCard className="w-5 h-5 text-violet-600" />
+              </div>
+              <div>
+                <CardTitle>Billing & Subscription</CardTitle>
+                <CardDescription>Plan, usage, and subscription management</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-slate-600 mb-4">View your current plan, usage limits, and manage your subscription.</p>
+            <Button asChild variant="outline">
+              <Link to={ROUTES.billing}>Go to Billing</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
       <Card className="mt-6 border-amber-200 bg-amber-50/40">
