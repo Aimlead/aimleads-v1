@@ -58,7 +58,7 @@ export default function AppShell({ children }) {
       </a>
 
       {/* Desktop sidebar */}
-      <Sidebar onOpenPalette={openPalette} />
+      <Sidebar onOpenPalette={openPalette} onSignOut={handleSignOut} />
 
       <Header
         user={user}
