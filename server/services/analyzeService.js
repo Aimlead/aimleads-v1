@@ -1,18 +1,11 @@
 import { scoreAiSignals } from './aiSignalService.js';
 import { enrichWithLlm } from './llmService.js';
 import { discoverInternetSignals } from './internetSignalDiscoveryService.js';
+import { ICP_CATEGORY, DEFAULT_CATEGORY_THRESHOLDS, clamp, normalizeText, resolveCategoryThresholds } from '../lib/serviceUtils.js';
 
 const LEAD_STATUS = {
   QUALIFIED: 'Qualified',
   REJECTED: 'Rejected',
-};
-
-const ICP_CATEGORY = {
-  EXCELLENT: 'Excellent',
-  STRONG: 'Strong Fit',
-  MEDIUM: 'Medium Fit',
-  LOW: 'Low Fit',
-  EXCLUDED: 'Excluded',
 };
 
 const DEFAULT_SCORE_WEIGHTS = {
@@ -27,15 +20,6 @@ const SCORE_LIMITS = {
   maxRaw: 110,
   minRaw: -100,
 };
-
-const DEFAULT_CATEGORY_THRESHOLDS = {
-  excellent: 80,
-  strong: 50,
-  medium: 20,
-};
-
-const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-const normalizeText = (value) => String(value || '').trim().toLowerCase();
 
 const listIncludesExact = (list = [], value = '') => {
   const needle = normalizeText(value);
@@ -54,20 +38,6 @@ const listIncludesPartial = (list = [], value = '') => {
     const escaped = e.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return new RegExp(`(?:^|\\s)${escaped}(?:\\s|$)`).test(needle);
   });
-};
-
-const toNumber = (value, fallback) => {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return fallback;
-  return parsed;
-};
-
-const resolveCategoryThresholds = (raw = {}, fallback = DEFAULT_CATEGORY_THRESHOLDS) => {
-  const excellent = clamp(Math.round(toNumber(raw?.excellent, fallback.excellent)), 0, 100);
-  const strong = clamp(Math.round(toNumber(raw?.strong, fallback.strong)), 0, excellent);
-  const medium = clamp(Math.round(toNumber(raw?.medium, fallback.medium)), 0, strong);
-
-  return { excellent, strong, medium };
 };
 
 const resolveScoringMeta = (icpProfile) => {

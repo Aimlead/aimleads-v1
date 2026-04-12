@@ -29,6 +29,7 @@ const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'));
 const Billing = lazy(() => import('@/pages/Billing'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 const Outreach = lazy(() => import('@/pages/Outreach'));
+const Help = lazy(() => import('@/pages/Help'));
 
 function PageLoader() {
   return (
@@ -118,6 +119,7 @@ function AppRoutes() {
           <Route path={ROUTES.auditLog} element={<AuditLog />} />
           <Route path={ROUTES.billing} element={<Billing />} />
           <Route path={ROUTES.outreach} element={<Outreach />} />
+          <Route path={ROUTES.help} element={<Help />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />
