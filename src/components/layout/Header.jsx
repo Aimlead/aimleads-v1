@@ -5,38 +5,46 @@ import { ROUTES } from '@/constants/routes';
 import { Search, UserCog, Zap } from 'lucide-react';
 import { dataClient } from '@/services/dataClient';
 
+// balance states: undefined = loading, -1 = error/unknown, number = actual balance
 function CreditBadge() {
-  const [balance, setBalance] = useState(null);
+  const [balance, setBalance] = useState(undefined);
 
   useEffect(() => {
     let cancelled = false;
     dataClient.workspace.getCredits()
       .then((res) => {
-        if (!cancelled) setBalance(res?.data?.balance ?? null);
+        if (!cancelled) setBalance(res?.data?.balance ?? -1);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) setBalance(-1);
+      });
     return () => { cancelled = true; };
   }, []);
 
-  if (balance === null) return null;
+  // Still loading — render nothing until we know
+  if (balance === undefined) return null;
 
-  const isLow = balance <= 10;
-  const isEmpty = balance === 0;
+  const isError = balance === -1;
+  const isLow = !isError && balance <= 10;
+  const isEmpty = !isError && balance === 0;
 
   return (
-    <div
-      title={`${balance} credits remaining`}
-      className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium ${
-        isEmpty
-          ? 'bg-red-50 border-red-200 text-red-600'
-          : isLow
-            ? 'bg-amber-50 border-amber-200 text-amber-700'
-            : 'bg-slate-50 border-slate-200 text-slate-500'
+    <Link
+      to={ROUTES.billing}
+      title={isError ? 'Credits unavailable' : `${balance} credits remaining`}
+      className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-opacity hover:opacity-80 ${
+        isError
+          ? 'bg-slate-50 border-slate-200 text-slate-400'
+          : isEmpty
+            ? 'bg-red-50 border-red-200 text-red-600'
+            : isLow
+              ? 'bg-amber-50 border-amber-200 text-amber-700'
+              : 'bg-slate-50 border-slate-200 text-slate-500'
       }`}
     >
-      <Zap className={`w-3 h-3 ${isEmpty ? 'text-red-500' : isLow ? 'text-amber-500' : 'text-slate-400'}`} />
-      <span>{balance} credits</span>
-    </div>
+      <Zap className={`w-3 h-3 ${isError ? 'text-slate-300' : isEmpty ? 'text-red-500' : isLow ? 'text-amber-500' : 'text-slate-400'}`} />
+      <span>{isError ? '—' : balance} credits</span>
+    </Link>
   );
 }
 

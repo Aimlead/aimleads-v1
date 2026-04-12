@@ -1,6 +1,6 @@
 ﻿import express from 'express';
 import { requireAuth, wrapAsyncRoutes } from '../lib/middleware.js';
-import { requireCredits } from '../lib/credits.js';
+import { requireCredits, logTokenUsage } from '../lib/credits.js';
 import { dataStore } from '../lib/dataStore.js';
 import { schemas, validateBody } from '../lib/validation.js';
 import { writeAuditLog } from '../lib/auditLog.js';
@@ -155,6 +155,7 @@ router.post('/generate', icpGenerateLimiter, requireCredits('icp_generate'), val
     logger.warn('icp_generate_null', { reason: 'llm_returned_null', description_length: description.length });
     return res.status(502).json({ message: 'AI generation failed. Please try again.' });
   }
+  if (result._usage) logTokenUsage(req, 'icp_generate', result._usage);
 
   return res.json({ data: result });
 });

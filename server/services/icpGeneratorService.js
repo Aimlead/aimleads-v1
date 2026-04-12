@@ -231,13 +231,22 @@ export async function generateIcpFromDescription(description) {
       meta: DEFAULT_SCORE_WEIGHTS.meta,
     };
 
-    logger.info('icp_generator_success', { name: result.name });
+    const usage = message.usage
+      ? { input_tokens: message.usage.input_tokens, output_tokens: message.usage.output_tokens }
+      : null;
+
+    logger.info('icp_generator_success', {
+      name: result.name,
+      input_tokens: usage?.input_tokens,
+      output_tokens: usage?.output_tokens,
+    });
 
     return {
       name: result.name,
       description: result.description,
       weights: mergedWeights,
       reasoning: result.reasoning,
+      _usage: usage ? { ...usage, model: ANTHROPIC_MODEL } : null,
     };
   } catch (error) {
     logger.warn('icp_generator_failed', { error: error?.message });

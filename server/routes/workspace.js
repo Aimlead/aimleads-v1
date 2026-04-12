@@ -6,7 +6,7 @@ import { schemas, validateBody } from '../lib/validation.js';
 import { writeAuditLog } from '../lib/auditLog.js';
 import { getUserWorkspaceId } from '../lib/scope.js';
 import { getCircuitBreakerStatus } from '../services/llmService.js';
-import { getBalance, grantCredits, getTransactionHistory, CREDIT_COSTS } from '../lib/credits.js';
+import { getBalance, grantCredits, getTransactionHistory, getWorkspacePlan, CREDIT_COSTS } from '../lib/credits.js';
 
 const router = express.Router();
 wrapAsyncRoutes(router);
@@ -316,9 +316,10 @@ router.get('/credits', requireAuth, async (req, res) => {
   const limit = Math.max(1, Math.min(100, Number.parseInt(req.query.limit || '20', 10)));
   const offset = Math.max(0, Number.parseInt(req.query.offset || '0', 10));
 
-  const [balance, transactions] = await Promise.all([
+  const [balance, transactions, plan] = await Promise.all([
     getBalance(workspaceId),
     getTransactionHistory(workspaceId, { limit, offset }),
+    getWorkspacePlan(workspaceId),
   ]);
 
   return res.json({
@@ -326,6 +327,7 @@ router.get('/credits', requireAuth, async (req, res) => {
       balance,
       costs: CREDIT_COSTS,
       transactions,
+      plan,
     },
   });
 });

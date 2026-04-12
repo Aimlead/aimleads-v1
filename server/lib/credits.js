@@ -24,6 +24,7 @@ export const CREDIT_COSTS = {
   sequence: 3,
   icp_generate: 3,
   analytics_insights: 2,
+  // token_log: 0 — internal usage tracking only, never charged
 };
 
 const TRIAL_CREDITS = 50;
@@ -108,6 +109,19 @@ const supabaseGetBalance = async (workspaceId) => {
   return Number(rows[0]?.credit_balance ?? 0);
 };
 
+const supabaseGetWorkspacePlan = async (workspaceId) => {
+  const url = `${getSupabaseBase()}/rest/v1/workspaces?id=eq.${encodeURIComponent(workspaceId)}&select=plan_slug,billing_status,trial_ends_at`;
+  const response = await fetch(url, { headers: getServiceHeaders() });
+  if (!response.ok) return {};
+  const rows = await response.json();
+  if (!Array.isArray(rows) || rows.length === 0) return {};
+  return {
+    plan_slug: rows[0]?.plan_slug ?? 'free',
+    billing_status: rows[0]?.billing_status ?? 'trial',
+    trial_ends_at: rows[0]?.trial_ends_at ?? null,
+  };
+};
+
 const supabaseGetTransactions = async (workspaceId, limit = 20, offset = 0) => {
   const url = `${getSupabaseBase()}/rest/v1/credit_transactions?workspace_id=eq.${encodeURIComponent(workspaceId)}&order=created_at.desc&limit=${limit}&offset=${offset}`;
   const response = await fetch(url, { headers: getServiceHeaders() });
@@ -188,6 +202,45 @@ export const grantCredits = async (workspaceId, amount, action = 'grant', descri
 export const getTransactionHistory = async (workspaceId, { limit = 20, offset = 0 } = {}) => {
   if (!workspaceId || !isSupabase()) return [];
   return supabaseGetTransactions(workspaceId, limit, offset);
+};
+
+/**
+ * Get workspace plan info (plan_slug, billing_status, trial_ends_at).
+ * Returns defaults in local mode.
+ */
+export const getWorkspacePlan = async (workspaceId) => {
+  if (!workspaceId) return { plan_slug: 'free', billing_status: 'trial', trial_ends_at: null };
+  if (isSupabase()) return supabaseGetWorkspacePlan(workspaceId);
+  return { plan_slug: 'free', billing_status: 'trial', trial_ends_at: null };
+};
+
+/**
+ * Fire-and-forget token usage log.
+ * Inserts a zero-amount credit_transaction with action='token_log' so we can track
+ * actual Claude API consumption per action without affecting credit balance.
+ *
+ * @param {Object} req - Express request (needs req.user)
+ * @param {string} parentAction - e.g. 'analyze', 'sequence'
+ * @param {{ input_tokens: number, output_tokens: number, model: string }} usage
+ */
+export const logTokenUsage = (req, parentAction, usage) => {
+  if (!usage?.input_tokens && !usage?.output_tokens) return;
+  const workspaceId = getUserWorkspaceId(req?.user);
+  const userId = String(req?.user?.id || '');
+  if (!workspaceId) return;
+
+  const total = (usage.input_tokens ?? 0) + (usage.output_tokens ?? 0);
+
+  // Fire-and-forget — never block the HTTP response
+  deductCredits(workspaceId, userId, 'token_log', 0, {
+    parent_action: parentAction,
+    input_tokens: usage.input_tokens ?? 0,
+    output_tokens: usage.output_tokens ?? 0,
+    total_tokens: total,
+    model: usage.model ?? 'unknown',
+  }).catch((err) => {
+    logger.warn('token_log_failed', { parentAction, error: err?.message });
+  });
 };
 
 // ─────────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 ﻿import express from 'express';
 import { requireAuth, wrapAsyncRoutes } from '../lib/middleware.js';
-import { requireCredits } from '../lib/credits.js';
+import { requireCredits, logTokenUsage } from '../lib/credits.js';
 import { analyzeLead } from '../services/analyzeService.js';
 import { dataStore } from '../lib/dataStore.js';
 import { schemas, validateBody } from '../lib/validation.js';
@@ -47,6 +47,7 @@ router.post('/', requireCredits('analyze'), validateBody(schemas.analyzeSchema),
   }
 
   const result = await analyzeLead({ lead, icpProfile });
+  if (result._token_usage) logTokenUsage(req, 'analyze', result._token_usage);
   return res.json({ data: result });
 });
 

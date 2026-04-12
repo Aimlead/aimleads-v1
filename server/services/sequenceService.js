@@ -168,15 +168,22 @@ export async function generateOutreachSequence(lead, icpProfile, analysisContext
       return null;
     }
 
+    const usage = message.usage
+      ? { input_tokens: message.usage.input_tokens, output_tokens: message.usage.output_tokens }
+      : null;
+
     logger.info('sequence_generator_success', {
       company: lead.company_name,
       touches: toolUse.input.touches?.length,
+      input_tokens: usage?.input_tokens,
+      output_tokens: usage?.output_tokens,
     });
 
     return {
       ...toolUse.input,
       generated_at: new Date().toISOString(),
       lead_id: lead.id,
+      _usage: usage ? { ...usage, model: ANTHROPIC_MODEL } : null,
     };
   } catch (error) {
     logger.warn('sequence_generator_failed', { error: error?.message, company: lead.company_name });

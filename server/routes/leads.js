@@ -1,6 +1,6 @@
 import express from 'express';
 import { requireAuth, wrapAsyncRoutes } from '../lib/middleware.js';
-import { requireCredits } from '../lib/credits.js';
+import { requireCredits, logTokenUsage } from '../lib/credits.js';
 import { dataStore } from '../lib/dataStore.js';
 import { sanitizeWebsite } from '../lib/utils.js';
 import { schemas, validateBody } from '../lib/validation.js';
@@ -401,6 +401,8 @@ router.post('/:leadId/reanalyze', reanalyzeLimiter, requireCredits('reanalyze_ll
     skipLlm,
   });
 
+  if (analysis._token_usage) logTokenUsage(req, 'reanalyze_llm', analysis._token_usage);
+
   const updatedLead = await dataStore.updateLead(req.user, lead.id, {
     internet_signals: lead.internet_signals || [],
     ...toLeadAnalysisUpdatePayload(analysis),
@@ -636,6 +638,7 @@ router.post('/:leadId/sequence', sequenceLimiter, requireCredits('sequence'), as
   if (!result) {
     return res.status(502).json({ message: 'Sequence generation failed. Please try again.' });
   }
+  if (result._usage) logTokenUsage(req, 'sequence', result._usage);
 
   return res.json({ data: result });
 });

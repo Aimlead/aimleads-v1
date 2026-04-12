@@ -196,7 +196,15 @@ export async function narrateAnalytics(analyticsData) {
       return null;
     }
 
-    logger.info('analytics_narrator_success', { totalLeads: analyticsData.totalLeads });
+    const usage = message.usage
+      ? { input_tokens: message.usage.input_tokens, output_tokens: message.usage.output_tokens }
+      : null;
+
+    logger.info('analytics_narrator_success', {
+      totalLeads: analyticsData.totalLeads,
+      input_tokens: usage?.input_tokens,
+      output_tokens: usage?.output_tokens,
+    });
 
     return {
       ...toolUse.input,
@@ -205,6 +213,7 @@ export async function narrateAnalytics(analyticsData) {
         total_leads: analyticsData.totalLeads,
         period: analyticsData.dateRangeLabel ?? 'all_time',
       },
+      _usage: usage ? { ...usage, model: ANTHROPIC_MODEL } : null,
     };
   } catch (error) {
     logger.warn('analytics_narrator_failed', { error: error?.message });
