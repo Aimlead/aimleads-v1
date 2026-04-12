@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/routes';
 import {
   BarChart3, Kanban,
-  LayoutDashboard, Mail, ScrollText, Settings, Sparkles, Target, Users,
+  LayoutDashboard, LogOut, Mail, ScrollText, Settings, Sparkles, Target, Users,
 } from 'lucide-react';
 import BrandLogo from '@/components/brand/BrandLogo';
 
@@ -25,7 +25,7 @@ const GROUP_LABELS = {
   config: 'Configuration',
 };
 
-export default function Sidebar({ mobile = false, onNavigate, onOpenPalette }) {
+export default function Sidebar({ mobile = false, onNavigate, onOpenPalette, onSignOut }) {
   const location = useLocation();
 
   const isActive = (href) => {
@@ -134,6 +134,17 @@ export default function Sidebar({ mobile = false, onNavigate, onOpenPalette }) {
           </div>
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0 animate-pulse" />
         </div>
+      </div>
+
+      {/* Sign out */}
+      <div className="px-3 pb-4">
+        <button
+          onClick={onSignOut}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/45 hover:bg-white/[0.05] hover:text-white/80 transition-all duration-150"
+        >
+          <LogOut className="w-[17px] h-[17px] flex-shrink-0 text-white/30" />
+          Se déconnecter
+        </button>
       </div>
     </aside>
   );
