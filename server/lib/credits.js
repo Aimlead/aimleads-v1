@@ -221,7 +221,7 @@ export const getWorkspacePlan = async (workspaceId) => {
  *
  * @param {Object} req - Express request (needs req.user)
  * @param {string} parentAction - e.g. 'analyze', 'sequence'
- * @param {{ input_tokens: number, output_tokens: number, model: string }} usage
+ * @param {{ input_tokens: number, output_tokens: number, cache_read_input_tokens?: number, cache_creation_input_tokens?: number, model: string }} usage
  */
 export const logTokenUsage = (req, parentAction, usage) => {
   if (!usage?.input_tokens && !usage?.output_tokens) return;
@@ -236,6 +236,8 @@ export const logTokenUsage = (req, parentAction, usage) => {
     parent_action: parentAction,
     input_tokens: usage.input_tokens ?? 0,
     output_tokens: usage.output_tokens ?? 0,
+    cache_read_input_tokens: usage.cache_read_input_tokens ?? 0,
+    cache_creation_input_tokens: usage.cache_creation_input_tokens ?? 0,
     total_tokens: total,
     model: usage.model ?? 'unknown',
   }).catch((err) => {

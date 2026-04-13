@@ -526,6 +526,7 @@ const icpScore = toMetricValue(lead.icp_score ?? lead.score_details?.icp_score);
               >
                 {discoveringSignals ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Globe className="w-3.5 h-3.5" />}
                 Re-scan website
+                <span className="text-[10px] opacity-50 font-normal">10 crédits</span>
               </Button>
             </div>
 
@@ -664,6 +665,7 @@ const icpScore = toMetricValue(lead.icp_score ?? lead.score_details?.icp_score);
             <Button onClick={handleSaveAndAnalyze} disabled={savingAndAnalyzing || saving || discoveringSignals} className="gap-2">
               {savingAndAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
               Save + Re-analyze
+              {!savingAndAnalyzing && <span className="text-[10px] opacity-60 font-normal">3 crédits</span>}
             </Button>
             <Button variant="outline" onClick={handleSave} disabled={saving || savingAndAnalyzing || discoveringSignals}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Draft'}

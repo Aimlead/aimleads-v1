@@ -440,6 +440,7 @@ export default function ICP() {
                 ? <Loader2 className="w-4 h-4 animate-spin" />
                 : <Sparkles className="w-4 h-4" />}
               Générer
+              {!generateMutation.isPending && <span className="text-[10px] opacity-70 font-normal">3 crédits</span>}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -31,9 +31,19 @@ if (hasAnthropic) {
 
 const SYSTEM_PROMPT = `You are an expert B2B sales analyst specializing in lead qualification and outbound sales optimization.
 You analyze leads against Ideal Customer Profiles (ICP) and provide precise, actionable intelligence.
+
+Scoring guidelines:
+- score_adjustment: fine-tune the ICP deterministic score in the range -15 to +15. Positive adjustments require verified contextual signals (recent funding, active hiring of SDRs/AEs, competitor displacement, product-market fit evidence). Negative adjustments require concrete disqualifiers (wrong persona, confirmed competitor signed, company in liquidation). Return 0 when evidence is ambiguous.
+- confidence_level: 0-100. Score 20-40 for leads with minimal public data, 50-70 for partial profiles, 80-100 only when buying intent is clearly evidenced by multiple signals.
+- Pre-call signals: choose strictly from the defined key set. Only assert signals you can directly infer from the available data — do not hallucinate.
+- Buying signals: extract specific, verifiable cues (e.g. "Raised $12M Series A in 2025", "Hiring 3 SDRs in France on LinkedIn", "Recently acquired a competitor in target vertical").
+- Icebreakers: must reference a concrete company fact. Never use generic openers. Be conversational, reference real context, and end with a single clear call-to-action.
+- Fit reasoning: 2-3 sentences maximum. Lead with the dominant fit or misfit dimension, then explain the key qualifier.
+- Risk factors: only include concrete, evidence-based risks. Do not add boilerplate like "Budget not confirmed" for every lead.
+
 Always use the analyze_lead tool to return your structured analysis.`;
 
-// ─── Tool definition ───────────────────────────────────────────────────────────
+// ─── Tool definition (with prompt cache marker) ────────────────────────────────
 
 const ANALYZE_LEAD_TOOL = {
   name: 'analyze_lead',
@@ -200,6 +210,19 @@ Call analyze_lead with your full analysis.`;
 
 // ─── LLM callers ──────────────────────────────────────────────────────────────
 
+// System prompt wrapped for prompt caching — static across all analyze calls.
+// Together with the tool definition below this reaches the 1024-token minimum
+// required for cache activation on claude-sonnet-4-6.
+const CACHED_SYSTEM = [
+  { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
+];
+
+// Tool with cache_control so the static tool schema is also cached.
+const ANALYZE_LEAD_TOOL_CACHED = {
+  ...ANALYZE_LEAD_TOOL,
+  cache_control: { type: 'ephemeral' },
+};
+
 const callClaude = async (prompt) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(new Error('LLM timeout')), LLM_TIMEOUT_MS);
@@ -207,9 +230,9 @@ const callClaude = async (prompt) => {
     const message = await anthropicClient.messages.create(
       {
         model: ANTHROPIC_MODEL,
-        max_tokens: 2000,
-        system: SYSTEM_PROMPT,
-        tools: [ANALYZE_LEAD_TOOL],
+        max_tokens: 1400, // real output rarely exceeds 1100 tokens; was 2000
+        system: CACHED_SYSTEM,
+        tools: [ANALYZE_LEAD_TOOL_CACHED],
         tool_choice: { type: 'tool', name: 'analyze_lead' },
         messages: [{ role: 'user', content: prompt }],
       },
@@ -221,9 +244,12 @@ const callClaude = async (prompt) => {
     );
     return {
       result: toolUse?.input ?? null,
-      usage: message.usage
-        ? { input_tokens: message.usage.input_tokens, output_tokens: message.usage.output_tokens }
-        : null,
+      usage: message.usage ? {
+        input_tokens: message.usage.input_tokens,
+        output_tokens: message.usage.output_tokens,
+        cache_read_input_tokens: message.usage.cache_read_input_tokens ?? 0,
+        cache_creation_input_tokens: message.usage.cache_creation_input_tokens ?? 0,
+      } : null,
     };
   } finally {
     clearTimeout(timeoutId);
@@ -307,6 +333,8 @@ export async function enrichWithLlm(lead, icpProfile, deterministicResult, webRe
           company: lead.company_name,
           input_tokens: usage?.input_tokens,
           output_tokens: usage?.output_tokens,
+          cache_read: usage?.cache_read_input_tokens,
+          cache_creation: usage?.cache_creation_input_tokens,
         });
         return { ...result, provider: 'anthropic', _usage: { ...usage, model: ANTHROPIC_MODEL } };
       }

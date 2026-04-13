@@ -581,7 +581,7 @@ export default function Outreach() {
             >
               {sequenceMutation.isPending
                 ? <><RefreshCw className="w-4 h-4 animate-spin" /> Génération…</>
-                : <><Sparkles className="w-4 h-4" /> Générer la séquence</>}
+                : <><Sparkles className="w-4 h-4" /> Générer la séquence <span className="text-[10px] opacity-70 font-normal">3 crédits</span></>}
             </Button>
           </div>
 
