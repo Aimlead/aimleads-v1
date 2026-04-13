@@ -11,7 +11,9 @@ import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '../lib/observability.js';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const ANTHROPIC_MODEL = process.env.LLM_MODEL || 'claude-sonnet-4-6';
+// ICP generation is a structured extraction task — Haiku 4.5 handles it well
+// and is ~75% cheaper than Sonnet 4.6.  Override with LLM_SIMPLE_MODEL if needed.
+const ANTHROPIC_MODEL = process.env.LLM_SIMPLE_MODEL || process.env.LLM_MODEL || 'claude-haiku-4-5-20251001';
 const LLM_TIMEOUT_MS = 30000;
 
 const hasAnthropic = Boolean(ANTHROPIC_API_KEY);
