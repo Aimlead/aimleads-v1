@@ -13,6 +13,7 @@ import analyzeRoutes from './routes/analyze.js';
 import auditRoutes from './routes/audit.js';
 import workspaceRoutes from './routes/workspace.js';
 import analyticsInsightsRoutes from './routes/analyticsInsights.js';
+import crmRoutes from './routes/crm.js';
 import devRoutes from './routes/dev.js';
 import publicRoutes from './routes/public.js';
 import { getCorsOptions } from './lib/http.js';
@@ -122,6 +123,7 @@ app.use('/api/v1/audit', auditRoutes);
 app.use('/api/v1/workspace', workspaceRoutes);
 app.use('/api/v1/analytics', analyticsInsightsRoutes);
 app.use('/api/v1/public', publicRoutes);
+app.use('/api/v1/crm', crmRoutes);
 
 // Legacy unversioned routes — kept for backwards compatibility
 app.use('/api/auth', authRoutes);
@@ -132,6 +134,7 @@ app.use('/api/audit', auditRoutes);
 app.use('/api/workspace', workspaceRoutes);
 app.use('/api/analytics', analyticsInsightsRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/crm', crmRoutes);
 
 // Dev tools: only mounted when not in production (double guard — route itself also checks)
 if (!config.isProduction) {

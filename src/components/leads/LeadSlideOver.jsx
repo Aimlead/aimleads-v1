@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Check, ChevronDown, ChevronUp, Copy, Globe, Loader2, Linkedin, Mail, Phone, Sparkles } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Check, ChevronDown, ChevronUp, Copy, Database, ExternalLink, Globe, Loader2, Linkedin, Mail, Phone, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -188,6 +189,7 @@ const buildDiscoverToast = (response) => {
 
 export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [copied, setCopied] = useState(null);
   const [followUpStatus, setFollowUpStatus] = useState('');
   const [notes, setNotes] = useState('');
@@ -200,6 +202,41 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
   const [showManualOverrides, setShowManualOverrides] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [lastScanMeta, setLastScanMeta] = useState(null);
+
+  // CRM sync status for this lead
+  const { data: crmSyncRecords = [], refetch: refetchCrmStatus } = useQuery({
+    queryKey: ['crmSyncStatus', lead?.id],
+    queryFn: () => dataClient.crm.getSyncStatus(lead.id),
+    enabled: Boolean(lead?.id) && open,
+    staleTime: 30_000,
+  });
+
+  const { data: crmIntegrations = [] } = useQuery({
+    queryKey: ['crmIntegrations'],
+    queryFn: () => dataClient.crm.list(),
+    enabled: open,
+    staleTime: 60_000,
+  });
+
+  const crmSyncMutation = useMutation({
+    mutationFn: ({ leadId, crmType }) => dataClient.crm.syncLead(leadId, crmType),
+    onSuccess: (result, { crmType }) => {
+      if (result?.success) {
+        toast.success(`Lead synchronisé vers ${crmType === 'hubspot' ? 'HubSpot' : 'Salesforce'}.`);
+      } else {
+        toast.error(`Échec du sync ${crmType === 'hubspot' ? 'HubSpot' : 'Salesforce'} : ${result?.error || 'erreur inconnue'}`);
+      }
+      refetchCrmStatus();
+      queryClient.invalidateQueries({ queryKey: ['crmIntegrations'] });
+    },
+    onError: (err) => {
+      toast.error(`Erreur CRM : ${err.message}`);
+    },
+  });
+
+  const activeCrmTypes = crmIntegrations
+    .filter((i) => i.is_active)
+    .map((i) => i.crm_type);
 
   // Track initial values to detect unsaved changes
   const initialRef = useRef({ followUpStatus: '', notes: '', intentSignals: {}, internetSignals: [] });
@@ -753,6 +790,65 @@ const icpScore = toMetricValue(lead.icp_score ?? lead.score_details?.icp_score);
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : isDirty ? 'Save changes ●' : 'Save'}
           </Button>
         </div>
+
+        {/* CRM Sync section — only shown when at least one CRM is configured */}
+        {activeCrmTypes.length > 0 && (
+          <div className="border-t border-slate-100 pt-4 space-y-3">
+            <p className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+              <Database className="w-4 h-4 text-slate-400" />
+              CRM
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {activeCrmTypes.map((crmType) => {
+                const lastSync = crmSyncRecords
+                  .filter((r) => r.crm_type === crmType && r.status === 'success')
+                  .at(0);
+                const label = crmType === 'hubspot' ? 'HubSpot' : 'Salesforce';
+                const isSyncing =
+                  crmSyncMutation.isPending &&
+                  crmSyncMutation.variables?.crmType === crmType;
+
+                return (
+                  <div key={crmType} className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => crmSyncMutation.mutate({ leadId: lead.id, crmType })}
+                      disabled={crmSyncMutation.isPending}
+                    >
+                      {isSyncing ? (
+                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      ) : (
+                        <Database className="w-3.5 h-3.5 mr-1.5" />
+                      )}
+                      Push to {label}
+                    </Button>
+                    {lastSync?.crm_object_url && (
+                      <a
+                        href={lastSync.crm_object_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:underline flex items-center gap-0.5"
+                      >
+                        Voir dans {label}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {crmSyncRecords.length > 0 && (
+              <p className="text-xs text-slate-400">
+                Dernier sync :{' '}
+                {new Date(crmSyncRecords[0].created_at).toLocaleString('fr')}
+                {crmSyncRecords[0].status === 'failed' && (
+                  <span className="text-red-400 ml-1">— échec</span>
+                )}
+              </p>
+            )}
+          </div>
+        )}
       </SheetContent>
     </Sheet>
     </>
