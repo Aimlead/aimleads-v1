@@ -14,7 +14,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
@@ -122,13 +122,6 @@ const getInternetSignalsFromLead = (lead) => {
 };
 
 const toMetricValue = (value) => (Number.isFinite(Number(value)) ? Number(value) : null);
-
-const formatFoundAt = (value) => {
-  if (!value) return null;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.toLocaleString();
-};
 
 const signalTypeClass = (type) => {
   const key = String(type || '').toLowerCase();
@@ -241,7 +234,7 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
     if (notes !== init.notes) return true;
     if (JSON.stringify(intentSignals) !== JSON.stringify(init.intentSignals)) return true;
     return false;
-  }, [followUpStatus, notes, intentSignals, internetSignals]);
+  }, [followUpStatus, notes, intentSignals]);
 
   const handleOpenChange = (next) => {
     if (!next && isDirty) {
