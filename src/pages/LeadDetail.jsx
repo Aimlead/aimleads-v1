@@ -23,9 +23,11 @@ const normalizeLabel = (value) =>
     .replace(/\s+/g, ' ')
     .trim();
 
+const NEGATIVE_SIGNAL_TOKENS = ['bankruptcy', 'closed', 'shutdown', 'layoff', 'churn', 'no_budget', 'budget_frozen'];
+
 const inferSignalTypeFromKey = (value) => {
   const key = String(value || '').toLowerCase();
-  if (['bankruptcy', 'closed', 'shutdown', 'layoff', 'churn'].some((token) => key.includes(token))) return 'negative';
+  if (NEGATIVE_SIGNAL_TOKENS.some((token) => key.includes(token))) return 'negative';
   if (['missing', 'unknown', 'unverified'].some((token) => key.includes(token))) return 'neutral';
   return 'positive';
 };
@@ -33,11 +35,13 @@ const inferSignalTypeFromKey = (value) => {
 const getScoreDetails = (lead) =>
   lead?.score_details && typeof lead.score_details === 'object' ? lead.score_details : {};
 
-const sumScoreDetailPoints = (details) =>
-  Object.values(details).reduce((sum, entry) => {
-    const points = toMetric(entry?.points);
-    return points === null ? sum : sum + points;
-  }, 0);
+const getNumericScoreDetail = (details, key) => {
+  const entry = details?.[key];
+  if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
+    return toMetric(entry.points ?? entry.score ?? entry.value);
+  }
+  return toMetric(entry);
+};
 
 const getBaseIcpScore = (lead) => {
   const direct = toMetric(lead?.icp_score);
@@ -47,14 +51,59 @@ const getBaseIcpScore = (lead) => {
   if (raw !== null) return raw;
 
   const details = getScoreDetails(lead);
-  return Object.keys(details).length > 0 ? sumScoreDetailPoints(details) : null;
+  const detailScore = getNumericScoreDetail(details, 'icp_score');
+  if (detailScore !== null) return detailScore;
+
+  const detailRaw = getNumericScoreDetail(details, 'icp_raw_score');
+  if (detailRaw !== null) return detailRaw;
+
+  return null;
+};
+
+const extractSignalLabel = (item) => {
+  if (typeof item === 'string') return normalizeLabel(item);
+  if (!item || typeof item !== 'object') return '';
+  return normalizeLabel(item.label || item.key || item.signal);
+};
+
+const normalizeIntentSignalPayload = (value) => {
+  const normalized = {
+    pre_call: [],
+    post_contact: [],
+    negative: [],
+  };
+
+  const pushUnique = (bucket, item) => {
+    const label = extractSignalLabel(item);
+    if (!label || normalized[bucket].includes(label)) return;
+    normalized[bucket].push(label);
+  };
+
+  if (Array.isArray(value)) {
+    value.forEach((item) => {
+      const explicitType = String(item?.type || '').toLowerCase();
+      const inferredType = explicitType || inferSignalTypeFromKey(item?.key || item?.signal || item?.label || item);
+      pushUnique(inferredType === 'negative' ? 'negative' : 'pre_call', item);
+    });
+    return normalized;
+  }
+
+  if (!value || typeof value !== 'object') return normalized;
+
+  const appendBucket = (bucket, payload) => {
+    if (!Array.isArray(payload)) return;
+    payload.forEach((item) => pushUnique(bucket, item));
+  };
+
+  appendBucket('pre_call', value.pre_call || value.preCall || value.pre || value.precall);
+  appendBucket('post_contact', value.post_contact || value.postContact || value.post);
+  appendBucket('negative', value.negative || value.negatives || value.negative_signals);
+
+  return normalized;
 };
 
 const getIntentSignals = (lead) => {
-  const payload =
-    lead?.intent_signals && typeof lead.intent_signals === 'object'
-      ? lead.intent_signals
-      : {};
+  const payload = normalizeIntentSignalPayload(lead?.intent_signals);
 
   return [
     ...(Array.isArray(payload.pre_call) ? payload.pre_call : []).map((label) => ({
@@ -213,10 +262,12 @@ export default function LeadDetail() {
 
   const icpScore = getBaseIcpScore(lead);
   const aiScore = toMetric(lead.ai_score);
-  const finalScore = toMetric(lead.final_score) ?? icpScore;
-  const aiBoost = icpScore !== null && finalScore !== null ? finalScore - icpScore : null;
   const scoreDetails = getScoreDetails(lead);
-  const scoreDetailEntries = Object.entries(scoreDetails);
+  const finalScore = toMetric(lead.final_score) ?? getNumericScoreDetail(scoreDetails, 'final_score') ?? icpScore;
+  const aiBoost = icpScore !== null && finalScore !== null ? finalScore - icpScore : null;
+  const scoreDetailEntries = Object.entries(scoreDetails).filter(([, entry]) =>
+    entry && typeof entry === 'object' && !Array.isArray(entry) && toMetric(entry.points) !== null
+  );
   const displaySignals = getDisplaySignals(lead);
 
   const signalGroups = {
