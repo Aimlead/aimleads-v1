@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/routes';
 import {
   BarChart3, Kanban,
-  LayoutDashboard, LogOut, Mail, ScrollText, Settings, Sparkles, Target, Users,
+  Database, LayoutDashboard, LogOut, Mail, ScrollText, Settings, Sparkles, Target, Users,
 } from 'lucide-react';
 import BrandLogo from '@/components/brand/BrandLogo';
 
@@ -17,6 +17,7 @@ export const sidebarNavigation = [
   { name: 'ICP Profile', href: ROUTES.icp, icon: Target, group: 'config' },
   { name: 'Team', href: ROUTES.team, icon: Users, group: 'config' },
   { name: 'Settings', href: ROUTES.settings, icon: Settings, group: 'config' },
+  { name: 'CRM Integration', href: ROUTES.crmIntegration, icon: Database, group: 'config' },
   { name: 'Audit Log', href: ROUTES.auditLog, icon: ScrollText, group: 'config' },
 ];
 

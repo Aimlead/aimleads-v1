@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
-import { ChevronLeft, ChevronRight, ExternalLink, Loader2, Search, Sparkles, Trash2, Upload, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Database, ExternalLink, Loader2, Search, Sparkles, Trash2, Upload, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SkeletonRow } from '@/components/ui/skeleton';
 import { ROUTES } from '@/constants/routes';
@@ -156,6 +156,40 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
     onLeadUpdated?.();
   };
 
+  // CRM integrations — loaded once on mount to show bulk push buttons
+  const [crmIntegrations, setCrmIntegrations] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    dataClient.crm?.list().then((list) => {
+      if (!cancelled) setCrmIntegrations(list || []);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  const activeCrmTypes = crmIntegrations.filter((i) => i.is_active).map((i) => i.crm_type);
+
+  const [syncingCrm, setSyncingCrm] = useState(false);
+
+  const handleBulkSyncCrm = async (crmType) => {
+    const ids = [...selectedIds].slice(0, 100);
+    setSyncingCrm(true);
+    try {
+      const result = await dataClient.crm.syncBulk(ids, crmType);
+      const label = crmType === 'hubspot' ? 'HubSpot' : 'Salesforce';
+      const { success = 0, failed = 0 } = result?.summary || {};
+      if (failed === 0) {
+        toast.success(`${success} lead(s) synchronisés vers ${label}.`);
+      } else {
+        toast.warning(`${success} synchronisés, ${failed} échec(s) vers ${label}.`);
+      }
+    } catch {
+      toast.error(`Échec du sync CRM.`);
+    } finally {
+      setSyncingCrm(false);
+    }
+  };
+
   const handleDeleteSingle = async () => {
     const lead = deleteConfirm?.lead;
     if (!lead) return;
@@ -260,8 +294,25 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
         )}
       </div>
       {someSelected && (
-        <div className="flex items-center gap-2 text-sm bg-brand-sky/5 border border-brand-sky/20 rounded-lg px-3 py-2">
+        <div className="flex flex-wrap items-center gap-2 text-sm bg-brand-sky/5 border border-brand-sky/20 rounded-lg px-3 py-2">
           <span className="text-brand-sky font-medium">{selectedIds.size} selected</span>
+          {activeCrmTypes.map((crmType) => (
+            <Button
+              key={crmType}
+              size="sm"
+              variant="outline"
+              className="h-7 gap-1.5 text-xs"
+              onClick={() => handleBulkSyncCrm(crmType)}
+              disabled={syncingCrm}
+            >
+              {syncingCrm ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Database className="w-3 h-3" />
+              )}
+              Push to {crmType === 'hubspot' ? 'HubSpot' : 'Salesforce'}
+            </Button>
+          ))}
           <Button
             size="sm"
             variant="destructive"

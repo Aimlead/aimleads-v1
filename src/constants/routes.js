@@ -15,6 +15,7 @@ export const ROUTES = {
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
   billing: '/billing',
+  crmIntegration: '/crm-integration',
 };
 
 export const PAGE_ROUTE_MAP = {
