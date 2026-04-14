@@ -214,11 +214,6 @@ export default function Login() {
           </Link>
         </div>
 
-        {import.meta.env.DEV && (
-          <div className="login-debug">
-            Mode: {dataClient.mode} · API: {dataClient.debug.apiBaseUrl} · Fallback: {dataClient.debug.allowApiFallback ? 'on' : 'off'}
-          </div>
-        )}
       </div>
     </div>
   );

@@ -396,7 +396,7 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {import.meta.env.DEV && <Card>
+        <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-cyan-100 flex items-center justify-center">
@@ -476,7 +476,7 @@ export default function Settings() {
               ))}
             </div>
           </CardContent>
-        </Card>}
+        </Card>
 
         <Card>
           <CardHeader>
@@ -496,7 +496,7 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {import.meta.env.DEV && <Card>
+        <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-slate-200 to-slate-100 flex items-center justify-center">
@@ -520,7 +520,7 @@ export default function Settings() {
               Front fallback: <span className="font-semibold">{dataClient.debug.allowApiFallback ? 'enabled' : 'disabled'}</span>
             </p>
           </CardContent>
-        </Card>}
+        </Card>
       </div>
 
       <Card className="mt-6 border-amber-200 bg-amber-50/40">

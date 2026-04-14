@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import LeadsTable from '@/components/leads/LeadsTable';
@@ -11,6 +11,9 @@ vi.mock('@/services/dataClient', () => ({
       update: vi.fn(),
       reanalyze: vi.fn(),
       delete: vi.fn(),
+    },
+    crm: {
+      list: vi.fn().mockResolvedValue([]),
     },
   },
 }));
@@ -63,6 +66,9 @@ const defaultProps = {
   onLeadUpdated: vi.fn(),
 };
 
+// The table renders leads in two layouts (desktop table + mobile cards),
+// so each company name appears twice — use getAllByText for these assertions.
+
 describe('LeadsTable', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -100,9 +106,12 @@ describe('LeadsTable', () => {
 
   it('calls onSelectLead when clicking a row', async () => {
     render(<MemoryRouter><LeadsTable {...defaultProps} /></MemoryRouter>);
-    // Both views render; click the first occurrence — mobile card bubbles up to its clickable div
-    const companyEl = screen.getAllByText('Alpha Corp')[0];
-    await userEvent.click(companyEl);
+    // Use the desktop table row (font-medium class — mobile cards use font-semibold)
+    const nameEl = screen.getAllByText('Alpha Corp').find(
+      (el) => el.className.includes('font-medium')
+    );
+    const row = nameEl.closest('tr');
+    await userEvent.click(row);
     expect(defaultProps.onSelectLead).toHaveBeenCalledWith(MOCK_LEADS[0]);
   });
 
@@ -117,9 +126,9 @@ describe('LeadsTable', () => {
   it('shows delete confirmation dialog on single delete', async () => {
     render(<MemoryRouter><LeadsTable {...defaultProps} /></MemoryRouter>);
     // Both views render delete buttons; click any one
-    const deleteBtn = screen.getAllByLabelText('Delete Alpha Corp')[0];
-    await userEvent.click(deleteBtn);
-    expect(screen.getByText(/Delete Alpha Corp/)).toBeInTheDocument();
+    const deleteBtns = screen.getAllByLabelText('Delete Alpha Corp');
+    await userEvent.click(deleteBtns[0]);
+    expect(screen.getAllByText(/Delete Alpha Corp/).length).toBeGreaterThan(0);
     expect(screen.getByText(/cannot be undone/)).toBeInTheDocument();
   });
 
@@ -127,8 +136,8 @@ describe('LeadsTable', () => {
     dataClient.leads.delete.mockResolvedValue({});
     render(<MemoryRouter><LeadsTable {...defaultProps} /></MemoryRouter>);
 
-    const deleteBtn = screen.getAllByLabelText('Delete Alpha Corp')[0];
-    await userEvent.click(deleteBtn);
+    const deleteBtns = screen.getAllByLabelText('Delete Alpha Corp');
+    await userEvent.click(deleteBtns[0]);
 
     const confirmBtn = screen.getByText('Delete lead');
     await userEvent.click(confirmBtn);
