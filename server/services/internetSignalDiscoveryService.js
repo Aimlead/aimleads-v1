@@ -1,4 +1,5 @@
 import { validateOutboundUrl } from '../lib/ssrf.js';
+import { clamp } from '../lib/serviceUtils.js';
 
 const DEFAULT_TIMEOUT_MS = 3500;
 const DEFAULT_MAX_PAGES = 3;
@@ -95,8 +96,6 @@ const WEBSITE_SIGNAL_RULES = [
 
 const DECISION_MAKER_ROLE_REGEX =
   /\b(cto|cio|ciso|chief technology officer|chief information officer|head of it|it director|directeur des systemes d'information|dsi)\b/i;
-
-const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 const safeWebsiteUrl = (value) => {
   const raw = String(value || '').trim();

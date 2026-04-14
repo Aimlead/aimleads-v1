@@ -23,7 +23,7 @@ export const getClearCookieOptions = (overrides = {}) => {
   return options;
 };
 
-export const getCsrfCookieOptions = (overrides = {}) => {
+const getCsrfCookieOptions = (overrides = {}) => {
   const config = getRuntimeConfig();
 
   return {
@@ -36,7 +36,7 @@ export const getCsrfCookieOptions = (overrides = {}) => {
   };
 };
 
-export const getClearCsrfCookieOptions = (overrides = {}) => {
+const getClearCsrfCookieOptions = (overrides = {}) => {
   const { maxAge: _maxAge, ...options } = getCsrfCookieOptions(overrides);
   return options;
 };

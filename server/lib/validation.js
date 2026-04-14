@@ -368,15 +368,6 @@ export const validateBody = (schema) => (req, _res, next) => {
   }
 };
 
-export const validateQuery = (schema) => (req, _res, next) => {
-  try {
-    req.validatedQuery = schema.parse(req.query || {});
-    return next();
-  } catch (error) {
-    return next(toValidationError(error));
-  }
-};
-
 export const schemas = {
   authRegisterSchema,
   authLoginSchema,

@@ -4,6 +4,8 @@ import { requireAuth, wrapAsyncRoutes } from '../lib/middleware.js';
 import { dataStore, getDataStoreRuntime } from '../lib/dataStore.js';
 import { bootstrapWorkspaceDemoData } from '../services/bootstrap.js';
 import { analyzeLead } from '../services/analyzeService.js';
+import { toLeadAnalysisUpdatePayload } from '../services/leadAnalysisPersistence.js';
+import { normalizeText } from '../lib/serviceUtils.js';
 
 const router = express.Router();
 wrapAsyncRoutes(router);
@@ -53,8 +55,6 @@ const DEFAULT_DEV_ICP = {
   },
 };
 
-const normalizeText = (value) => String(value || '').trim().toLowerCase();
-
 const avg = (items, key) => {
   const values = (items || []).map((item) => Number(item?.[key])).filter((value) => Number.isFinite(value));
   if (values.length === 0) return null;
@@ -77,34 +77,6 @@ const leadKey = (lead) => {
   const contact = normalizeText(lead.contact_name);
   return [company, website, email, contact].join('|');
 };
-
-const toLeadAnalysisUpdatePayload = (result) => ({
-  status: result.final_status || result.status,
-  icp_score: result.icp_score,
-  icp_raw_score: result.icp_raw_score,
-  icp_category: result.category,
-  icp_priority: result.priority,
-  recommended_action: result.recommended_action,
-  icp_profile_id: result.icp_profile_id,
-  icp_profile_name: result.icp_profile_name,
-  analysis_version: result.analysis_version,
-  ai_score: result.ai_score,
-  ai_confidence: result.ai_confidence,
-  ai_signals: result.ai_signals,
-  ai_summary: result.ai_summary,
-  scoring_weights: result.scoring_weights,
-  final_score: result.final_score,
-  final_category: result.final_category,
-  final_priority: result.final_priority,
-  final_recommended_action: result.final_recommended_action,
-  final_status: result.final_status,
-  signals: result.signals,
-  score_details: result.score_details,
-  analysis_summary: result.analysis_summary,
-  generated_icebreakers: result.generated_icebreakers,
-  generated_icebreaker: result.generated_icebreakers?.email,
-  last_analyzed_at: new Date().toISOString(),
-});
 
 const requireNonProduction = (_req, res, next) => {
   if (getRuntimeConfig().isProduction) {

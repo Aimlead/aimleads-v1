@@ -1,13 +1,6 @@
-const ICP_CATEGORY = {
-  EXCELLENT: 'Excellent',
-  STRONG: 'Strong Fit',
-  MEDIUM: 'Medium Fit',
-  LOW: 'Low Fit',
-  EXCLUDED: 'Excluded',
-};
+import { ICP_CATEGORY, DEFAULT_CATEGORY_THRESHOLDS, clamp, normalizeText, resolveCategoryThresholds } from '../lib/serviceUtils.js';
 
 const DEFAULT_BLEND_WEIGHTS = { icp: 0.6, ai: 0.4 };
-const DEFAULT_CATEGORY_THRESHOLDS = { excellent: 80, strong: 50, medium: 20 };
 const BASELINE_AI_SCORE = 12;
 const MAX_AI_BOOST = 30;
 const MIN_AI_BOOST = -35;
@@ -139,8 +132,6 @@ const SIGNAL_KEY_ALIASES = {
   mort: 'closed_or_dead',
 };
 
-const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-const normalizeText = (value) => String(value || '').trim().toLowerCase();
 const stripDiacritics = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 const normalizeSignalKey = (value) =>
   normalizeText(stripDiacritics(value)).replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
@@ -171,15 +162,6 @@ const resolveBlendWeights = (weights = {}) => {
     ai: aiRaw / total,
   };
 };
-
-const resolveCategoryThresholds = (raw = {}, fallback = DEFAULT_CATEGORY_THRESHOLDS) => {
-  const excellent = clamp(Math.round(Number(raw?.excellent ?? fallback.excellent)), 0, 100);
-  const strong = clamp(Math.round(Number(raw?.strong ?? fallback.strong)), 0, excellent);
-  const medium = clamp(Math.round(Number(raw?.medium ?? fallback.medium)), 0, strong);
-
-  return { excellent, strong, medium };
-};
-
 
 const pushSignal = (signals, { source = 'ai', type, points, label, evidence, key }) => {
   signals.push({ source, type, points, label, evidence, key });

@@ -19,6 +19,7 @@ export const sidebarNavigation = [
   { name: 'Settings', href: ROUTES.settings, icon: Settings, group: 'config' },
   { name: 'CRM Integration', href: ROUTES.crmIntegration, icon: Database, group: 'config' },
   { name: 'Audit Log', href: ROUTES.auditLog, icon: ScrollText, group: 'config' },
+  { name: 'Help', href: ROUTES.help, icon: LifeBuoy, group: 'config' },
 ];
 
 const GROUP_LABELS = {
