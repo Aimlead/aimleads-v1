@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Check, ChevronDown, ChevronUp, Copy, Globe, Loader2, Linkedin, Mail, Phone, Sparkles } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Copy, Loader2, Linkedin, Mail, Phone, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -14,7 +14,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
@@ -71,15 +70,6 @@ const INTENT_SIGNAL_GROUPS = [
     ],
   },
 ];
-
-const INTERNET_SIGNAL_OPTIONS = INTENT_SIGNAL_GROUPS.find((g) => g.key === 'pre_call')?.items ?? [];
-const LABEL_BY_SIGNAL_KEY = Object.fromEntries(INTERNET_SIGNAL_OPTIONS.map((item) => [item.key, item.label]));
-
-const createInternetSignalDraft = () => ({
-  key: INTERNET_SIGNAL_OPTIONS[0]?.key || 'recent_funding',
-  evidence: '',
-  confidence: 80,
-});
 
 const normalizeInternetSignalConfidence = (value, fallback = 80) => {
   const parsed = Number(value);
@@ -146,13 +136,6 @@ const signalTypeClass = (type) => {
   return 'text-slate-700 bg-slate-50 border-slate-200';
 };
 
-const SOURCE_LABEL = {
-  hunter_io: 'HUNTER',
-  news_api: 'NEWS',
-  claude_web_research: 'CLAUDE',
-  website_scraping: 'WEB',
-};
-
 const PROVIDER_STATUS_FR = {
   ok: null,
   no_results: 'aucun résultat',
@@ -193,16 +176,13 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
   const [notes, setNotes] = useState('');
   const [intentSignals, setIntentSignals] = useState({ pre_call: [], post_contact: [], negative: [] });
   const [internetSignals, setInternetSignals] = useState([]);
-  const [internetSignalDraft, setInternetSignalDraft] = useState(createInternetSignalDraft());
   const [saving, setSaving] = useState(false);
   const [savingAndAnalyzing, setSavingAndAnalyzing] = useState(false);
-  const [discoveringSignals, setDiscoveringSignals] = useState(false);
   const [showManualOverrides, setShowManualOverrides] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
-  const [lastScanMeta, setLastScanMeta] = useState(null);
 
   // Track initial values to detect unsaved changes
-  const initialRef = useRef({ followUpStatus: '', notes: '', intentSignals: {}, internetSignals: [] });
+  const initialRef = useRef({ followUpStatus: '', notes: '', intentSignals: {} });
 
   React.useEffect(() => {
     if (lead) {
@@ -214,9 +194,7 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
       setNotes(n);
       setIntentSignals(is);
       setInternetSignals(nets);
-      setInternetSignalDraft(createInternetSignalDraft());
-      setLastScanMeta(lead.auto_signal_metadata || null);
-      initialRef.current = { followUpStatus: fs, notes: n, intentSignals: is, internetSignals: nets };
+      initialRef.current = { followUpStatus: fs, notes: n, intentSignals: is };
     }
   }, [lead]);
 
@@ -225,7 +203,6 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
     if (followUpStatus !== init.followUpStatus) return true;
     if (notes !== init.notes) return true;
     if (JSON.stringify(intentSignals) !== JSON.stringify(init.intentSignals)) return true;
-    if (JSON.stringify(internetSignals) !== JSON.stringify(init.internetSignals)) return true;
     return false;
   }, [followUpStatus, notes, intentSignals, internetSignals]);
 
@@ -273,34 +250,6 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
     });
   };
 
-  const addInternetSignal = () => {
-    const nextKey = String(internetSignalDraft.key || '').trim();
-    const nextEvidence = String(internetSignalDraft.evidence || '').trim();
-    const nextConfidence = Number(internetSignalDraft.confidence);
-
-    if (!nextKey) return;
-
-    setInternetSignals((previous) => [
-      ...previous,
-      {
-        key: nextKey,
-        evidence: nextEvidence,
-        confidence: Number.isFinite(nextConfidence) ? Math.max(0, Math.min(100, nextConfidence)) : 80,
-        found_at: new Date().toISOString(),
-      },
-    ]);
-
-    setInternetSignalDraft((previous) => ({
-      ...previous,
-      evidence: '',
-      confidence: 80,
-    }));
-  };
-
-  const removeInternetSignalAt = (indexToRemove) => {
-    setInternetSignals((previous) => previous.filter((_, index) => index !== indexToRemove));
-  };
-
   const handleSave = async () => {
     if (!lead) return;
 
@@ -327,33 +276,9 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
     if (response?.lead) {
       setIntentSignals(getIntentSignalsFromLead(response.lead));
       setInternetSignals(getInternetSignalsFromLead(response.lead));
-      if (response.lead.auto_signal_metadata) {
-        setLastScanMeta(response.lead.auto_signal_metadata);
-      }
     }
     onLeadUpdated?.();
     return response;
-  };
-
-  const handleAutoDiscover = async () => {
-    if (!lead) return;
-
-    setDiscoveringSignals(true);
-    try {
-      const response = await runSignalDiscovery({ reanalyze: false });
-      const message = buildDiscoverToast(response);
-      const hasResults = (Number(response?.discovered_signals || 0) + Number(response?.news_signals || 0) + Number(response?.web_research_signals || 0)) > 0 || response?.hunter_email;
-      if (hasResults) {
-        toast.success(message);
-      } else {
-        toast(message);
-      }
-    } catch (error) {
-      console.warn('Auto-discover signals failed', error);
-      toast.error('Échec de la détection automatique des signaux internet');
-    } finally {
-      setDiscoveringSignals(false);
-    }
   };
 
   const handleSaveAndAnalyze = async () => {
@@ -495,122 +420,8 @@ const icpScore = toMetricValue(lead.icp_score ?? lead.score_details?.icp_score);
         <div className="mb-4 rounded-xl border border-slate-200 p-4 space-y-4 bg-slate-50/40">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-semibold text-slate-800">Signaux & Preuves</p>
-            <div className="flex gap-1.5 text-[11px]">
-              <span className="px-2 py-1 rounded-md border border-slate-200 bg-white text-slate-600">{internetSignals.length} internet</span>
-              {intentCount > 0 && (
-                <span className="px-2 py-1 rounded-md border border-slate-200 bg-white text-slate-600">{intentCount} intent</span>
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-xs text-slate-500">
-                  Force un nouveau scan du site pour trouver des signaux internet frais.
-                </p>
-                {lastScanMeta?.last_discovery_at && (
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    Dernier scan : {new Date(lastScanMeta.last_discovery_at).toLocaleString()}
-                    {lastScanMeta.pages_scanned > 0 ? ` — ${lastScanMeta.pages_scanned} page(s)` : ''}
-                  </p>
-                )}
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleAutoDiscover}
-                disabled={discoveringSignals || savingAndAnalyzing || saving}
-                className="gap-1.5"
-              >
-                {discoveringSignals ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Globe className="w-3.5 h-3.5" />}
-                Re-scan website
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 gap-2">
-              <Select
-                value={internetSignalDraft.key}
-                onValueChange={(value) => setInternetSignalDraft((previous) => ({ ...previous, key: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Signal" />
-                </SelectTrigger>
-                <SelectContent>
-                  {INTERNET_SIGNAL_OPTIONS.map((option) => (
-                    <SelectItem key={option.key} value={option.key}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Input
-                value={internetSignalDraft.evidence}
-                onChange={(event) =>
-                  setInternetSignalDraft((previous) => ({
-                    ...previous,
-                    evidence: event.target.value,
-                  }))
-                }
-                placeholder="URL de preuve (article, post LinkedIn, communique...)"
-              />
-
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={internetSignalDraft.confidence}
-                  onChange={(event) =>
-                    setInternetSignalDraft((previous) => ({
-                      ...previous,
-                      confidence: event.target.value,
-                    }))
-                  }
-                  placeholder="Confidence 0-100"
-                />
-                <Button type="button" variant="outline" onClick={addInternetSignal}>
-                  Add
-                </Button>
-              </div>
-            </div>
-
-            {internetSignals.length > 0 ? (
-              <div className="space-y-2">
-                {internetSignals.map((entry, index) => {
-                  const label = LABEL_BY_SIGNAL_KEY[entry.key] || entry.key;
-                  const foundAt = formatFoundAt(entry.found_at);
-                  const sourceLabel = entry.source_type ? SOURCE_LABEL[entry.source_type] : null;
-                  return (
-                    <div
-                      key={`${entry.key}-${index}`}
-                      className="flex items-start justify-between gap-2 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2"
-                    >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <p className="text-xs font-semibold text-slate-800">{label}</p>
-                          {sourceLabel && (
-                            <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-slate-200 text-slate-500 tracking-wide">
-                              {sourceLabel}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-slate-500 break-all">
-                          {entry.evidence || 'Pas d\'URL de preuve'} | confiance {entry.confidence}%
-                        </p>
-                        {foundAt ? <p className="text-[11px] text-slate-400 mt-0.5">Détecté : {foundAt}</p> : null}
-                      </div>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => removeInternetSignalAt(index)}>
-                        Retirer
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-xs text-slate-500">Aucune preuve internet ajoutée.</p>
+            {intentCount > 0 && (
+              <span className="px-2 py-1 rounded-md border border-slate-200 bg-white text-slate-600 text-[11px]">{intentCount} intent</span>
             )}
           </div>
 
@@ -661,12 +472,12 @@ const icpScore = toMetricValue(lead.icp_score ?? lead.score_details?.icp_score);
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={handleSaveAndAnalyze} disabled={savingAndAnalyzing || saving || discoveringSignals} className="gap-2">
+            <Button onClick={handleSaveAndAnalyze} disabled={savingAndAnalyzing || saving} className="gap-2">
               {savingAndAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
               Save + Re-analyze
               {!savingAndAnalyzing && <span className="text-[10px] opacity-60 font-normal">3 crédits</span>}
             </Button>
-            <Button variant="outline" onClick={handleSave} disabled={saving || savingAndAnalyzing || discoveringSignals}>
+            <Button variant="outline" onClick={handleSave} disabled={saving || savingAndAnalyzing}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Draft'}
             </Button>
           </div>
@@ -748,7 +559,7 @@ const icpScore = toMetricValue(lead.icp_score ?? lead.score_details?.icp_score);
 
           <Textarea placeholder="Notes..." value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} />
 
-          <Button onClick={handleSave} disabled={saving || savingAndAnalyzing || discoveringSignals} className="w-full relative">
+          <Button onClick={handleSave} disabled={saving || savingAndAnalyzing} className="w-full relative">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : isDirty ? 'Save changes ●' : 'Save'}
           </Button>
         </div>
