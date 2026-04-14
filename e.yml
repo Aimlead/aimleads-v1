@@ -1,0 +1,33 @@
+[1mdiff --git a/docker-compose.yml b/docker-compose.yml[m
+[1mindex 84e30ee..7cb4d41 100644[m
+[1m--- a/docker-compose.yml[m
+[1m+++ b/docker-compose.yml[m
+[36m@@ -1,5 +1,5 @@[m
+ services:[m
+[31m-  app:[m
+[32m+[m[32m   app:[m
+     build:[m
+       context: .[m
+       dockerfile: Dockerfile[m
+[36m@@ -9,6 +9,12 @@[m [mservices:[m
+     # Secrets and runtime config loaded from .env file (never commit .env)[m
+     env_file:[m
+       - .env[m
+[32m+[m[32m    labels:[m
+[32m+[m[32m      - traefik.enable=true[m
+[32m+[m[32m      - traefik.http.routers.aimleads.rule=Host(`aimlead.io`) || Host(`www.aimlead.io`)[m
+[32m+[m[32m      - traefik.http.routers.aimleads.entrypoints=websecure[m
+[32m+[m[32m      - traefik.http.services.aimleads.loadbalancer.server.port=3010[m
+[32m+[m[32m      - traefik.http.services.aimleads.loadbalancer.server.scheme=http[m
+     environment:[m
+       - NODE_ENV=production[m
+       - API_PORT=3010[m
+[36m@@ -22,7 +28,7 @@[m [mservices:[m
+       - SUPABASE_FALLBACK_TO_LOCAL=false[m
+       - VITE_ALLOW_API_FALLBACK=0[m
+     ports:[m
+[31m-      - "80:3010"[m
+[32m+[m[32m      - "127.0.0.1:3010:3010"[m
+     logging:[m
+       driver: json-file[m
+       options:[m

@@ -1,0 +1,34 @@
+2026-04-04T11:20:23.045515 Project directory: /docker/aimlead
+2026-04-04T11:20:23.045981 Pulling project images
+2026-04-04T11:20:23.046623 ------------------------------
+2026-04-04T11:20:23.131743  Image aimleads:latest Pulling 
+2026-04-04T11:20:23.728835  Image aimleads:latest pull access denied for aimleads, repository does not exist or may require 'docker login' 
+2026-04-04T11:20:23.729652 time="2026-04-04T11:20:23Z" level=warning msg="WARNING: Some service image(s) must be built from source by running:\n    docker compose build app"
+2026-04-04T11:20:23.730176 Error response from daemon: pull access denied for aimleads, repository does not exist or may require 'docker login'
+2026-04-04T11:20:23.735459 ------------------------------
+2026-04-04T11:20:23.735500 Image pull failed with code 1
+2026-04-04T11:20:23.735699 Pull failed, will retry again after 30 seconds... (1/3)
+2026-04-04T11:20:53.737398 ------------------------------
+2026-04-04T11:20:53.845612  Image aimleads:latest Pulling 
+2026-04-04T11:34:48.831503  Image aimleads:latest failed to resolve reference "docker.io/library/aimleads:latest": failed to authorize: failed to fetch anonymous token: Get "https://auth.docker.io/token?scope=repository%3Alibrary%2Faimleads%3Apull&service=registry.docker.io": read tcp [2a02:4780:7:3e6d::1]:51420->[2a06:98c1:3105::ac40:904e]:443: read: network is unreachable 
+2026-04-04T11:34:48.832271 time="2026-04-04T11:34:48Z" level=warning msg="WARNING: Some service image(s) must be built from source by running:\n    docker compose build app"
+2026-04-04T11:34:48.832335 Error response from daemon: failed to resolve reference "docker.io/library/aimleads:latest": failed to authorize: failed to fetch anonymous token: Get "https://auth.docker.io/token?scope=repository%3Alibrary%2Faimleads%3Apull&service=registry.docker.io": read tcp [2a02:4780:7:3e6d::1]:51420->[2a06:98c1:3105::ac40:904e]:443: read: network is unreachable
+2026-04-04T11:34:49.011874 ------------------------------
+2026-04-04T11:34:49.011926 Image pull failed with code 1
+2026-04-04T11:34:49.012067 Pull failed, will retry again after 60 seconds... (2/3)
+2026-04-04T11:35:49.013101 ------------------------------
+2026-04-04T11:35:49.123075  Image aimleads:latest Pulling 
+2026-04-04T11:35:49.609782  Image aimleads:latest pull access denied for aimleads, repository does not exist or may require 'docker login' 
+2026-04-04T11:35:49.609861 time="2026-04-04T11:35:49Z" level=warning msg="WARNING: Some service image(s) must be built from source by running:\n    docker compose build app"
+2026-04-04T11:35:49.609879 Error response from daemon: pull access denied for aimleads, repository does not exist or may require 'docker login'
+2026-04-04T11:35:49.722553 ------------------------------
+2026-04-04T11:35:49.722609 Image pull failed with code 1
+2026-04-04T11:35:49.722780 Pull failed, will retry again after 90 seconds... (3/3)
+2026-04-04T11:37:19.722943 Deploying project
+2026-04-04T11:37:19.723814 ------------------------------
+2026-04-04T11:37:19.821602  Container aimleads Recreate 
+2026-04-04T11:37:20.101456  Container aimleads Recreated 
+2026-04-04T11:37:20.114595  Container aimleads Starting 
+2026-04-04T11:37:20.318009  Container aimleads Started 
+2026-04-04T11:37:20.322669 ------------------------------
+2026-04-04T11:37:20.322720 Project deployed successfully

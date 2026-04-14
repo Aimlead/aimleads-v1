@@ -14,6 +14,10 @@ import { findEmailForLead } from '../services/hunterService.js';
 import { fetchCompanyNewsFindings } from '../services/newsService.js';
 import { researchCompanyOnWeb } from '../services/claudeWebResearchService.js';
 import { toLeadAnalysisUpdatePayload } from '../services/leadAnalysisPersistence.js';
+import { getCrmIntegration, syncLeadToCrm } from '../services/crmService.js';
+import { normalizeLeadForResponse } from '../lib/leadNormalization.js';
+import { getUserWorkspaceId } from '../lib/scope.js';
+import { logger } from '../lib/observability.js';
 
 // Per-user limits for expensive LLM operations
 const sequenceLimiter = createUserRateLimit({
@@ -122,24 +126,6 @@ const mergeInternetSignals = (currentSignals, incomingSignals, lead) => {
   }
 
   return merged;
-};
-
-const normalizeLeadForResponse = (lead) => {
-  if (!lead || typeof lead !== 'object') return lead;
-
-  const finalStatus = String(lead.final_status || '').trim();
-  const hasFinalStatus = finalStatus === 'Qualified' || finalStatus === 'Rejected';
-  const currentStatus = String(lead.status || '').trim();
-
-  if (!hasFinalStatus) return lead;
-  if (!currentStatus || currentStatus === 'Error') {
-    return {
-      ...lead,
-      status: finalStatus,
-    };
-  }
-
-  return lead;
 };
 
 const sanitizeSpreadsheetCell = (value) => {
@@ -563,6 +549,25 @@ router.patch('/:leadId', validateBody(schemas.leadPatchSchema), async (req, res)
     resourceId: req.params.leadId,
     changes: safeUpdates,
   });
+
+  // Auto-sync to any active CRM when a lead becomes "Qualified"
+  if (safeUpdates.status === 'Qualified' && updatedLead.status === 'Qualified') {
+    const workspaceId = getUserWorkspaceId(req.user);
+    const leadSnapshot = { ...updatedLead };
+    setImmediate(async () => {
+      for (const crmType of ['hubspot', 'salesforce']) {
+        try {
+          const integration = await getCrmIntegration(workspaceId, crmType);
+          if (integration?.is_active) {
+            await syncLeadToCrm(workspaceId, leadSnapshot, crmType);
+          }
+        } catch (err) {
+          // fire-and-forget: log but never block the response
+          logger.warn('crm_auto_sync_failed', { crm_type: crmType, lead_id: leadSnapshot.id, error: err.message });
+        }
+      }
+    });
+  }
 
   return res.json({ data: normalizeLeadForResponse(updatedLead) });
 });

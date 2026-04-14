@@ -6,6 +6,7 @@ import { schemas, validateBody } from '../lib/validation.js';
 import { writeAuditLog } from '../lib/auditLog.js';
 import { getUserWorkspaceId } from '../lib/scope.js';
 import { getCircuitBreakerStatus } from '../services/llmService.js';
+import { listCrmIntegrations } from '../services/crmService.js';
 import { getBalance, grantCredits, getTransactionHistory, getWorkspacePlan, CREDIT_COSTS } from '../lib/credits.js';
 
 const router = express.Router();
@@ -359,7 +360,7 @@ router.post('/credits/grant', requireAuth, async (req, res) => {
   return res.json({ data: result });
 });
 
-router.get('/integration-status', requireAuth, (req, res) => {
+router.get('/integration-status', requireAuth, async (req, res) => {
   const config = getRuntimeConfig();
 
   const supabaseUrl = Boolean(config.supabase.url);
@@ -369,10 +370,25 @@ router.get('/integration-status', requireAuth, (req, res) => {
   const hasCorsOrigin = Boolean(config.corsOrigin || process.env.VERCEL_URL);
   const cbStatus = getCircuitBreakerStatus();
 
+  // CRM integration status — graceful degradation if DB unavailable
+  const crmStatus = { hubspot: false, salesforce: false };
+  try {
+    const workspaceId = getUserWorkspaceId(req.user);
+    const integrations = await listCrmIntegrations(workspaceId);
+    for (const integration of integrations) {
+      if (integration.is_active) {
+        crmStatus[integration.crm_type] = true;
+      }
+    }
+  } catch {
+    // Non-critical — leave both false
+  }
+
   res.json({
     claude: Boolean(process.env.ANTHROPIC_API_KEY),
     hunter: Boolean(process.env.HUNTER_API_KEY),
     newsApi: Boolean(process.env.NEWS_API_KEY),
+    crm: crmStatus,
     supabase: {
       configured: supabaseConfigured,
       url: supabaseUrl,

@@ -15,6 +15,18 @@ import { dataClient } from '@/services/dataClient';
 import ScoreGauge from '@/components/leads/ScoreGauge';
 import SignalBadge from '@/components/leads/SignalBadge';
 
+// Helper: format source_list slug to human label
+function formatSourceList(slug) {
+  if (!slug) return 'Unknown';
+  return slug
+    .replace(/_/g, ' ')
+    .replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3')
+    .replace(/\w/g, l => l.toUpperCase())
+    .replace(/(Given To Sales|Onboarding)/gi, s => s)
+    .trim();
+}
+
+
 const toMetric = (value) => (Number.isFinite(Number(value)) ? Number(value) : null);
 
 const normalizeLabel = (value) =>
@@ -23,11 +35,9 @@ const normalizeLabel = (value) =>
     .replace(/\s+/g, ' ')
     .trim();
 
-const NEGATIVE_SIGNAL_TOKENS = ['bankruptcy', 'closed', 'shutdown', 'layoff', 'churn', 'no_budget', 'budget_frozen'];
-
 const inferSignalTypeFromKey = (value) => {
   const key = String(value || '').toLowerCase();
-  if (NEGATIVE_SIGNAL_TOKENS.some((token) => key.includes(token))) return 'negative';
+  if (['bankruptcy', 'closed', 'shutdown', 'layoff', 'churn'].some((token) => key.includes(token))) return 'negative';
   if (['missing', 'unknown', 'unverified'].some((token) => key.includes(token))) return 'neutral';
   return 'positive';
 };
@@ -35,13 +45,11 @@ const inferSignalTypeFromKey = (value) => {
 const getScoreDetails = (lead) =>
   lead?.score_details && typeof lead.score_details === 'object' ? lead.score_details : {};
 
-const getNumericScoreDetail = (details, key) => {
-  const entry = details?.[key];
-  if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
-    return toMetric(entry.points ?? entry.score ?? entry.value);
-  }
-  return toMetric(entry);
-};
+const sumScoreDetailPoints = (details) =>
+  Object.values(details).reduce((sum, entry) => {
+    const points = toMetric(entry?.points);
+    return points === null ? sum : sum + points;
+  }, 0);
 
 const getBaseIcpScore = (lead) => {
   const direct = toMetric(lead?.icp_score);
@@ -51,59 +59,14 @@ const getBaseIcpScore = (lead) => {
   if (raw !== null) return raw;
 
   const details = getScoreDetails(lead);
-  const detailScore = getNumericScoreDetail(details, 'icp_score');
-  if (detailScore !== null) return detailScore;
-
-  const detailRaw = getNumericScoreDetail(details, 'icp_raw_score');
-  if (detailRaw !== null) return detailRaw;
-
-  return null;
-};
-
-const extractSignalLabel = (item) => {
-  if (typeof item === 'string') return normalizeLabel(item);
-  if (!item || typeof item !== 'object') return '';
-  return normalizeLabel(item.label || item.key || item.signal);
-};
-
-const normalizeIntentSignalPayload = (value) => {
-  const normalized = {
-    pre_call: [],
-    post_contact: [],
-    negative: [],
-  };
-
-  const pushUnique = (bucket, item) => {
-    const label = extractSignalLabel(item);
-    if (!label || normalized[bucket].includes(label)) return;
-    normalized[bucket].push(label);
-  };
-
-  if (Array.isArray(value)) {
-    value.forEach((item) => {
-      const explicitType = String(item?.type || '').toLowerCase();
-      const inferredType = explicitType || inferSignalTypeFromKey(item?.key || item?.signal || item?.label || item);
-      pushUnique(inferredType === 'negative' ? 'negative' : 'pre_call', item);
-    });
-    return normalized;
-  }
-
-  if (!value || typeof value !== 'object') return normalized;
-
-  const appendBucket = (bucket, payload) => {
-    if (!Array.isArray(payload)) return;
-    payload.forEach((item) => pushUnique(bucket, item));
-  };
-
-  appendBucket('pre_call', value.pre_call || value.preCall || value.pre || value.precall);
-  appendBucket('post_contact', value.post_contact || value.postContact || value.post);
-  appendBucket('negative', value.negative || value.negatives || value.negative_signals);
-
-  return normalized;
+  return Object.keys(details).length > 0 ? sumScoreDetailPoints(details) : null;
 };
 
 const getIntentSignals = (lead) => {
-  const payload = normalizeIntentSignalPayload(lead?.intent_signals);
+  const payload =
+    lead?.intent_signals && typeof lead.intent_signals === 'object'
+      ? lead.intent_signals
+      : {};
 
   return [
     ...(Array.isArray(payload.pre_call) ? payload.pre_call : []).map((label) => ({
@@ -262,12 +225,10 @@ export default function LeadDetail() {
 
   const icpScore = getBaseIcpScore(lead);
   const aiScore = toMetric(lead.ai_score);
-  const scoreDetails = getScoreDetails(lead);
-  const finalScore = toMetric(lead.final_score) ?? getNumericScoreDetail(scoreDetails, 'final_score') ?? icpScore;
+  const finalScore = toMetric(lead.final_score) ?? icpScore;
   const aiBoost = icpScore !== null && finalScore !== null ? finalScore - icpScore : null;
-  const scoreDetailEntries = Object.entries(scoreDetails).filter(([, entry]) =>
-    entry && typeof entry === 'object' && !Array.isArray(entry) && toMetric(entry.points) !== null
-  );
+  const scoreDetails = getScoreDetails(lead);
+  const scoreDetailEntries = Object.entries(scoreDetails);
   const displaySignals = getDisplaySignals(lead);
 
   const signalGroups = {
@@ -281,7 +242,7 @@ export default function LeadDetail() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-start gap-4 mb-6 sticky top-20 bg-white z-10 py-3 -mx-6 px-6 border-b border-slate-100">
+      <div className="flex items-start gap-4 mb-6">
         <Button variant="ghost" size="sm" className="gap-2 mt-1" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-4 h-4" />
           Back
@@ -317,7 +278,7 @@ export default function LeadDetail() {
             {lead.industry && <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px]">{lead.industry}</span>}
             {lead.country && <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px]">{lead.country}</span>}
             {lead.company_size && <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px]">{lead.company_size} emp.</span>}
-            {lead.source_list && <span className="px-2 py-0.5 rounded-md bg-brand-sky/5 text-brand-sky text-[11px]">{lead.source_list}</span>}
+            {lead.source_list && <span className="px-2 py-0.5 rounded-md bg-brand-sky/5 text-brand-sky text-[11px]">{formatSourceList(lead.source_list)}</span>}
           </div>
         </div>
 
@@ -330,7 +291,7 @@ export default function LeadDetail() {
           <Card className="shadow-sm">
             <CardContent className="pt-6">
               <div className="flex flex-col items-center">
-                <ScoreGauge score={finalScore} size="large" label="Final Score" category={lead.final_category} />
+                <ScoreGauge score={finalScore} size="large" label="Final Score" />
               </div>
 
               {/* Score breakdown */}
@@ -527,17 +488,23 @@ export default function LeadDetail() {
             </TabsContent>
 
             {/* ANALYSIS TAB */}
-            <TabsContent value="analysis" className="mt-4">
-              <Card className="shadow-sm">
-                <CardContent className="pt-6">
-                  {lead.analysis_summary ? (
-                    <pre className="text-sm text-slate-700 whitespace-pre-wrap font-sans leading-relaxed">{lead.analysis_summary}</pre>
-                  ) : (
-                    <p className="text-slate-500 text-sm text-center py-6">No analysis summary yet. Re-analyze to generate.</p>
+        <TabsContent value="analysis" className="mt-4">
+          <Card className="shadow-sm">
+            <CardContent className="pt-6">
+              {lead.analysis_summary ? (
+                <div className="space-y-3">
+                  {lead.analysis_summary.split('\n\n').map((para, i) =>
+                    para.trim() ? (
+                      <p key={i} className="text-sm text-slate-700 leading-relaxed bg-slate-50 rounded-lg p-3 border border-slate-100">{para.trim()}</p>
+                    ) : null
                   )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                </div>
+              ) : (
+                <p className="text-slate-500 text-sm text-center py-6">No analysis summary yet. Re-analyze to generate.</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
             {/* INTERNET SIGNALS TAB */}
             {internetSignals.length > 0 && (
@@ -556,7 +523,7 @@ export default function LeadDetail() {
                             <p className="font-medium text-slate-700">{signal.key?.replace(/_/g, ' ')}</p>
                             {signal.evidence && (
                               <a
-                                href={signal.evidence}
+                                href={signal.evidence && signal.evidence.startsWith("http") ? signal.evidence : "#"}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-brand-sky hover:underline truncate block"

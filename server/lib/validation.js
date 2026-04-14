@@ -325,6 +325,28 @@ const workspaceMemberRoleUpdateSchema = z.object({
   role: workspaceInviteRoleSchema,
 });
 
+const crmTypeEnum = z.enum(['hubspot', 'salesforce']);
+
+const crmSaveSchema = z.object({
+  crm_type: crmTypeEnum,
+  api_token: z.string().trim().min(1).max(2000),
+  config: z
+    .object({
+      instance_url: z.string().trim().max(500).optional(),
+    })
+    .optional()
+    .default({}),
+});
+
+const crmSyncBulkSchema = z.object({
+  lead_ids: z.array(z.string().min(1)).min(1).max(100),
+  crm_type: crmTypeEnum,
+});
+
+const crmTestSchema = z.object({
+  crm_type: crmTypeEnum,
+});
+
 const toValidationError = (error) => {
   const issues = error.issues?.map((issue) => ({
     path: issue.path.join('.'),
@@ -364,4 +386,7 @@ export const schemas = {
   externalSignalsSchema,
   workspaceInviteCreateSchema,
   workspaceMemberRoleUpdateSchema,
+  crmSaveSchema,
+  crmSyncBulkSchema,
+  crmTestSchema,
 };

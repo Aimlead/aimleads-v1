@@ -303,6 +303,14 @@ function scoreLeadDeterministic({ lead, icpProfile }) {
   return { rawScore, details, earlyExit: false };
 }
 
+// ICP score threshold below which we skip the LLM + web discovery entirely.
+// These leads have clearly failed deterministic matching — spending credits on them is wasteful.
+// Override with LLM_SKIP_THRESHOLD env var (integer 0-100, default 15).
+const LLM_SKIP_THRESHOLD = (() => {
+  const raw = Number.parseInt(process.env.LLM_SKIP_THRESHOLD ?? '15', 10);
+  return Number.isFinite(raw) && raw >= 0 && raw <= 100 ? raw : 15;
+})();
+
 /**
  * Analyze a lead against an ICP profile.
  * Async — enriches with LLM if API keys are configured.
@@ -329,8 +337,12 @@ export async function analyzeLead({ lead, icpProfile, skipLlm = false }) {
 
   const profileName = icpProfile?.name || 'Active ICP profile';
 
-  // If early exit (hard exclusion), skip LLM and score without signals
-  if (earlyExit || skipLlm) {
+  // Skip LLM + web discovery for:
+  //   - Hard exclusions (earlyExit): industry/role is blocked by ICP — no point enriching
+  //   - Explicitly requested skip (skipLlm): e.g. bulk re-analyze
+  //   - Low-fit leads (icpScore < LLM_SKIP_THRESHOLD): clearly failing ICP — save credits
+  const isLowFit = icpScore < LLM_SKIP_THRESHOLD;
+  if (earlyExit || skipLlm || isLowFit) {
     const ai = scoreAiSignals({
       lead,
       icpScore,

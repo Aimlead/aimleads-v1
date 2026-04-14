@@ -23,11 +23,9 @@ const normalizeLabel = (value) =>
     .replace(/\s+/g, ' ')
     .trim();
 
-const NEGATIVE_SIGNAL_TOKENS = ['bankruptcy', 'closed', 'shutdown', 'layoff', 'churn', 'no_budget', 'budget_frozen'];
-
 const inferSignalTypeFromKey = (value) => {
   const key = String(value || '').toLowerCase();
-  if (NEGATIVE_SIGNAL_TOKENS.some((token) => key.includes(token))) return 'negative';
+  if (['bankruptcy', 'closed', 'shutdown', 'layoff', 'churn'].some((token) => key.includes(token))) return 'negative';
   if (['missing', 'unknown', 'unverified'].some((token) => key.includes(token))) return 'neutral';
   return 'positive';
 };
@@ -35,13 +33,11 @@ const inferSignalTypeFromKey = (value) => {
 const getScoreDetails = (lead) =>
   lead?.score_details && typeof lead.score_details === 'object' ? lead.score_details : {};
 
-const getNumericScoreDetail = (details, key) => {
-  const entry = details?.[key];
-  if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
-    return toMetric(entry.points ?? entry.score ?? entry.value);
-  }
-  return toMetric(entry);
-};
+const sumScoreDetailPoints = (details) =>
+  Object.values(details).reduce((sum, entry) => {
+    const points = toMetric(entry?.points);
+    return points === null ? sum : sum + points;
+  }, 0);
 
 const getBaseIcpScore = (lead) => {
   const direct = toMetric(lead?.icp_score);
@@ -51,59 +47,14 @@ const getBaseIcpScore = (lead) => {
   if (raw !== null) return raw;
 
   const details = getScoreDetails(lead);
-  const detailScore = getNumericScoreDetail(details, 'icp_score');
-  if (detailScore !== null) return detailScore;
-
-  const detailRaw = getNumericScoreDetail(details, 'icp_raw_score');
-  if (detailRaw !== null) return detailRaw;
-
-  return null;
-};
-
-const extractSignalLabel = (item) => {
-  if (typeof item === 'string') return normalizeLabel(item);
-  if (!item || typeof item !== 'object') return '';
-  return normalizeLabel(item.label || item.key || item.signal);
-};
-
-const normalizeIntentSignalPayload = (value) => {
-  const normalized = {
-    pre_call: [],
-    post_contact: [],
-    negative: [],
-  };
-
-  const pushUnique = (bucket, item) => {
-    const label = extractSignalLabel(item);
-    if (!label || normalized[bucket].includes(label)) return;
-    normalized[bucket].push(label);
-  };
-
-  if (Array.isArray(value)) {
-    value.forEach((item) => {
-      const explicitType = String(item?.type || '').toLowerCase();
-      const inferredType = explicitType || inferSignalTypeFromKey(item?.key || item?.signal || item?.label || item);
-      pushUnique(inferredType === 'negative' ? 'negative' : 'pre_call', item);
-    });
-    return normalized;
-  }
-
-  if (!value || typeof value !== 'object') return normalized;
-
-  const appendBucket = (bucket, payload) => {
-    if (!Array.isArray(payload)) return;
-    payload.forEach((item) => pushUnique(bucket, item));
-  };
-
-  appendBucket('pre_call', value.pre_call || value.preCall || value.pre || value.precall);
-  appendBucket('post_contact', value.post_contact || value.postContact || value.post);
-  appendBucket('negative', value.negative || value.negatives || value.negative_signals);
-
-  return normalized;
+  return Object.keys(details).length > 0 ? sumScoreDetailPoints(details) : null;
 };
 
 const getIntentSignals = (lead) => {
-  const payload = normalizeIntentSignalPayload(lead?.intent_signals);
+  const payload =
+    lead?.intent_signals && typeof lead.intent_signals === 'object'
+      ? lead.intent_signals
+      : {};
 
   return [
     ...(Array.isArray(payload.pre_call) ? payload.pre_call : []).map((label) => ({
@@ -147,12 +98,12 @@ const getDisplaySignals = (lead) => {
 
 const categoryStyle = (cat) => {
   const key = String(cat || '').toLowerCase();
-  if (key.includes('excellent')) return 'bg-violet-50 text-violet-700 border-violet-200';
-  if (key.includes('strong')) return 'bg-blue-50 text-blue-700 border-blue-200';
-  if (key.includes('medium')) return 'bg-amber-50 text-amber-700 border-amber-200';
-  if (key.includes('low')) return 'bg-rose-50 text-rose-600 border-rose-200';
-  if (key.includes('excluded')) return 'bg-gray-50 text-gray-500 border-gray-200';
-  return 'bg-slate-50 text-slate-500 border-slate-200';
+  if (key.includes('excellent')) return 'bg-violet-100 text-violet-700 border-violet-200';
+  if (key.includes('strong')) return 'bg-blue-100 text-blue-700 border-blue-200';
+  if (key.includes('medium')) return 'bg-amber-100 text-amber-700 border-amber-200';
+  if (key.includes('low')) return 'bg-rose-100 text-rose-600 border-rose-200';
+  if (key.includes('excluded')) return 'bg-gray-100 text-gray-600 border-gray-200';
+  return 'bg-slate-100 text-slate-600 border-slate-200';
 };
 
 const formatDate = (value) => {
@@ -262,12 +213,10 @@ export default function LeadDetail() {
 
   const icpScore = getBaseIcpScore(lead);
   const aiScore = toMetric(lead.ai_score);
-  const scoreDetails = getScoreDetails(lead);
-  const finalScore = toMetric(lead.final_score) ?? getNumericScoreDetail(scoreDetails, 'final_score') ?? icpScore;
+  const finalScore = toMetric(lead.final_score) ?? icpScore;
   const aiBoost = icpScore !== null && finalScore !== null ? finalScore - icpScore : null;
-  const scoreDetailEntries = Object.entries(scoreDetails).filter(([, entry]) =>
-    entry && typeof entry === 'object' && !Array.isArray(entry) && toMetric(entry.points) !== null
-  );
+  const scoreDetails = getScoreDetails(lead);
+  const scoreDetailEntries = Object.entries(scoreDetails);
   const displaySignals = getDisplaySignals(lead);
 
   const signalGroups = {
@@ -281,7 +230,7 @@ export default function LeadDetail() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-start gap-4 mb-6 sticky top-20 bg-white z-10 py-3 -mx-6 px-6 border-b border-slate-100">
+      <div className="flex items-start gap-4 mb-6">
         <Button variant="ghost" size="sm" className="gap-2 mt-1" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-4 h-4" />
           Back
@@ -330,7 +279,7 @@ export default function LeadDetail() {
           <Card className="shadow-sm">
             <CardContent className="pt-6">
               <div className="flex flex-col items-center">
-                <ScoreGauge score={finalScore} size="large" label="Final Score" category={lead.final_category} />
+                <ScoreGauge score={finalScore} size="large" label="Final Score" />
               </div>
 
               {/* Score breakdown */}

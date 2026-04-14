@@ -356,6 +356,23 @@ const apiClient = {
       const qs = new URLSearchParams(params).toString();
       return apiRequest(`/workspace/credits${qs ? `?${qs}` : ''}`);
     },
+    grantCredits: (payload) => apiRequest('/workspace/credits/grant', { method: 'POST', body: payload }),
+  },
+  crm: {
+    list: () => apiRequest('/crm'),
+    save: (payload) => apiRequest('/crm', { method: 'POST', body: payload }),
+    delete: (crmType) => apiRequest(`/crm/${encodeURIComponent(crmType)}`, { method: 'DELETE' }),
+    test: (crmType) => apiRequest('/crm/test', { method: 'POST', body: { crm_type: crmType } }),
+    syncLead: (leadId, crmType) =>
+      apiRequest(`/crm/sync/${encodeURIComponent(leadId)}`, { method: 'POST', body: { crm_type: crmType } }),
+    syncBulk: (leadIds, crmType) =>
+      apiRequest('/crm/sync-bulk', { method: 'POST', body: { lead_ids: leadIds, crm_type: crmType } }),
+    getSyncStatus: (leadId) => apiRequest(`/crm/sync-status/${encodeURIComponent(leadId)}`),
+  },
+  dev: {
+    loadDemo: () => apiRequest('/dev/load-demo', { method: 'POST' }),
+    reanalyze: (payload = {}) => apiRequest('/dev/reanalyze', { method: 'POST', body: payload }),
+    checkup: () => apiRequest('/dev/checkup'),
   },
 };
 
@@ -764,6 +781,87 @@ export const dataClient = {
       },
   },
 
+  crm: {
+    async list() {
+      return runWithMode({
+        operationName: 'crm.list',
+        apiCall: () => apiClient.crm.list(),
+        fallbackCall: async () => [],
+        passAuthErrors: true,
+      });
+    },
+    async save(payload) {
+      return runWithMode({
+        operationName: 'crm.save',
+        apiCall: () => apiClient.crm.save(payload),
+        fallbackCall: mockUnsupported,
+        passAuthErrors: true,
+      });
+    },
+    async delete(crmType) {
+      return runWithMode({
+        operationName: 'crm.delete',
+        apiCall: () => apiClient.crm.delete(crmType),
+        fallbackCall: mockUnsupported,
+        passAuthErrors: true,
+      });
+    },
+    async test(crmType) {
+      return runWithMode({
+        operationName: 'crm.test',
+        apiCall: () => apiClient.crm.test(crmType),
+        fallbackCall: async () => ({ success: false, error: 'mock_mode' }),
+        passAuthErrors: true,
+      });
+    },
+    async syncLead(leadId, crmType) {
+      return runWithMode({
+        operationName: 'crm.syncLead',
+        apiCall: () => apiClient.crm.syncLead(leadId, crmType),
+        fallbackCall: mockUnsupported,
+        passAuthErrors: true,
+      });
+    },
+    async syncBulk(leadIds, crmType) {
+      return runWithMode({
+        operationName: 'crm.syncBulk',
+        apiCall: () => apiClient.crm.syncBulk(leadIds, crmType),
+        fallbackCall: mockUnsupported,
+        passAuthErrors: true,
+      });
+    },
+    async getSyncStatus(leadId) {
+      return runWithMode({
+        operationName: 'crm.getSyncStatus',
+        apiCall: () => apiClient.crm.getSyncStatus(leadId),
+        fallbackCall: async () => [],
+        passAuthErrors: true,
+      });
+    },
+  },
+
+  dev: {
+    loadDemo: async () =>
+      runWithMode({
+        operationName: 'dev.loadDemo',
+        apiCall: () => apiClient.dev.loadDemo(),
+        fallbackCall: mockUnsupported,
+      }),
+
+    reanalyze: async (payload = {}) =>
+      runWithMode({
+        operationName: 'dev.reanalyze',
+        apiCall: () => apiClient.dev.reanalyze(payload),
+        fallbackCall: mockUnsupported,
+      }),
+
+    checkup: async () =>
+      runWithMode({
+        operationName: 'dev.checkup',
+        apiCall: () => apiClient.dev.checkup(),
+        fallbackCall: mockUnsupported,
+      }),
+  },
 };
 
 

@@ -15,5 +15,17 @@ export const ROUTES = {
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
   billing: '/billing',
-  help: '/help',
+  crmIntegration: '/crm-integration',
+};
+
+export const PAGE_ROUTE_MAP = {
+  Home: ROUTES.home,
+  Login: ROUTES.login,
+  Dashboard: ROUTES.dashboard,
+  ICP: ROUTES.icp,
+  Settings: ROUTES.settings,
+  Pricing: ROUTES.pricing,
+  LeadDetail: ROUTES.leadDetail,
+  AuditLog: ROUTES.auditLog,
+  Billing: ROUTES.billing,
 };
