@@ -76,6 +76,7 @@ describe('LeadsTable', () => {
 
   it('renders all leads', () => {
     render(<MemoryRouter><LeadsTable {...defaultProps} /></MemoryRouter>);
+    // Component renders leads in both mobile and desktop views simultaneously (CSS hide/show)
     expect(screen.getAllByText('Alpha Corp').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Beta Inc').length).toBeGreaterThan(0);
   });
@@ -90,6 +91,7 @@ describe('LeadsTable', () => {
     render(<MemoryRouter><LeadsTable {...defaultProps} /></MemoryRouter>);
     const searchInput = screen.getByPlaceholderText('Search leads...');
     await userEvent.type(searchInput, 'Alpha');
+    // Both mobile and desktop views render the match, so at least one must exist
     expect(screen.getAllByText('Alpha Corp').length).toBeGreaterThan(0);
     expect(screen.queryByText('Beta Inc')).not.toBeInTheDocument();
   });
@@ -98,6 +100,7 @@ describe('LeadsTable', () => {
     render(<MemoryRouter><LeadsTable {...defaultProps} /></MemoryRouter>);
     const searchInput = screen.getByPlaceholderText('Search leads...');
     await userEvent.type(searchInput, 'zzz-no-match');
+    // Both mobile and desktop render the empty state
     expect(screen.getAllByText(/no leads/i).length).toBeGreaterThan(0);
   });
 
@@ -122,7 +125,7 @@ describe('LeadsTable', () => {
 
   it('shows delete confirmation dialog on single delete', async () => {
     render(<MemoryRouter><LeadsTable {...defaultProps} /></MemoryRouter>);
-    // Use the first Delete Alpha Corp aria-label (desktop table row)
+    // Both views render delete buttons; click any one
     const deleteBtns = screen.getAllByLabelText('Delete Alpha Corp');
     await userEvent.click(deleteBtns[0]);
     expect(screen.getAllByText(/Delete Alpha Corp/).length).toBeGreaterThan(0);
@@ -146,7 +149,7 @@ describe('LeadsTable', () => {
 
   it('displays score values correctly', () => {
     render(<MemoryRouter><LeadsTable {...defaultProps} /></MemoryRouter>);
-    // Final scores displayed via ScorePill
+    // Scores appear in both mobile and desktop ScorePills
     expect(screen.getAllByText('61').length).toBeGreaterThan(0);
     expect(screen.getAllByText('83').length).toBeGreaterThan(0);
   });
