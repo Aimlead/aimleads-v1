@@ -70,8 +70,9 @@ describe('LeadsTable', () => {
 
   it('renders all leads', () => {
     render(<MemoryRouter><LeadsTable {...defaultProps} /></MemoryRouter>);
-    expect(screen.getByText('Alpha Corp')).toBeInTheDocument();
-    expect(screen.getByText('Beta Inc')).toBeInTheDocument();
+    // Component renders leads in both mobile and desktop views simultaneously (CSS hide/show)
+    expect(screen.getAllByText('Alpha Corp').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Beta Inc').length).toBeGreaterThan(0);
   });
 
   it('shows lead count stats', () => {
@@ -84,7 +85,8 @@ describe('LeadsTable', () => {
     render(<MemoryRouter><LeadsTable {...defaultProps} /></MemoryRouter>);
     const searchInput = screen.getByPlaceholderText('Search leads...');
     await userEvent.type(searchInput, 'Alpha');
-    expect(screen.getByText('Alpha Corp')).toBeInTheDocument();
+    // Both mobile and desktop views render the match, so at least one must exist
+    expect(screen.getAllByText('Alpha Corp').length).toBeGreaterThan(0);
     expect(screen.queryByText('Beta Inc')).not.toBeInTheDocument();
   });
 
@@ -92,13 +94,15 @@ describe('LeadsTable', () => {
     render(<MemoryRouter><LeadsTable {...defaultProps} /></MemoryRouter>);
     const searchInput = screen.getByPlaceholderText('Search leads...');
     await userEvent.type(searchInput, 'zzz-no-match');
-    expect(screen.getByText(/no leads/i)).toBeInTheDocument();
+    // Both mobile and desktop render the empty state
+    expect(screen.getAllByText(/no leads/i).length).toBeGreaterThan(0);
   });
 
   it('calls onSelectLead when clicking a row', async () => {
     render(<MemoryRouter><LeadsTable {...defaultProps} /></MemoryRouter>);
-    const row = screen.getByText('Alpha Corp').closest('tr');
-    await userEvent.click(row);
+    // Both views render; click the first occurrence — mobile card bubbles up to its clickable div
+    const companyEl = screen.getAllByText('Alpha Corp')[0];
+    await userEvent.click(companyEl);
     expect(defaultProps.onSelectLead).toHaveBeenCalledWith(MOCK_LEADS[0]);
   });
 
@@ -112,7 +116,8 @@ describe('LeadsTable', () => {
 
   it('shows delete confirmation dialog on single delete', async () => {
     render(<MemoryRouter><LeadsTable {...defaultProps} /></MemoryRouter>);
-    const deleteBtn = screen.getByLabelText('Delete Alpha Corp');
+    // Both views render delete buttons; click any one
+    const deleteBtn = screen.getAllByLabelText('Delete Alpha Corp')[0];
     await userEvent.click(deleteBtn);
     expect(screen.getByText(/Delete Alpha Corp/)).toBeInTheDocument();
     expect(screen.getByText(/cannot be undone/)).toBeInTheDocument();
@@ -122,7 +127,7 @@ describe('LeadsTable', () => {
     dataClient.leads.delete.mockResolvedValue({});
     render(<MemoryRouter><LeadsTable {...defaultProps} /></MemoryRouter>);
 
-    const deleteBtn = screen.getByLabelText('Delete Alpha Corp');
+    const deleteBtn = screen.getAllByLabelText('Delete Alpha Corp')[0];
     await userEvent.click(deleteBtn);
 
     const confirmBtn = screen.getByText('Delete lead');
@@ -135,8 +140,8 @@ describe('LeadsTable', () => {
 
   it('displays score values correctly', () => {
     render(<MemoryRouter><LeadsTable {...defaultProps} /></MemoryRouter>);
-    // Final scores displayed via ScorePill
-    expect(screen.getByText('61')).toBeInTheDocument();
-    expect(screen.getByText('83')).toBeInTheDocument();
+    // Scores appear in both mobile and desktop ScorePills
+    expect(screen.getAllByText('61').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('83').length).toBeGreaterThan(0);
   });
 });
