@@ -1,7 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { AlertCircle, ArrowRight, CheckCircle2, FileText, Loader2, Sparkles, Target, Upload, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -78,27 +77,24 @@ const parseCsv = (text) => {
 };
 
 /**
- * Parse XLSX/XLS file using the xlsx library.
+ * Parse XLSX files in the browser.
  * Returns rows normalized with lowercase header keys.
  */
-const parseXlsx = (buffer) => {
-  const workbook = XLSX.read(buffer, { type: 'array' });
-  const sheetName = workbook.SheetNames[0];
-  if (!sheetName) return [];
+const parseXlsx = async (file) => {
+  const { default: readXlsxFile } = await import('read-excel-file/browser');
+  const rows = await readXlsxFile(file);
+  if (rows.length < 2) return [];
 
-  const sheet = workbook.Sheets[sheetName];
-  const raw = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+  const headers = rows[0].map((header) => String(header ?? '').trim().toLowerCase());
 
-  if (raw.length === 0) return [];
-
-  return raw
-    .map((row) => {
-      const normalized = {};
-      for (const [key, value] of Object.entries(row)) {
-        normalized[key.trim().toLowerCase()] = String(value ?? '').trim();
-      }
-      return normalized;
-    })
+  return rows
+    .slice(1)
+    .map((row) =>
+      headers.reduce((normalized, header, idx) => {
+        normalized[header] = String(row[idx] ?? '').trim();
+        return normalized;
+      }, {})
+    )
     .filter((row) => row.company_name || row['company name'] || row.name);
 };
 
@@ -186,14 +182,18 @@ export default function ImportCSVDialog({
     setImported(false);
     setFileName(file.name);
 
-    const isXlsx = /\.(xlsx|xls|ods)$/i.test(file.name);
+    const isXlsx = /\.xlsx$/i.test(file.name);
+    const isLegacySpreadsheet = /\.(xls|ods)$/i.test(file.name);
+
+    if (isLegacySpreadsheet) {
+      setError('Legacy .xls and .ods files are disabled for security. Re-export the file as .xlsx or .csv.');
+      return;
+    }
 
     if (isXlsx) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
+      void (async () => {
         try {
-          const buffer = new Uint8Array(e.target.result);
-          const rows = parseXlsx(buffer).map(normalizeRow);
+          const rows = (await parseXlsx(file)).map(normalizeRow);
           if (rows.length === 0) {
             setError('No valid rows found. Make sure the first sheet has a "company_name" (or similar) column.');
             return;
@@ -203,8 +203,7 @@ export default function ImportCSVDialog({
         } catch (err) {
           setError(`Failed to parse Excel file: ${err?.message || 'unknown error'}`);
         }
-      };
-      reader.readAsArrayBuffer(file);
+      })();
     } else {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -276,7 +275,8 @@ export default function ImportCSVDialog({
         <DialogHeader>
           <DialogTitle>Import Leads</DialogTitle>
           <DialogDescription>
-            Supports <strong>CSV</strong> and <strong>Excel (XLSX/XLS)</strong>. Required column: <code className="text-xs bg-slate-100 px-1 rounded">company_name</code>.
+            Supports <strong>CSV</strong> and <strong>Excel (.xlsx)</strong>. Legacy <strong>.xls</strong> and <strong>.ods</strong> files should be re-exported first.
+            {' '}Required column: <code className="text-xs bg-slate-100 px-1 rounded">company_name</code>.
             Optional: website_url, industry, company_size, country, contact_name, contact_role, contact_email, notes, source_list.
           </DialogDescription>
         </DialogHeader>
@@ -288,7 +288,7 @@ export default function ImportCSVDialog({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".csv,.xlsx,.xls,.ods"
+                  accept=".csv,.xlsx"
                   className="hidden"
                   id="lead-file-upload"
                   onChange={handleFileChange}
@@ -300,7 +300,7 @@ export default function ImportCSVDialog({
                   ) : (
                     <>
                       <p className="text-sm font-medium text-slate-700">Click to upload CSV or Excel file</p>
-                      <p className="text-xs text-slate-400 mt-1">.csv · .xlsx · .xls · .ods</p>
+                      <p className="text-xs text-slate-400 mt-1">.csv · .xlsx</p>
                     </>
                   )}
                 </label>

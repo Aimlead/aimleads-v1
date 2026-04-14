@@ -49,7 +49,88 @@ end $$;
 -- Step 4: merge signals → intent_signals
 do $$ begin
   update leads
-  set intent_signals = signals
+  set intent_signals = case
+    when jsonb_typeof(signals) = 'object' then jsonb_build_object(
+      'pre_call',
+      case
+        when jsonb_typeof(signals->'pre_call') = 'array' then signals->'pre_call'
+        when jsonb_typeof(signals->'preCall') = 'array' then signals->'preCall'
+        when jsonb_typeof(signals->'pre') = 'array' then signals->'pre'
+        else '[]'::jsonb
+      end,
+      'post_contact',
+      case
+        when jsonb_typeof(signals->'post_contact') = 'array' then signals->'post_contact'
+        when jsonb_typeof(signals->'postContact') = 'array' then signals->'postContact'
+        when jsonb_typeof(signals->'post') = 'array' then signals->'post'
+        else '[]'::jsonb
+      end,
+      'negative',
+      case
+        when jsonb_typeof(signals->'negative') = 'array' then signals->'negative'
+        when jsonb_typeof(signals->'negatives') = 'array' then signals->'negatives'
+        when jsonb_typeof(signals->'negative_signals') = 'array' then signals->'negative_signals'
+        else '[]'::jsonb
+      end
+    )
+    when jsonb_typeof(signals) = 'array' then jsonb_build_object(
+      'pre_call',
+      coalesce((
+        select jsonb_agg(parsed.value order by parsed.first_seen)
+        from (
+          select value, min(ordinality) as first_seen
+          from (
+            select
+              ordinality,
+              case
+                when jsonb_typeof(item) = 'string' then nullif(trim(both '"' from item::text), '')
+                when jsonb_typeof(item) = 'object' then coalesce(
+                  nullif(trim(item->>'key'), ''),
+                  nullif(trim(item->>'signal'), ''),
+                  nullif(trim(item->>'label'), '')
+                )
+                else null
+              end as value,
+              coalesce(lower(item->>'type'), 'positive') as signal_type
+            from jsonb_array_elements(signals) with ordinality as elements(item, ordinality)
+          ) flattened
+          where value is not null and signal_type <> 'negative'
+          group by value
+        ) parsed
+      ), '[]'::jsonb),
+      'post_contact',
+      '[]'::jsonb,
+      'negative',
+      coalesce((
+        select jsonb_agg(parsed.value order by parsed.first_seen)
+        from (
+          select value, min(ordinality) as first_seen
+          from (
+            select
+              ordinality,
+              case
+                when jsonb_typeof(item) = 'string' then nullif(trim(both '"' from item::text), '')
+                when jsonb_typeof(item) = 'object' then coalesce(
+                  nullif(trim(item->>'key'), ''),
+                  nullif(trim(item->>'signal'), ''),
+                  nullif(trim(item->>'label'), '')
+                )
+                else null
+              end as value,
+              coalesce(lower(item->>'type'), 'positive') as signal_type
+            from jsonb_array_elements(signals) with ordinality as elements(item, ordinality)
+          ) flattened
+          where value is not null and signal_type = 'negative'
+          group by value
+        ) parsed
+      ), '[]'::jsonb)
+    )
+    else jsonb_build_object(
+      'pre_call', '[]'::jsonb,
+      'post_contact', '[]'::jsonb,
+      'negative', '[]'::jsonb
+    )
+  end
   where signals is not null
     and (intent_signals is null or intent_signals = '[]'::jsonb or intent_signals = '{}'::jsonb);
 exception when undefined_column then

@@ -127,8 +127,6 @@ create index if not exists idx_icp_workspace_active
   on icp_profiles(workspace_id, is_active);
 create index if not exists idx_icp_active
   on icp_profiles(workspace_id) where is_active = true;
-create index if not exists idx_icp_owner_user
-  on icp_profiles(workspace_id, owner_user_id);
 
 -- FK from leads.icp_profile_id → icp_profiles
 do $$ begin

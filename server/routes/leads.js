@@ -15,6 +15,7 @@ import { fetchCompanyNewsFindings } from '../services/newsService.js';
 import { researchCompanyOnWeb } from '../services/claudeWebResearchService.js';
 import { toLeadAnalysisUpdatePayload } from '../services/leadAnalysisPersistence.js';
 import { getCrmIntegration, syncLeadToCrm } from '../services/crmService.js';
+import { normalizeLeadForResponse } from '../lib/leadNormalization.js';
 import { getUserWorkspaceId } from '../lib/scope.js';
 import { logger } from '../lib/observability.js';
 
@@ -125,24 +126,6 @@ const mergeInternetSignals = (currentSignals, incomingSignals, lead) => {
   }
 
   return merged;
-};
-
-const normalizeLeadForResponse = (lead) => {
-  if (!lead || typeof lead !== 'object') return lead;
-
-  const finalStatus = String(lead.final_status || '').trim();
-  const hasFinalStatus = finalStatus === 'Qualified' || finalStatus === 'Rejected';
-  const currentStatus = String(lead.status || '').trim();
-
-  if (!hasFinalStatus) return lead;
-  if (!currentStatus || currentStatus === 'Error') {
-    return {
-      ...lead,
-      status: finalStatus,
-    };
-  }
-
-  return lead;
 };
 
 const sanitizeSpreadsheetCell = (value) => {
