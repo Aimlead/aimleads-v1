@@ -204,14 +204,14 @@ export default function Pipeline() {
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Pipeline</h1>
         <p className="text-slate-500 mt-1 text-sm">
-          {leads.length} total leads across all stages
+          {leads.length} lead{leads.length !== 1 ? 's' : ''} au total dans toutes les étapes
         </p>
       </div>
 
       {leads.length === 0 ? (
         <div className="text-center py-20 text-slate-500">
-          <p className="text-lg font-semibold">No leads yet</p>
-          <p className="text-sm mt-1">Import leads from the Dashboard to populate your pipeline</p>
+          <p className="text-lg font-semibold">Aucun lead</p>
+          <p className="text-sm mt-1">Importez des leads depuis le tableau de bord pour alimenter votre pipeline</p>
         </div>
       ) : (
         <>
@@ -259,7 +259,7 @@ export default function Pipeline() {
             <div className="space-y-2">
               {mobileStageLeads.length === 0 ? (
                 <div className="text-center py-12 text-sm text-slate-400 bg-white rounded-2xl border border-slate-200">
-                  No leads in this stage
+                  Aucun lead dans cette étape
                 </div>
               ) : (
                 mobileStageLeads.map((lead) => (
@@ -304,7 +304,7 @@ export default function Pipeline() {
                   <div className="flex-1 p-2 space-y-2 overflow-y-auto">
                     {stageLeads.length === 0 ? (
                       <div className={cn('text-center py-8 text-xs transition-colors', isDragTarget ? 'text-brand-sky' : 'text-slate-400')}>
-                        {isDragTarget ? 'Drop here' : 'No leads'}
+                        {isDragTarget ? 'Déposer ici' : 'Aucun lead'}
                       </div>
                     ) : (
                       stageLeads.map((lead) => (

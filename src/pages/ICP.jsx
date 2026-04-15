@@ -292,20 +292,20 @@ export default function ICP() {
     if (thresholds) {
       const { excellent = 80, strong = 50, medium = 20 } = thresholds;
       if (excellent <= strong || strong <= medium) {
-        toast.error('Thresholds must be in descending order: Excellent > Strong > Medium');
+        toast.error('Les seuils doivent être en ordre décroissant : Excellent > Strong > Medium');
         return;
       }
     }
     setSaving(true);
     try {
       await dataClient.icp.saveActive(formData);
-      toast.success('ICP profile saved. Re-analyze leads to apply the new weights.');
+      toast.success('Profil ICP sauvegardé. Réanalysez vos leads pour appliquer les nouveaux poids.');
       setEditing(false);
       queryClient.invalidateQueries({ queryKey: ['icpConfig'] });
       queryClient.invalidateQueries({ queryKey: ['icpProfilesQuickSwitch'] });
     } catch (error) {
       console.warn('Failed to save ICP profile', error);
-      toast.error('Failed to save ICP profile');
+      toast.error('Échec de la sauvegarde du profil ICP');
     } finally {
       setSaving(false);
     }
@@ -363,13 +363,13 @@ export default function ICP() {
     <div className="max-w-4xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-start gap-4 mb-8">
         <div className="flex-1">
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">ICP Profile</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Profil ICP</h1>
           <p className="text-slate-500 mt-1">
-            Define your Ideal Customer Profile and tune scoring weights
+            Définissez votre profil client idéal et ajustez les poids de scoring
           </p>
           {editing && (
             <p className="text-xs text-amber-600 mt-1 font-medium">
-              ⚠ Unsaved changes — click Save to apply to scoring
+              ⚠ Modifications non sauvegardées — cliquez sur Sauvegarder pour appliquer
             </p>
           )}
         </div>
@@ -387,14 +387,14 @@ export default function ICP() {
             </Button>
             <Button onClick={() => setEditing(true)} className="gap-2 bg-gradient-to-r from-brand-sky to-brand-sky-2">
               <Edit className="w-4 h-4" />
-              <span className="hidden sm:inline">Edit Profile</span>
-              <span className="sm:hidden">Edit</span>
+              <span className="hidden sm:inline">Modifier le profil</span>
+              <span className="sm:hidden">Modifier</span>
             </Button>
           </div>
         ) : (
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleCancel}>
-              Cancel
+              Annuler
             </Button>
             <Button
               onClick={handleSave}
@@ -402,7 +402,7 @@ export default function ICP() {
               className="gap-2 bg-gradient-to-r from-brand-sky to-brand-sky-2"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Save Profile
+              Sauvegarder
             </Button>
           </div>
         )}
@@ -491,73 +491,73 @@ export default function ICP() {
                   value={formData.description}
                   disabled={!editing}
                   onChange={(event) => setFormData((previous) => ({ ...previous, description: event.target.value }))}
-                  placeholder="Short description of this profile"
+                  placeholder="Brève description de ce profil"
                 />
               </div>
             </CardContent>
           </Card>
 
           {/* Industries */}
-          <SectionCard icon={Building2} title="Industries" color="bg-violet-500">
+          <SectionCard icon={Building2} title="Secteurs" color="bg-violet-500">
             <TagInput
-              label="Primary Industries (+30 pts)"
+              label="Secteurs primaires (+30 pts)"
               values={formData.weights.industrie.primaires}
               onChange={(value) => updateWeights('industrie.primaires', value)}
-              placeholder="e.g. SaaS, FinTech, Cybersecurity"
+              placeholder="ex. SaaS, FinTech, Cybersécurité"
               disabled={!editing}
               variant="default"
             />
             <TagInput
-              label="Secondary Industries (+15 pts)"
+              label="Secteurs secondaires (+15 pts)"
               values={formData.weights.industrie.secondaires}
               onChange={(value) => updateWeights('industrie.secondaires', value)}
-              placeholder="e.g. Consulting, MarTech"
+              placeholder="ex. Conseil, MarTech"
               disabled={!editing}
               variant="secondary"
             />
             <TagInput
-              label="Excluded Industries (eliminates lead)"
+              label="Secteurs exclus (élimine le lead)"
               values={formData.weights.industrie.exclusions || []}
               onChange={(value) => updateWeights('industrie.exclusions', value)}
-              placeholder="e.g. Hospitals, Public sector"
+              placeholder="ex. Hôpitaux, Secteur public"
               disabled={!editing}
               variant="danger"
             />
           </SectionCard>
 
           {/* Roles */}
-          <SectionCard icon={Users} title="Contact Roles" color="bg-blue-500">
+          <SectionCard icon={Users} title="Rôles du contact" color="bg-blue-500">
             <TagInput
-              label="Exact Roles (+25 pts)"
+              label="Rôles exacts (+25 pts)"
               values={formData.weights.roles.exacts}
               onChange={(value) => updateWeights('roles.exacts', value)}
-              placeholder="e.g. CEO, CTO, VP Sales"
+              placeholder="ex. CEO, CTO, VP Sales"
               disabled={!editing}
               variant="default"
             />
             <TagInput
-              label="Similar Roles (+10 pts)"
+              label="Rôles similaires (+10 pts)"
               values={formData.weights.roles.proches}
               onChange={(value) => updateWeights('roles.proches', value)}
-              placeholder="e.g. Director, Head of, Manager"
+              placeholder="ex. Directeur, Head of, Responsable"
               disabled={!editing}
               variant="secondary"
             />
             <TagInput
-              label="Excluded Roles (eliminates lead)"
+              label="Rôles exclus (élimine le lead)"
               values={formData.weights.roles.exclusions}
               onChange={(value) => updateWeights('roles.exclusions', value)}
-              placeholder="e.g. Intern, Student, HR"
+              placeholder="ex. Stagiaire, Étudiant, RH"
               disabled={!editing}
               variant="danger"
             />
           </SectionCard>
 
           {/* Company Size */}
-          <SectionCard icon={Target} title="Company Size" color="bg-amber-500">
+          <SectionCard icon={Target} title="Taille de l'entreprise" color="bg-amber-500">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Min employees (primary)</Label>
+                <Label>Employés min (primaire)</Label>
                 <Input
                   type="number"
                   disabled={!editing}
@@ -566,7 +566,7 @@ export default function ICP() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Max employees (primary)</Label>
+                <Label>Employés max (primaire)</Label>
                 <Input
                   type="number"
                   disabled={!editing}
@@ -575,7 +575,7 @@ export default function ICP() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Min employees (secondary)</Label>
+                <Label>Employés min (secondaire)</Label>
                 <Input
                   type="number"
                   disabled={!editing}
@@ -584,7 +584,7 @@ export default function ICP() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Max employees (secondary)</Label>
+                <Label>Employés max (secondaire)</Label>
                 <Input
                   type="number"
                   disabled={!editing}
@@ -596,40 +596,40 @@ export default function ICP() {
           </SectionCard>
 
           {/* Geography */}
-          <SectionCard icon={Globe} title="Geography" color="bg-emerald-500">
+          <SectionCard icon={Globe} title="Géographie" color="bg-emerald-500">
             <TagInput
-              label="Primary Countries (+15 pts)"
+              label="Pays primaires (+15 pts)"
               values={formData.weights.geo.primaire}
               onChange={(value) => updateWeights('geo.primaire', value)}
-              placeholder="e.g. France, Germany"
+              placeholder="ex. France, Allemagne"
               disabled={!editing}
               variant="default"
             />
             <TagInput
-              label="Secondary Countries (+5 pts)"
+              label="Pays secondaires (+5 pts)"
               values={formData.weights.geo.secondaire}
               onChange={(value) => updateWeights('geo.secondaire', value)}
-              placeholder="e.g. Belgium, Spain"
+              placeholder="ex. Belgique, Espagne"
               disabled={!editing}
               variant="secondary"
             />
           </SectionCard>
 
           {/* Client Type */}
-          <SectionCard icon={MapPin} title="Client Type" color="bg-pink-500">
+          <SectionCard icon={MapPin} title="Type de client" color="bg-pink-500">
             <TagInput
-              label="Primary Client Type (B2B / B2C / B2B2C)"
+              label="Type de client primaire (B2B / B2C / B2B2C)"
               values={formData.weights.typeClient.primaire || []}
               onChange={(value) => updateWeights('typeClient.primaire', value)}
-              placeholder="e.g. B2B"
+              placeholder="ex. B2B"
               disabled={!editing}
               variant="default"
             />
             <TagInput
-              label="Secondary Client Type"
+              label="Type de client secondaire"
               values={formData.weights.typeClient.secondaire || []}
               onChange={(value) => updateWeights('typeClient.secondaire', value)}
-              placeholder="e.g. B2B2C"
+              placeholder="ex. B2B2C"
               disabled={!editing}
               variant="secondary"
             />
@@ -643,47 +643,47 @@ export default function ICP() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Sliders className="w-5 h-5 text-violet-600" />
-                Criterion Importance
+                Importance des critères
               </CardTitle>
               <p className="text-sm text-slate-500 mt-1">
-                Adjust how much each criterion contributes to the ICP score. 100% = default weight, 150% = critical, 0% = ignored.
+                Ajustez l'impact de chaque critère sur le score ICP. 100% = poids par défaut, 150% = critique, 0% = ignoré.
               </p>
             </CardHeader>
             <CardContent className="space-y-6">
               <WeightSlider
-                label="Industry"
+                label="Secteur"
                 value={formData.weights.industrie.weight ?? 100}
                 onChange={(v) => updateWeights('industrie.weight', v)}
                 disabled={!editing}
-                description="How important is the industry match? Primary = +30pts × weight"
+                description="Importance du secteur ? Primaire = +30pts × poids"
               />
               <WeightSlider
-                label="Contact Role"
+                label="Rôle du contact"
                 value={formData.weights.roles.weight ?? 100}
                 onChange={(v) => updateWeights('roles.weight', v)}
                 disabled={!editing}
-                description="How important is the contact's role? Exact = +25pts × weight"
+                description="Importance du rôle du contact ? Exact = +25pts × poids"
               />
               <WeightSlider
-                label="Client Type (B2B/B2C)"
+                label="Type de client (B2B/B2C)"
                 value={formData.weights.typeClient.weight ?? 100}
                 onChange={(v) => updateWeights('typeClient.weight', v)}
                 disabled={!editing}
-                description="How important is the business model match? Match = +25pts × weight"
+                description="Importance du modèle business ? Match = +25pts × poids"
               />
               <WeightSlider
-                label="Company Size"
+                label="Taille de l'entreprise"
                 value={formData.weights.structure.weight ?? 100}
                 onChange={(v) => updateWeights('structure.weight', v)}
                 disabled={!editing}
-                description="How important is headcount matching? Primary = +15pts × weight"
+                description="Importance de la taille ? Primaire = +15pts × poids"
               />
               <WeightSlider
-                label="Geography"
+                label="Géographie"
                 value={formData.weights.geo.weight ?? 100}
                 onChange={(v) => updateWeights('geo.weight', v)}
                 disabled={!editing}
-                description="How important is the country? Primary = +15pts × weight"
+                description="Importance du pays ? Primaire = +15pts × poids"
               />
             </CardContent>
           </Card>
@@ -693,10 +693,10 @@ export default function ICP() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Brain className="w-5 h-5 text-brand-sky" />
-                AI vs ICP Blend
+                Équilibre IA / ICP
               </CardTitle>
               <p className="text-sm text-slate-500 mt-1">
-                Final Score = ICP base score + AI signal boost. Adjust how much weight each side gets.
+                Score final = score ICP de base + boost signal IA. Ajustez le poids de chaque côté.
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -712,8 +712,8 @@ export default function ICP() {
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-xs text-slate-500">
-                  <span>More ICP rules-based</span>
-                  <span>More AI-driven</span>
+                  <span>Plus basé sur les règles ICP</span>
+                  <span>Plus piloté par l'IA</span>
                 </div>
                 <Slider
                   value={[icpWeight]}
@@ -733,9 +733,9 @@ export default function ICP() {
           {/* Score thresholds */}
           <Card className="border border-slate-200 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Score Thresholds</CardTitle>
+              <CardTitle className="text-base">Seuils de score</CardTitle>
               <p className="text-sm text-slate-500 mt-1">
-                Define at what score a lead becomes Excellent, Strong Fit, or Medium Fit.
+                Définissez à partir de quel score un lead devient Excellent, Strong Fit ou Medium Fit.
               </p>
             </CardHeader>
             <CardContent>
@@ -778,7 +778,7 @@ export default function ICP() {
                 </div>
               </div>
               <p className="text-xs text-slate-500 mt-3">
-                Leads below the Medium threshold are marked as Low Fit. Excluded should only come from hard exclusion rules.
+                Les leads en dessous du seuil Medium sont marqués Low Fit. Les exclusions ne viennent que des règles d'exclusion strictes.
               </p>
             </CardContent>
           </Card>

@@ -190,7 +190,7 @@ export default function Dashboard() {
 
     const activeProfile = activeIcp || await dataClient.icp.getActive();
     if (!activeProfile) {
-      toast.error('Create an active ICP before analyzing leads.');
+      toast.error('Créez un profil ICP actif avant d\'analyser les leads.');
       navigate(ROUTES.icp);
       return { analyzedCount: 0, firstLeadId: null };
     }
@@ -209,11 +209,11 @@ export default function Dashboard() {
       }
 
       await queryClient.invalidateQueries({ queryKey: ['leads'] });
-      toast.success(successMessage || `Analyzed ${analyzedCount} lead(s)`);
+      toast.success(successMessage || `${analyzedCount} lead(s) analysé(s)`);
       return { analyzedCount, firstLeadId: leadBatch[0]?.id || null };
     } catch (error) {
       console.warn('Activation analysis failed', error);
-      toast.error('Failed to analyze leads');
+      toast.error('Échec de l\'analyse des leads');
       return { analyzedCount: 0, firstLeadId: null };
     } finally {
       setIsReanalyzing(false);
@@ -246,7 +246,7 @@ export default function Dashboard() {
 
     const result = await runLeadAnalysisBatch(
       importedLeads,
-      `Analyzed ${importedLeads.length} imported lead(s). Review the best one and start the follow-up workflow next.`
+      `${importedLeads.length} lead(s) importé(s) analysé(s). Ouvrez le meilleur et démarrez le workflow de suivi.`
     );
 
     if (result.firstLeadId) {
@@ -267,12 +267,12 @@ export default function Dashboard() {
     setIsSwitchingIcp(true);
     try {
       await dataClient.icp.saveActive(nextProfile);
-      toast.success(`Active ICP changed to ${nextProfile.name}`);
+      toast.success(`Profil ICP changé vers ${nextProfile.name}`);
       queryClient.invalidateQueries({ queryKey: ['icpProfilesQuickSwitch'] });
       queryClient.invalidateQueries({ queryKey: ['icpConfig'] });
     } catch (error) {
       console.warn('Failed to switch ICP', error);
-      toast.error('Failed to switch ICP profile');
+      toast.error('Échec du changement de profil ICP');
     } finally {
       setIsSwitchingIcp(false);
     }
@@ -280,14 +280,14 @@ export default function Dashboard() {
 
   const handleReanalyzeVisible = async () => {
     if (visibleLeads.length === 0) {
-      toast('No leads to analyze in this list');
+      toast('Aucun lead à analyser dans cette liste');
       return;
     }
     setIsReanalyzing(true);
     try {
       let analyzedCount = 0;
       const activeProfile = await dataClient.icp.getActive();
-      if (!activeProfile) throw new Error('No active ICP profile found');
+      if (!activeProfile) throw new Error('Aucun profil ICP actif trouvé');
 
       for (const lead of visibleLeads) {
         const result = await analyzeLead({
@@ -299,11 +299,11 @@ export default function Dashboard() {
         analyzedCount += 1;
       }
 
-      toast.success(`Re-analyzed ${analyzedCount} lead(s)`);
+      toast.success(`${analyzedCount} lead(s) réanalysé(s)`);
       queryClient.invalidateQueries({ queryKey: ['leads'] });
     } catch (error) {
       console.warn('Re-analyze failed', error);
-      toast.error('Failed to re-analyze leads');
+      toast.error('Échec de la réanalyse des leads');
     } finally {
       setIsReanalyzing(false);
     }
@@ -323,16 +323,16 @@ export default function Dashboard() {
     scoredLeads.length > 0 ? Math.round(scoredLeads.reduce((acc, score) => acc + score, 0) / scoredLeads.length) : 0;
   const aiEnriched = visibleLeads.filter((l) => l.llm_enriched).length;
   const selectedListLabel = selectedSourceList === LIST_KEYS.ALL
-    ? 'All Lists'
+    ? 'Toutes les listes'
     : sourceListOptions.find((option) => option.key === selectedSourceList)?.label || sourceListLabel(selectedSourceList);
   const analyzedVisible = visibleLeads.filter((lead) => getLeadScore(lead) !== null).length;
   const showActivationChecklist = !activationState.hasActiveIcp || totalLeads < 10;
 
   const stats = [
-    { key: 'total', value: totalLeads, label: 'Total Leads' },
-    { key: 'qualified', value: qualifiedLeads, label: 'Qualified' },
-    { key: 'avg', value: avgScore, label: 'Avg Final Score' },
-    { key: 'toAnalyze', value: toAnalyze, label: 'To Analyze' },
+    { key: 'total', value: totalLeads, label: 'Leads total' },
+    { key: 'qualified', value: qualifiedLeads, label: 'Qualifiés' },
+    { key: 'avg', value: avgScore, label: 'Score moyen' },
+    { key: 'toAnalyze', value: toAnalyze, label: 'À analyser' },
   ];
 
   const handleActivationAnalysis = async () => {
@@ -344,7 +344,7 @@ export default function Dashboard() {
     const nextLead = activationState.leadToAnalyze || leads[0];
     const result = await runLeadAnalysisBatch(
       [nextLead],
-      `${nextLead.company_name || 'Lead'} analyzed. Open it now and start the follow-up workflow.`
+      `${nextLead.company_name || 'Lead'} analysé. Ouvrez-le pour démarrer le workflow de suivi.`
     );
 
     if (result.firstLeadId) {
@@ -360,41 +360,41 @@ export default function Dashboard() {
     {
       id: 'icp',
       icon: Target,
-      title: 'Set your active ICP',
+      title: 'Définir votre ICP actif',
       description: activeIcp
-        ? `Current scoring profile: ${activeIcp.name}.`
-        : 'Define the industries, roles, company size, and geography you want AI to prioritize.',
+        ? `Profil de scoring actuel : ${activeIcp.name}.`
+        : 'Définissez les secteurs, rôles, tailles d\'entreprise et zones géographiques que l\'IA doit prioriser.',
       complete: activationState.hasActiveIcp,
-      actionLabel: activeIcp ? 'Review ICP' : 'Configure ICP',
+      actionLabel: activeIcp ? 'Revoir l\'ICP' : 'Configurer l\'ICP',
       onAction: () => navigate(ROUTES.icp),
     },
     {
       id: 'import',
       icon: Upload,
-      title: 'Import your first lead list',
+      title: 'Importer votre première liste de leads',
       description: leads.length > 0
-        ? `${leads.length} lead(s) already available in Dashboard.`
-        : 'Upload a CSV or Excel file to seed your workspace with prospects.',
+        ? `${leads.length} lead(s) déjà disponibles dans le tableau de bord.`
+        : 'Importez un fichier CSV ou Excel pour alimenter votre espace avec des prospects.',
       complete: activationState.hasImportedLeads,
-      actionLabel: leads.length > 0 ? 'Review leads' : 'Import leads',
+      actionLabel: leads.length > 0 ? 'Voir les leads' : 'Importer des leads',
       onAction: leads.length > 0 ? scrollToLeadsTable : () => setImportDialogOpen(true),
     },
     {
       id: 'analysis',
       icon: Sparkles,
-      title: 'Analyze your first lead',
+      title: 'Analyser votre premier lead',
       description: hasAnalyzedLead
-        ? 'At least one lead has already been scored and enriched.'
-        : 'Run the first analysis to generate fit scoring, intent signals, and tailored copy.',
+        ? 'Au moins un lead a déjà été scoré et enrichi.'
+        : 'Lancez la première analyse pour générer le scoring ICP, les signaux d\'intention et le copy personnalisé.',
       complete: hasAnalyzedLead,
       actionLabel:
         leads.length === 0
-          ? 'Import leads first'
+          ? 'Importer d\'abord'
           : !activeIcp
-            ? 'Configure ICP first'
+            ? 'Configurer l\'ICP d\'abord'
             : isReanalyzing
-              ? 'Analyzing...'
-              : 'Analyze first lead',
+              ? 'Analyse en cours...'
+              : 'Analyser le premier lead',
       onAction:
         leads.length === 0
           ? () => setImportDialogOpen(true)
@@ -406,12 +406,12 @@ export default function Dashboard() {
     {
       id: 'review',
       icon: MessageSquare,
-      title: 'Start your first follow-up',
+      title: 'Démarrer votre premier suivi',
       description: activationState.hasFollowUpStarted
-        ? 'A lead already has notes or a follow-up status set.'
-        : 'Open the best analyzed lead and set notes or a follow-up status so the workflow actually starts.',
+        ? 'Un lead a déjà des notes ou un statut de suivi défini.'
+        : 'Ouvrez le meilleur lead analysé et ajoutez des notes ou un statut de suivi pour démarrer le workflow.',
       complete: activationState.hasFollowUpStarted,
-      actionLabel: activationState.leadToReview ? 'Open best lead' : 'Open pipeline',
+      actionLabel: activationState.leadToReview ? 'Ouvrir le meilleur lead' : 'Ouvrir le pipeline',
       onAction: activationState.leadToReview
         ? () => handleOpenLeadPage(activationState.leadToReview)
         : () => navigate(ROUTES.pipeline),
@@ -424,19 +424,19 @@ export default function Dashboard() {
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
         <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Dashboard</h1>
-          <p className="text-slate-500 mt-0.5 text-sm">ICP-first lead prioritization with AI intent reinforcement</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Tableau de bord</h1>
+          <p className="text-slate-500 mt-0.5 text-sm">Priorisation ICP-first avec renforcement IA des signaux d'intention</p>
           {aiEnriched > 0 && (
             <p className="text-xs text-brand-sky mt-1 flex items-center gap-1">
               <Brain className="w-3 h-3" />
-              {aiEnriched} leads enriched by AI
+              {aiEnriched} leads enrichis par IA
             </p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <Button variant="outline" size="sm" onClick={handleReanalyzeVisible} disabled={isReanalyzing} className="gap-1.5 h-8 text-xs">
             {isReanalyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCcw className="w-3.5 h-3.5" />}
-            Re-analyze
+            Réanalyser
           </Button>
           <Button
             variant="outline"
@@ -455,7 +455,7 @@ export default function Dashboard() {
             className="gap-1.5 h-8 text-xs bg-gradient-to-r from-brand-sky to-brand-sky-2"
           >
             <Upload className="w-3.5 h-3.5" />
-            Import CSV
+            Importer CSV
           </Button>
         </div>
       </div>
@@ -470,7 +470,7 @@ export default function Dashboard() {
             disabled={isSwitchingIcp || icpProfiles.length === 0}
           >
             <SelectTrigger className="h-8 text-sm">
-              <SelectValue placeholder="Select active ICP" />
+              <SelectValue placeholder="Sélectionner un profil ICP" />
             </SelectTrigger>
             <SelectContent>
               {icpProfiles.map((profile) => (
@@ -483,13 +483,13 @@ export default function Dashboard() {
         </div>
         <div className="w-px bg-slate-200 hidden sm:block" />
         <div className="flex-1 flex items-center gap-2 min-w-0">
-          <span className="text-xs font-semibold text-slate-400 uppercase shrink-0">List</span>
+          <span className="text-xs font-semibold text-slate-400 uppercase shrink-0">Liste</span>
           <Select value={selectedSourceList} onValueChange={setSelectedSourceList}>
             <SelectTrigger className="h-8 text-sm">
-              <SelectValue placeholder="Select lead list" />
+              <SelectValue placeholder="Sélectionner une liste" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={LIST_KEYS.ALL}>All Lists ({leads.length})</SelectItem>
+              <SelectItem value={LIST_KEYS.ALL}>Toutes les listes ({leads.length})</SelectItem>
               {sourceListOptions.map((option) => (
                 <SelectItem key={option.key} value={option.key}>
                   {option.label} ({option.count})
@@ -507,18 +507,18 @@ export default function Dashboard() {
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm font-semibold text-slate-900">
-                {selectedListLabel} is live in your workspace
+                {selectedListLabel} — liste active
               </p>
               <p className="text-sm text-slate-500">
-                {totalLeads} leads loaded
-                {activeIcp ? ` · Active ICP: ${activeIcp.name}` : ' · No active ICP yet'}
-                {analyzedVisible > 0 ? ` · ${analyzedVisible} scored` : ' · Ready to analyze'}
+                {totalLeads} leads chargés
+                {activeIcp ? ` · ICP actif : ${activeIcp.name}` : ' · Aucun profil ICP actif'}
+                {analyzedVisible > 0 ? ` · ${analyzedVisible} scorés` : ' · Prêt à analyser'}
               </p>
             </div>
             <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-              <span className="rounded-full bg-white px-2.5 py-1 border border-slate-200">Qualified: {qualifiedLeads}</span>
-              <span className="rounded-full bg-white px-2.5 py-1 border border-slate-200">To analyze: {toAnalyze}</span>
-              <span className="rounded-full bg-white px-2.5 py-1 border border-slate-200">Avg score: {avgScore}</span>
+              <span className="rounded-full bg-white px-2.5 py-1 border border-slate-200">Qualifiés : {qualifiedLeads}</span>
+              <span className="rounded-full bg-white px-2.5 py-1 border border-slate-200">À analyser : {toAnalyze}</span>
+              <span className="rounded-full bg-white px-2.5 py-1 border border-slate-200">Score moyen : {avgScore}</span>
             </div>
           </div>
         </div>
