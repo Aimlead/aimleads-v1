@@ -222,6 +222,7 @@ export default function Pipeline() {
                 onClick={() => setMobileStageIndex((i) => Math.max(0, i - 1))}
                 disabled={mobileStageIndex === 0}
                 className="p-2 rounded-xl bg-white border border-slate-200 disabled:opacity-30 transition-opacity"
+                aria-label="Étape précédente"
               >
                 <ChevronLeft className="w-4 h-4 text-slate-600" />
               </button>
@@ -251,6 +252,7 @@ export default function Pipeline() {
                 onClick={() => setMobileStageIndex((i) => Math.min(PIPELINE_STAGES.length - 1, i + 1))}
                 disabled={mobileStageIndex === PIPELINE_STAGES.length - 1}
                 className="p-2 rounded-xl bg-white border border-slate-200 disabled:opacity-30 transition-opacity"
+                aria-label="Étape suivante"
               >
                 <ChevronRight className="w-4 h-4 text-slate-600" />
               </button>

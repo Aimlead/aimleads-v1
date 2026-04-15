@@ -340,6 +340,7 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
           onClick={() => setPage((p) => Math.max(1, p - 1))}
           disabled={currentPage === 1}
           className="p-1 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          aria-label="Page précédente"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
@@ -359,6 +360,7 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
           onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
           disabled={currentPage === totalPages}
           className="p-1 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          aria-label="Page suivante"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
