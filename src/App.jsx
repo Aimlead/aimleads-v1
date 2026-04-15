@@ -30,6 +30,8 @@ const Billing = lazy(() => import('@/pages/Billing'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 const Outreach = lazy(() => import('@/pages/Outreach'));
 const CrmIntegration = lazy(() => import('@/pages/CrmIntegration'));
+const Help = lazy(() => import('@/pages/Help'));
+const AuthCallback = lazy(() => import('@/pages/AuthCallback'));
 
 function PageLoader() {
   return (
@@ -98,6 +100,7 @@ function AppRoutes() {
       <Route path={ROUTES.pricing} element={<Pricing />} />
       <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
       <Route path={ROUTES.resetPassword} element={<ResetPassword />} />
+      <Route path={ROUTES.authCallback} element={<AuthCallback />} />
       <Route element={<AuthScope />}>
         <Route
           path={ROUTES.login}
@@ -120,6 +123,7 @@ function AppRoutes() {
           <Route path={ROUTES.billing} element={<Billing />} />
           <Route path={ROUTES.outreach} element={<Outreach />} />
           <Route path={ROUTES.crmIntegration} element={<CrmIntegration />} />
+          <Route path={ROUTES.help} element={<Help />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />

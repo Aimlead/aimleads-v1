@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Loader2, Lock, User } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Download, Loader2, Lock, Trash2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,8 +10,54 @@ import { useAuth } from '@/lib/AuthContext';
 import { dataClient } from '@/services/dataClient';
 
 export default function AccountSettings() {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, logout } = useAuth();
+  const navigate = useNavigate();
   const usesManagedPasswordRecovery = Boolean(user?.supabase_auth_id);
+
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportError, setExportError] = useState('');
+
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleExport = async () => {
+    setExportLoading(true);
+    setExportError('');
+    try {
+      const url = dataClient.auth.exportMe();
+      const res = await fetch(url, { credentials: 'include' });
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = `aimleads-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      setExportError(error?.message || 'Échec de l\'export');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm !== 'DELETE') return;
+    setDeleteLoading(true);
+    setDeleteError('');
+    try {
+      await dataClient.auth.deleteMe();
+      if (logout) await logout().catch(() => {});
+      navigate(ROUTES.login, { replace: true });
+    } catch (error) {
+      setDeleteError(error?.message || 'Failed to delete account');
+      setDeleteLoading(false);
+    }
+  };
 
   const [profileForm, setProfileForm] = useState({ full_name: user?.full_name || '' });
   const [profileLoading, setProfileLoading] = useState(false);
@@ -212,6 +258,93 @@ export default function AccountSettings() {
           </CardContent>
         </Card>
       )}
+
+      {/* RGPD — Export */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Download className="w-5 h-5" />
+            Exporter mes données
+          </CardTitle>
+          <CardDescription>
+            Téléchargez une copie complète de votre profil et de vos leads au format JSON.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+            L&apos;export inclut votre profil utilisateur et tous les leads de votre workspace. Aucune donnée de carte bancaire n&apos;est stockée.
+          </div>
+          {exportError && <p className="text-sm text-rose-600">{exportError}</p>}
+          <Button variant="outline" disabled={exportLoading} onClick={handleExport} className="gap-2">
+            {exportLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            {exportLoading ? 'Export en cours…' : 'Télécharger mes données'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* RGPD — Delete */}
+      <Card className="border-rose-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-rose-700">
+            <Trash2 className="w-5 h-5" />
+            Supprimer mon compte
+          </CardTitle>
+          <CardDescription>
+            Action irréversible. Votre compte sera supprimé mais les données du workspace seront conservées.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
+            <p className="font-semibold mb-1">Avant de supprimer votre compte :</p>
+            <ul className="list-disc list-inside space-y-1 text-rose-600">
+              <li>Si vous êtes le seul propriétaire, transférez d&apos;abord la propriété du workspace.</li>
+              <li>Vos leads et données workspace ne seront <strong>pas</strong> supprimés.</li>
+              <li>Cette action est définitive et ne peut pas être annulée.</li>
+            </ul>
+          </div>
+
+          {!showDeleteConfirm ? (
+            <Button
+              variant="outline"
+              className="border-rose-300 text-rose-700 hover:bg-rose-50 gap-2"
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              <Trash2 className="w-4 h-4" />
+              Supprimer mon compte
+            </Button>
+          ) : (
+            <div className="space-y-3 border border-rose-200 rounded-xl p-4">
+              <p className="text-sm text-slate-700 font-medium">
+                Tapez <span className="font-mono font-bold text-rose-700">DELETE</span> pour confirmer la suppression :
+              </p>
+              <Input
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                placeholder="DELETE"
+                className="border-rose-300 focus-visible:ring-rose-400 font-mono"
+              />
+              {deleteError && <p className="text-sm text-rose-600">{deleteError}</p>}
+              <div className="flex gap-2">
+                <Button
+                  variant="destructive"
+                  disabled={deleteConfirm !== 'DELETE' || deleteLoading}
+                  onClick={handleDeleteAccount}
+                  className="gap-2"
+                >
+                  {deleteLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Confirmer la suppression
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => { setShowDeleteConfirm(false); setDeleteConfirm(''); setDeleteError(''); }}
+                >
+                  Annuler
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

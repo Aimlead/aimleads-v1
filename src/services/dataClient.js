@@ -313,6 +313,8 @@ const apiClient = {
     updateMe: (payload) => apiRequest('/auth/me', { method: 'PATCH', body: payload }),
     exportMe: () => `${API_BASE_URL}/auth/me/export`,
     deleteMe: () => apiRequest('/auth/me', { method: 'DELETE' }),
+    ssoInit: (provider) => `${API_BASE_URL}/auth/sso/init?provider=${encodeURIComponent(provider)}`,
+    ssoSession: (payload) => apiRequest('/auth/sso/session', { method: 'POST', body: payload }),
   },
   leads: {
     list: (sort = '-created_at') => apiRequest(`/leads?sort=${encodeURIComponent(sort)}`),
@@ -368,6 +370,9 @@ const apiClient = {
     syncBulk: (leadIds, crmType) =>
       apiRequest('/crm/sync-bulk', { method: 'POST', body: { lead_ids: leadIds, crm_type: crmType } }),
     getSyncStatus: (leadId) => apiRequest(`/crm/sync-status/${encodeURIComponent(leadId)}`),
+    getFieldMapping: (crmType) => apiRequest(`/crm/field-mapping/${encodeURIComponent(crmType)}`),
+    saveFieldMapping: (crmType, mapping) =>
+      apiRequest(`/crm/field-mapping/${encodeURIComponent(crmType)}`, { method: 'PUT', body: { mapping } }),
   },
   dev: {
     loadDemo: () => apiRequest('/dev/load-demo', { method: 'POST' }),
@@ -835,6 +840,22 @@ export const dataClient = {
         operationName: 'crm.getSyncStatus',
         apiCall: () => apiClient.crm.getSyncStatus(leadId),
         fallbackCall: async () => [],
+        passAuthErrors: true,
+      });
+    },
+    async getFieldMapping(crmType) {
+      return runWithMode({
+        operationName: 'crm.getFieldMapping',
+        apiCall: () => apiClient.crm.getFieldMapping(crmType),
+        fallbackCall: async () => ({}),
+        passAuthErrors: true,
+      });
+    },
+    async saveFieldMapping(crmType, mapping) {
+      return runWithMode({
+        operationName: 'crm.saveFieldMapping',
+        apiCall: () => apiClient.crm.saveFieldMapping(crmType, mapping),
+        fallbackCall: mockUnsupported,
         passAuthErrors: true,
       });
     },

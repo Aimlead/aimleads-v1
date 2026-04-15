@@ -18,6 +18,7 @@ import { createUserRateLimit } from '../lib/rateLimit.js';
 import {
   listCrmIntegrations,
   upsertCrmIntegration,
+  updateCrmConfig,
   deleteCrmIntegration,
   testCrmConnection,
   syncLeadToCrm,
@@ -100,6 +101,57 @@ router.delete('/:crmType', async (req, res) => {
   }).catch(() => {});
 
   return res.json({ data: { deleted: true, crm_type: crmType } });
+});
+
+// ─── Field mapping ────────────────────────────────────────────────────────────
+
+/**
+ * GET /crm/field-mapping/:crmType
+ * Returns the saved field mapping for a CRM type.
+ */
+router.get('/field-mapping/:crmType', async (req, res) => {
+  const { crmType } = req.params;
+  if (!CRM_TYPES.includes(crmType)) {
+    return res.status(400).json({ message: 'Invalid CRM type.' });
+  }
+  const workspaceId = getUserWorkspaceId(req.user);
+  const integrations = await listCrmIntegrations(workspaceId);
+  const integration = integrations.find((i) => i.crm_type === crmType);
+  const fieldMapping = integration?.config?.field_mapping || {};
+  return res.json({ data: fieldMapping });
+});
+
+/**
+ * PUT /crm/field-mapping/:crmType
+ * Save the field mapping for a CRM type.
+ * Body: { mapping: Record<string, string> }
+ */
+router.put('/field-mapping/:crmType', async (req, res) => {
+  const { crmType } = req.params;
+  if (!CRM_TYPES.includes(crmType)) {
+    return res.status(400).json({ message: 'Invalid CRM type.' });
+  }
+
+  const mapping = req.body?.mapping;
+  if (!mapping || typeof mapping !== 'object' || Array.isArray(mapping)) {
+    return res.status(400).json({ message: 'mapping must be an object.' });
+  }
+
+  const workspaceId = getUserWorkspaceId(req.user);
+  const updated = await updateCrmConfig(workspaceId, crmType, { field_mapping: mapping });
+  if (!updated) {
+    return res.status(404).json({ message: 'CRM integration not found. Connect first.' });
+  }
+
+  await writeAuditLog({
+    user: req.user,
+    action: 'update',
+    resourceType: 'crm_field_mapping',
+    resourceId: `${workspaceId}:${crmType}`,
+    changes: { crm_type: crmType, field_mapping: mapping },
+  }).catch(() => {});
+
+  return res.json({ data: { ok: true, field_mapping: mapping } });
 });
 
 // ─── Connection test ──────────────────────────────────────────────────────────

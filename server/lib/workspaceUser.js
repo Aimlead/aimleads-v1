@@ -116,5 +116,7 @@ export const ensureWorkspaceUserForAuth = async ({ authUser, fallbackFullName = 
     }).catch(() => null);
   }
 
-  return attachWorkspaceMembershipContext(appUser);
+  const withContext = await attachWorkspaceMembershipContext(appUser);
+  // Flag as newly-created so callers can send welcome emails
+  return withContext ? { ...withContext, _is_new: true } : withContext;
 };

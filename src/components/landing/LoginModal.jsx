@@ -32,7 +32,7 @@ export default function LoginModal({ open, onClose, onShowMentions }) {
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="modal" style={{ maxWidth: 420 }}>
-        <button className="modal-close" onClick={onClose}>✕</button>
+        <button className="modal-close" onClick={onClose} aria-label="Fermer">✕</button>
         <div className="modal-title">Connexion à AimLeads</div>
         <p className="modal-sub">Accédez à votre espace scoring et pipeline.</p>
 

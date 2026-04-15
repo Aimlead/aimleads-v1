@@ -59,7 +59,7 @@ export default function BookingModal({ open, onClose }) {
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="modal">
-        <button className="modal-close" onClick={onClose}>✕</button>
+        <button className="modal-close" onClick={onClose} aria-label="Fermer">✕</button>
 
         {submitted ? (
           <div style={{ textAlign: 'center', padding: '32px 0' }}>

@@ -95,8 +95,8 @@ function LeadCard({ lead, onOpen, onStageChange, onDragStart }) {
 
       <div className="flex gap-1 mt-2" onClick={(e) => e.stopPropagation()}>
         {lead.contact_email && (
-          <a href={`mailto:${lead.contact_email}`} title="Send email">
-            <Button variant="ghost" size="icon" className="h-6 w-6">
+          <a href={`mailto:${lead.contact_email}`} aria-label="Envoyer un email">
+            <Button variant="ghost" size="icon" className="h-6 w-6" aria-label="Envoyer un email">
               <Mail className="w-3 h-3 text-slate-400" />
             </Button>
           </a>

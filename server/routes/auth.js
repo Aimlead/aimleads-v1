@@ -19,6 +19,7 @@ import {
   adminDeleteAuthUser,
   clearSupabaseAuthCookies,
   adminCreateAuthUser,
+  getOAuthSignInUrl,
   getSupabaseAuthCookies,
   getAuthUserFromAccessToken,
   sendPasswordResetEmail,
@@ -394,6 +395,70 @@ router.delete('/me', requireAuth, async (req, res) => {
   res.clearCookie(SESSION_COOKIE_NAME, getClearCookieOptions());
   clearCsrfCookie(res);
   return res.status(200).json({ ok: true, message: 'Account deleted. Workspace data was not deleted.' });
+});
+
+// ─── SSO — OAuth initiation & session exchange ────────────────────────────────
+
+const ALLOWED_SSO_PROVIDERS = new Set(['google', 'github']);
+
+// Redirect user to Supabase OAuth authorize URL
+router.get('/sso/init', (req, res) => {
+  if (!isAuthProviderSupabase()) {
+    return res.status(400).json({ message: 'SSO requires Supabase auth provider.' });
+  }
+
+  const provider = String(req.query.provider || '').toLowerCase();
+  if (!ALLOWED_SSO_PROVIDERS.has(provider)) {
+    return res.status(400).json({ message: `Unsupported provider. Allowed: ${[...ALLOWED_SSO_PROVIDERS].join(', ')}.` });
+  }
+
+  const appUrl = String(process.env.CORS_ORIGIN || 'http://localhost:5173').replace(/\/$/, '');
+  const redirectTo = `${appUrl}/auth/callback`;
+  const authorizeUrl = getOAuthSignInUrl(provider, redirectTo);
+  return res.redirect(authorizeUrl);
+});
+
+// Exchange access + refresh tokens (from OAuth hash fragment) for httpOnly cookies
+router.post('/sso/session', authLimiter, async (req, res) => {
+  if (!isAuthProviderSupabase()) {
+    return res.status(400).json({ message: 'SSO requires Supabase auth provider.' });
+  }
+
+  const accessToken = String(req.body?.access_token || '').trim();
+  const refreshToken = String(req.body?.refresh_token || '').trim();
+
+  if (!accessToken || !refreshToken) {
+    return res.status(400).json({ message: 'access_token and refresh_token are required.' });
+  }
+
+  try {
+    const authUser = await getAuthUserFromAccessToken(accessToken);
+    if (!authUser?.id) {
+      return res.status(401).json({ message: 'Invalid or expired SSO token.' });
+    }
+
+    setSupabaseAuthCookies(res, { access_token: accessToken, refresh_token: refreshToken, expires_in: 3600, user: authUser });
+    setCsrfCookie(res);
+
+    const appUser = await ensureWorkspaceUserForAuth({
+      authUser,
+      fallbackFullName: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email || '',
+    });
+
+    // Welcome email for new users (fire-and-forget)
+    if (appUser?._is_new) {
+      sendEmail(EmailTemplates.welcome({
+        toEmail: authUser.email,
+        fullName: appUser?.full_name || authUser.email,
+        workspaceName: null,
+      })).catch(() => {});
+    }
+
+    return res.json({ user: sanitizeUser(appUser) });
+  } catch (error) {
+    const normalized = toApiAuthError(error, 'SSO session exchange failed');
+    return res.status(normalized.status).json({ message: normalized.message });
+  }
 });
 
 router.post('/logout', async (req, res) => {

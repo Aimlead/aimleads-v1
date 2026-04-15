@@ -124,15 +124,15 @@ function TemplateCard({ template, onEdit, onDelete, isSelected, onClick }) {
 
       {/* Actions */}
       <div className="flex items-center gap-1.5 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button onClick={handleCopy} className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 transition-colors px-2 py-1 rounded-lg hover:bg-slate-50">
+        <button onClick={handleCopy} className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 transition-colors px-2 py-1 rounded-lg hover:bg-slate-50" aria-label="Copier le template">
           {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-          {copied ? 'Copied' : 'Copy'}
+          {copied ? 'Copié' : 'Copier'}
         </button>
-        <button onClick={(e) => { e.stopPropagation(); onEdit(template); }} className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 transition-colors px-2 py-1 rounded-lg hover:bg-slate-50">
+        <button onClick={(e) => { e.stopPropagation(); onEdit(template); }} className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 transition-colors px-2 py-1 rounded-lg hover:bg-slate-50" aria-label="Modifier le template">
           <Edit3 className="w-3 h-3" />
-          Edit
+          Modifier
         </button>
-        <button onClick={(e) => { e.stopPropagation(); onDelete(template.id); }} className="flex items-center gap-1 text-xs text-slate-500 hover:text-rose-600 transition-colors px-2 py-1 rounded-lg hover:bg-rose-50 ml-auto">
+        <button onClick={(e) => { e.stopPropagation(); onDelete(template.id); }} className="flex items-center gap-1 text-xs text-slate-500 hover:text-rose-600 transition-colors px-2 py-1 rounded-lg hover:bg-rose-50 ml-auto" aria-label="Supprimer le template">
           <Trash2 className="w-3 h-3" />
         </button>
       </div>
@@ -320,6 +320,7 @@ function TouchCard({ touch }) {
           <button
             onClick={handleCopy}
             className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700 transition-colors px-2 py-1 rounded-lg hover:bg-slate-50"
+            aria-label="Copier le contenu"
           >
             {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
             {copied ? 'Copié' : 'Copier'}

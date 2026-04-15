@@ -179,6 +179,27 @@ export async function listCrmIntegrations(workspaceId) {
 }
 
 /**
+ * Updates only the config of an existing integration (does not touch the token).
+ * Returns the updated record with the token masked.
+ */
+export async function updateCrmConfig(workspaceId, crmType, configPatch) {
+  const existing = await getCrmIntegration(workspaceId, crmType);
+  if (!existing) return null;
+
+  const mergedConfig = { ...(existing.config || {}), ...configPatch };
+  const rows = await supabaseRequest('crm_integrations', {
+    method: 'PATCH',
+    query: { id: `eq.${existing.id}` },
+    body: {
+      config: mergedConfig,
+      updated_at: new Date().toISOString(),
+    },
+  });
+  const updated = Array.isArray(rows) ? rows[0] : rows;
+  return maskToken({ ...updated });
+}
+
+/**
  * Creates or updates a CRM integration for a workspace.
  * Returns the saved record with the token masked.
  */

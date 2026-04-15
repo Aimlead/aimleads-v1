@@ -331,6 +331,23 @@ export const ensureAuthUserWithPassword = async ({ email, password, fullName }) 
   };
 };
 
+/**
+ * Build the Supabase OAuth authorize URL for a given provider.
+ * The user is redirected to this URL; after OAuth, Supabase redirects
+ * back to `redirectTo` with tokens in the URL hash fragment (implicit flow).
+ */
+export const getOAuthSignInUrl = (provider, redirectTo) => {
+  const config = getRuntimeConfig();
+  const baseUrl = `${config.supabase.url.replace(/\/$/, '')}/auth/v1/authorize`;
+  const params = new URLSearchParams({
+    provider: String(provider || '').toLowerCase(),
+  });
+  if (redirectTo) {
+    params.set('redirect_to', String(redirectTo));
+  }
+  return `${baseUrl}?${params.toString()}`;
+};
+
 export const resolveSupabaseSessionFromRequest = async (req, res) => {
   const { accessToken, refreshToken } = getSupabaseAuthCookies(req);
 

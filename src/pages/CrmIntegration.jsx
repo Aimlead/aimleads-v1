@@ -25,9 +25,155 @@ import {
   Database,
   Eye,
   EyeOff,
+  GitMerge,
   Loader2,
   XCircle,
 } from 'lucide-react';
+
+// ─── Field definitions ────────────────────────────────────────────────────────
+
+const AIMLEADS_FIELDS = [
+  { key: 'company_name', label: 'Nom de l\'entreprise' },
+  { key: 'contact_name', label: 'Nom du contact' },
+  { key: 'contact_email', label: 'Email du contact' },
+  { key: 'contact_role', label: 'Rôle du contact' },
+  { key: 'industry', label: 'Secteur' },
+  { key: 'country', label: 'Pays' },
+  { key: 'company_size', label: 'Taille de l\'entreprise' },
+  { key: 'website_url', label: 'Site web' },
+  { key: 'icp_score', label: 'Score ICP' },
+  { key: 'icp_category', label: 'Catégorie ICP' },
+  { key: 'final_score', label: 'Score final' },
+  { key: 'status', label: 'Statut' },
+  { key: 'notes', label: 'Notes' },
+];
+
+const HUBSPOT_FIELDS = [
+  { key: 'firstname', label: 'Prénom (firstname)' },
+  { key: 'lastname', label: 'Nom (lastname)' },
+  { key: 'email', label: 'Email (email)' },
+  { key: 'jobtitle', label: 'Fonction (jobtitle)' },
+  { key: 'company', label: 'Entreprise (company)' },
+  { key: 'industry', label: 'Secteur (industry)' },
+  { key: 'country', label: 'Pays (country)' },
+  { key: 'numemployees', label: 'Nb employés (numemployees)' },
+  { key: 'website', label: 'Site web (website)' },
+  { key: 'aimlead_score', label: 'Score ICP (aimlead_score) *' },
+  { key: 'aimlead_category', label: 'Catégorie ICP (aimlead_category) *' },
+  { key: 'aimlead_analysis', label: 'Analyse (aimlead_analysis) *' },
+  { key: 'notes_last_contacted', label: 'Notes (notes_last_contacted)' },
+];
+
+const SALESFORCE_FIELDS = [
+  { key: 'FirstName', label: 'Prénom (FirstName)' },
+  { key: 'LastName', label: 'Nom (LastName)' },
+  { key: 'Email', label: 'Email (Email)' },
+  { key: 'Title', label: 'Fonction (Title)' },
+  { key: 'Company', label: 'Entreprise (Company)' },
+  { key: 'Industry', label: 'Secteur (Industry)' },
+  { key: 'Country', label: 'Pays (Country)' },
+  { key: 'NumberOfEmployees', label: 'Nb employés (NumberOfEmployees)' },
+  { key: 'Website', label: 'Site web (Website)' },
+  { key: 'AimLeads_Score__c', label: 'Score ICP (AimLeads_Score__c) *' },
+  { key: 'AimLeads_Category__c', label: 'Catégorie ICP (AimLeads_Category__c) *' },
+  { key: 'Description', label: 'Notes (Description)' },
+];
+
+// ─── Field Mapping Component ──────────────────────────────────────────────────
+
+function FieldMappingSection({ crmType, isConnected }) {
+  const queryClient = useQueryClient();
+  const [localMapping, setLocalMapping] = useState(null);
+
+  const { data: savedMapping = {}, isLoading } = useQuery({
+    queryKey: ['crmFieldMapping', crmType],
+    queryFn: () => dataClient.crm.getFieldMapping(crmType),
+    enabled: isConnected,
+    onSuccess: (data) => {
+      if (localMapping === null) setLocalMapping(data);
+    },
+  });
+
+  const mapping = localMapping ?? savedMapping;
+  const crmFields = crmType === 'hubspot' ? HUBSPOT_FIELDS : SALESFORCE_FIELDS;
+
+  const saveMutation = useMutation({
+    mutationFn: () => dataClient.crm.saveFieldMapping(crmType, mapping),
+    onSuccess: () => {
+      toast.success('Mapping de champs enregistré.');
+      queryClient.invalidateQueries({ queryKey: ['crmFieldMapping', crmType] });
+    },
+    onError: (err) => {
+      toast.error(err?.message || 'Erreur lors de l\'enregistrement du mapping.');
+    },
+  });
+
+  if (!isConnected) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <GitMerge className="w-4 h-4 text-slate-500" />
+          Mapping des champs — {crmType === 'hubspot' ? 'HubSpot' : 'Salesforce'}
+        </CardTitle>
+        <CardDescription>
+          Associez les champs AimLeads aux propriétés {crmType === 'hubspot' ? 'HubSpot' : 'Salesforce'}. Les champs marqués <span className="font-medium">*</span> nécessitent une propriété personnalisée dans votre CRM.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <Loader2 className="w-4 h-4 animate-spin" /> Chargement…
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-[1fr_auto_1fr] gap-2 text-xs font-medium text-slate-500 px-1">
+              <span>Champ AimLeads</span>
+              <span />
+              <span>Champ {crmType === 'hubspot' ? 'HubSpot' : 'Salesforce'}</span>
+            </div>
+            {AIMLEADS_FIELDS.map((field) => (
+              <div key={field.key} className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
+                <div className="text-sm bg-slate-50 rounded-lg px-3 py-2 text-slate-700 border border-slate-200">
+                  {field.label}
+                </div>
+                <div className="text-slate-400 text-xs">→</div>
+                <select
+                  className="text-sm bg-white rounded-lg px-3 py-2 text-slate-700 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-sky/30"
+                  value={mapping[field.key] || ''}
+                  onChange={(e) =>
+                    setLocalMapping((prev) => ({
+                      ...prev,
+                      [field.key]: e.target.value || undefined,
+                    }))
+                  }
+                >
+                  <option value="">— Non mappé —</option>
+                  {crmFields.map((cf) => (
+                    <option key={cf.key} value={cf.key}>
+                      {cf.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+            <div className="pt-2">
+              <Button
+                onClick={() => saveMutation.mutate()}
+                disabled={saveMutation.isPending}
+                size="sm"
+              >
+                {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Enregistrer le mapping
+              </Button>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 // ─── CRM Card ────────────────────────────────────────────────────────────────
 
@@ -335,6 +481,7 @@ export default function CrmIntegration() {
             integration={hubspot}
             onRefresh={handleRefresh}
           />
+          <FieldMappingSection crmType="hubspot" isConnected={Boolean(hubspot?.is_active)} />
 
           <CrmCard
             crmType="salesforce"
@@ -344,6 +491,7 @@ export default function CrmIntegration() {
             needsInstanceUrl
             onRefresh={handleRefresh}
           />
+          <FieldMappingSection crmType="salesforce" isConnected={Boolean(salesforce?.is_active)} />
         </div>
       )}
     </div>

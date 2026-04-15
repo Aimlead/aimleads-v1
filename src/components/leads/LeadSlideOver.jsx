@@ -562,6 +562,7 @@ const icpScore = toMetricValue(lead.icp_score ?? lead.score_details?.icp_score);
                     variant="ghost"
                     className="absolute top-2 right-2 h-7 gap-1"
                     onClick={() => handleCopy(content, key)}
+                    aria-label="Copier dans le presse-papier"
                   >
                     {copied === key ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                   </Button>

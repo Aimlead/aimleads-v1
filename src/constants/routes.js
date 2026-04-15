@@ -16,6 +16,8 @@ export const ROUTES = {
   resetPassword: '/reset-password',
   billing: '/billing',
   crmIntegration: '/crm-integration',
+  authCallback: '/auth/callback',
+  help: '/help',
 };
 
 export const PAGE_ROUTE_MAP = {

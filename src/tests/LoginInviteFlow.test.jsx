@@ -21,6 +21,9 @@ vi.mock('@/services/dataClient', () => ({
       apiBaseUrl: 'http://localhost:3000/api',
       allowApiFallback: false,
     },
+    auth: {
+      ssoInit: (provider) => `/api/auth/sso/init?provider=${provider}`,
+    },
   },
 }));
 
