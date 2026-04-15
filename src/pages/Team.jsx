@@ -1,4 +1,7 @@
 import React, { useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Copy, Crown, Loader2, Mail, Shield, UserPlus, Users } from 'lucide-react';
 import { toast } from 'sonner';
@@ -8,6 +11,11 @@ import { Input } from '@/components/ui/input';
 import { ROUTES } from '@/constants/routes';
 import { dataClient } from '@/services/dataClient';
 import { useAuth } from '@/lib/AuthContext';
+
+const inviteSchema = z.object({
+  email: z.string().min(1, 'L\'email est requis').email('Adresse email invalide'),
+  role: z.enum(['member', 'admin'], { required_error: 'Rôle requis' }),
+});
 
 const INVITE_ROLE_OPTIONS = [
   { value: 'member', label: 'Membre' },
@@ -56,10 +64,13 @@ const formatDate = (value) => {
 export default function Team() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState('member');
   const [lastCreatedInvite, setLastCreatedInvite] = useState(null);
   const [copiedInviteKey, setCopiedInviteKey] = useState('');
+
+  const { register: registerInvite, handleSubmit: handleInviteRHF, reset: resetInviteForm, formState: { errors: inviteErrors } } = useForm({
+    resolver: zodResolver(inviteSchema),
+    defaultValues: { email: '', role: 'member' },
+  });
 
   const {
     data: members = [],
@@ -131,8 +142,7 @@ export default function Team() {
     mutationFn: (payload) => dataClient.workspace.inviteMember(payload),
     onSuccess: (invite, variables) => {
       toast.success(`Invitation créée pour ${variables.email}.`);
-      setInviteEmail('');
-      setInviteRole('member');
+      resetInviteForm();
       setLastCreatedInvite(invite || null);
       setCopiedInviteKey('');
       queryClient.invalidateQueries({ queryKey: ['workspace-invites'] });
@@ -177,17 +187,10 @@ export default function Team() {
     },
   });
 
-  const handleInviteSubmit = async (event) => {
-    event.preventDefault();
-    const email = String(inviteEmail || '').trim().toLowerCase();
-    if (!email) {
-      toast.error('Entrez une adresse email.');
-      return;
-    }
-
+  const handleInviteSubmit = async (data) => {
     await inviteMutation.mutateAsync({
-      email,
-      role: inviteRole,
+      email: data.email.trim().toLowerCase(),
+      role: data.role,
     });
   };
   const memberCountLabel = `${members.length} membre${members.length === 1 ? '' : 's'}`;
@@ -247,30 +250,36 @@ export default function Team() {
         <CardContent className="space-y-4">
           {canManageInvites ? (
             <>
-              <form onSubmit={handleInviteSubmit} className="grid gap-3 md:grid-cols-[1.6fr_0.8fr_auto]">
-                <Input
-                  type="email"
-                  placeholder="teammate@company.com"
-                  value={inviteEmail}
-                  onChange={(event) => setInviteEmail(event.target.value)}
-                  disabled={inviteMutation.isPending}
-                />
-                <select
-                  value={inviteRole}
-                  onChange={(event) => setInviteRole(event.target.value)}
-                  disabled={inviteMutation.isPending}
-                  className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700"
-                >
-                  {inviteRoleOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <Button type="submit" disabled={inviteMutation.isPending}>
-                  {inviteMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
-                  Inviter
-                </Button>
+              <form onSubmit={handleInviteRHF(handleInviteSubmit)} className="space-y-2">
+                <div className="grid gap-3 md:grid-cols-[1.6fr_0.8fr_auto]">
+                  <div>
+                    <Input
+                      type="email"
+                      placeholder="teammate@company.com"
+                      disabled={inviteMutation.isPending}
+                      aria-invalid={Boolean(inviteErrors.email)}
+                      {...registerInvite('email')}
+                    />
+                    {inviteErrors.email && (
+                      <p className="mt-1 text-xs text-rose-600">{inviteErrors.email.message}</p>
+                    )}
+                  </div>
+                  <select
+                    disabled={inviteMutation.isPending}
+                    className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700"
+                    {...registerInvite('role')}
+                  >
+                    {inviteRoleOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <Button type="submit" disabled={inviteMutation.isPending}>
+                    {inviteMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
+                    Inviter
+                  </Button>
+                </div>
               </form>
 
               <div className="rounded-xl border border-brand-sky/20 bg-brand-sky/5 p-4 text-xs text-slate-600">

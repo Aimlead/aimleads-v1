@@ -1,11 +1,23 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { z } from 'zod';
 import { Eye, EyeOff, Loader2, Lock, Mail, User } from 'lucide-react';
 import PasswordStrength from '@/components/PasswordStrength';
 import BrandLogo from '@/components/brand/BrandLogo';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/lib/AuthContext';
 import { dataClient } from '@/services/dataClient';
+
+const loginSchema = z.object({
+  email: z.string().min(1, 'L\'email est requis').email('Adresse email invalide'),
+  password: z.string().min(1, 'Le mot de passe est requis'),
+});
+
+const signupSchema = z.object({
+  full_name: z.string().min(2, 'Le nom complet est requis (2 caractères minimum)'),
+  email: z.string().min(1, 'L\'email est requis').email('Adresse email invalide'),
+  password: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères'),
+});
 
 export default function Login() {
   const [searchParams] = useSearchParams();
@@ -26,6 +38,7 @@ export default function Login() {
   const [isSignup, setIsSignup] = useState(() => startsInSignupMode);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState(() => ({
     full_name: '',
@@ -51,9 +64,23 @@ export default function Login() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setLoading(true);
     setError('');
+    setFieldErrors({});
 
+    // Client-side Zod validation
+    const schema = isSignup ? signupSchema : loginSchema;
+    const result = schema.safeParse(formData);
+    if (!result.success) {
+      const errs = {};
+      for (const issue of result.error.issues) {
+        const key = issue.path[0];
+        if (key) errs[key] = issue.message;
+      }
+      setFieldErrors(errs);
+      return;
+    }
+
+    setLoading(true);
     try {
       if (isSignup) {
         await register(formData);
@@ -125,9 +152,12 @@ export default function Login() {
                   value={formData.full_name}
                   onChange={(e) => setFormData((prev) => ({ ...prev, full_name: e.target.value }))}
                   placeholder="Jean Dupont"
-                  required
+                  aria-invalid={Boolean(fieldErrors.full_name)}
                 />
               </div>
+              {fieldErrors.full_name && (
+                <p className="mt-1.5 text-xs text-rose-600">{fieldErrors.full_name}</p>
+              )}
             </div>
           )}
 
@@ -143,10 +173,13 @@ export default function Login() {
                 value={formData.email}
                 onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
                 placeholder="vous@entreprise.com"
-                required
                 disabled={isInviteLocked}
+                aria-invalid={Boolean(fieldErrors.email)}
               />
             </div>
+            {fieldErrors.email && !isInviteLocked && (
+              <p className="mt-1.5 text-xs text-rose-600">{fieldErrors.email}</p>
+            )}
             {isInviteLocked ? (
               <p className="mt-2 text-xs leading-5 text-slate-500">
                 Cet email est verrouillé pour éviter de créer un mauvais workspace par erreur. Connectez-vous ou inscrivez-vous avec l&apos;adresse invitée.
@@ -173,7 +206,7 @@ export default function Login() {
                 value={formData.password}
                 onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
                 placeholder="••••••••"
-                required
+                aria-invalid={Boolean(fieldErrors.password)}
               />
               <button
                 type="button"
@@ -184,6 +217,9 @@ export default function Login() {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+            {fieldErrors.password && (
+              <p className="mt-1.5 text-xs text-rose-600">{fieldErrors.password}</p>
+            )}
             {isSignup && <PasswordStrength password={formData.password} />}
           </div>
 
@@ -201,7 +237,7 @@ export default function Login() {
           {isSignup ? 'Déjà un compte ?' : 'Pas encore de compte ?'}{' '}
           <button
             type="button"
-            onClick={() => { setIsSignup((v) => !v); setError(''); }}
+            onClick={() => { setIsSignup((v) => !v); setError(''); setFieldErrors({}); }}
             className="login-switch-btn"
           >
             {isSignup ? 'Se connecter' : 'Créer un compte'}
