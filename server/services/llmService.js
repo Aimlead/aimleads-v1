@@ -17,7 +17,18 @@ const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
 // Use claude-sonnet-4-6 for richer reasoning; override with LLM_MODEL env var.
 // For cost/speed trade-off, set LLM_MODEL=claude-haiku-4-5-20251001
-const ANTHROPIC_MODEL = process.env.LLM_MODEL || 'claude-sonnet-4-6';
+// Default model is Sonnet for high-quality analysis; Haiku is used for lower-ICP leads.
+// Override both with LLM_MODEL (applies to all) or set individually:
+//   LLM_HAIKU_MODEL — model for quick scoring (default: claude-haiku-4-5-20251001)
+//   LLM_SONNET_MODEL — model for deep scoring (default: claude-sonnet-4-6)
+//   HAIKU_SCORE_THRESHOLD — ICP score below which Haiku is used (default: 65)
+const ANTHROPIC_MODEL = process.env.LLM_MODEL || null; // if set, overrides tiered logic
+const HAIKU_MODEL = process.env.LLM_HAIKU_MODEL || 'claude-haiku-4-5-20251001';
+const SONNET_MODEL = process.env.LLM_SONNET_MODEL || 'claude-sonnet-4-6';
+const HAIKU_SCORE_THRESHOLD = (() => {
+  const raw = Number.parseInt(process.env.HAIKU_SCORE_THRESHOLD ?? '65', 10);
+  return Number.isFinite(raw) && raw >= 0 && raw <= 100 ? raw : 65;
+})();
 const LLM_TIMEOUT_MS = 30000;
 
 const hasAnthropic = Boolean(ANTHROPIC_API_KEY);
@@ -223,14 +234,25 @@ const ANALYZE_LEAD_TOOL_CACHED = {
   cache_control: { type: 'ephemeral' },
 };
 
-const callClaude = async (prompt) => {
+/**
+ * Select the appropriate model based on ICP score.
+ * - icp_score >= HAIKU_SCORE_THRESHOLD → Sonnet (deep analysis, high-value lead)
+ * - icp_score < HAIKU_SCORE_THRESHOLD  → Haiku  (quick scoring, lower-priority lead)
+ * - LLM_MODEL env override applies to all leads regardless of score
+ */
+const selectModel = (icpScore) => {
+  if (ANTHROPIC_MODEL) return ANTHROPIC_MODEL; // explicit override
+  return icpScore >= HAIKU_SCORE_THRESHOLD ? SONNET_MODEL : HAIKU_MODEL;
+};
+
+const callClaude = async (prompt, model) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(new Error('LLM timeout')), LLM_TIMEOUT_MS);
   try {
     const message = await anthropicClient.messages.create(
       {
-        model: ANTHROPIC_MODEL,
-        max_tokens: 1400, // real output rarely exceeds 1100 tokens; was 2000
+        model,
+        max_tokens: model === HAIKU_MODEL ? 800 : 1400, // Haiku needs fewer tokens
         system: CACHED_SYSTEM,
         tools: [ANALYZE_LEAD_TOOL_CACHED],
         tool_choice: { type: 'tool', name: 'analyze_lead' },
@@ -250,6 +272,7 @@ const callClaude = async (prompt) => {
         cache_read_input_tokens: message.usage.cache_read_input_tokens ?? 0,
         cache_creation_input_tokens: message.usage.cache_creation_input_tokens ?? 0,
       } : null,
+      model,
     };
   } finally {
     clearTimeout(timeoutId);
@@ -323,24 +346,28 @@ export async function enrichWithLlm(lead, icpProfile, deterministicResult, webRe
   const prompt = buildUserPrompt(lead, icpProfile, deterministicResult, webResearchContext);
 
   if (hasAnthropic) {
+    const icpScore = Number(deterministicResult?.icp_score ?? 0);
+    const model = selectModel(icpScore);
     try {
-      const { result, usage } = await callClaude(prompt);
+      const { result, usage } = await callClaude(prompt, model);
       if (validateLlmResult(result)) {
         circuitBreaker.recordSuccess();
         logger.info('llm_enrich_success', {
           provider: 'anthropic',
-          model: ANTHROPIC_MODEL,
+          model,
+          tier: model === HAIKU_MODEL ? 'haiku' : 'sonnet',
+          icp_score: icpScore,
           company: lead.company_name,
           input_tokens: usage?.input_tokens,
           output_tokens: usage?.output_tokens,
           cache_read: usage?.cache_read_input_tokens,
           cache_creation: usage?.cache_creation_input_tokens,
         });
-        return { ...result, provider: 'anthropic', _usage: { ...usage, model: ANTHROPIC_MODEL } };
+        return { ...result, provider: 'anthropic', _usage: { ...usage, model } };
       }
     } catch (error) {
       circuitBreaker.recordFailure();
-      logger.warn('llm_claude_failed', { error: error?.message, company: lead.company_name });
+      logger.warn('llm_claude_failed', { error: error?.message, company: lead.company_name, model });
     }
   }
 

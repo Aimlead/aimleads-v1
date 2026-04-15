@@ -353,6 +353,7 @@ router.post('/:leadId/external-signals', externalSignalsLimiter, validateBody(sc
     shouldReanalyze,
   });
 
+  if (analysis?._token_usage) logTokenUsage(req, 'analyze', analysis._token_usage);
   updatedLead = analyzedLead;
 
   return res.json({
@@ -495,6 +496,7 @@ router.post('/:leadId/discover-signals', discoverLimiter, requireCredits('discov
     shouldReanalyze,
   });
 
+  if (analysis?._token_usage) logTokenUsage(req, 'analyze', analysis._token_usage);
   updatedLead = analyzedLead;
 
   const providerStatus = {

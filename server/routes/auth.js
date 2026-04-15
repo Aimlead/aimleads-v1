@@ -28,6 +28,7 @@ import {
   updateAuthUserPassword,
 } from '../lib/supabaseAuth.js';
 import { ensureWorkspaceUserForAuth } from '../lib/workspaceUser.js';
+import { sendEmail, EmailTemplates } from '../lib/email.js';
 
 const router = express.Router();
 wrapAsyncRoutes(router);
@@ -174,6 +175,13 @@ router.post('/register', authLimiter, validateBody(schemas.authRegisterSchema), 
     res.cookie(SESSION_COOKIE_NAME, token, getCookieOptions());
     setCsrfCookie(res);
 
+    // Welcome email (fire-and-forget)
+    sendEmail(EmailTemplates.welcome({
+      toEmail: email,
+      fullName: fullName,
+      workspaceName: null,
+    })).catch(() => {});
+
     return res.status(201).json({ user: sanitizeUser(newUser) });
   }
 
@@ -193,6 +201,13 @@ router.post('/register', authLimiter, validateBody(schemas.authRegisterSchema), 
       authUser: session.user,
       fallbackFullName: fullName,
     });
+
+    // Welcome email (fire-and-forget)
+    sendEmail(EmailTemplates.welcome({
+      toEmail: email,
+      fullName: appUser?.full_name || fullName,
+      workspaceName: null,
+    })).catch(() => {});
 
     return res.status(201).json({ user: sanitizeUser(appUser) });
   } catch (error) {

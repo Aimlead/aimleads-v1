@@ -8,6 +8,7 @@ import { getUserWorkspaceId } from '../lib/scope.js';
 import { getCircuitBreakerStatus } from '../services/llmService.js';
 import { listCrmIntegrations } from '../services/crmService.js';
 import { getBalance, grantCredits, getTransactionHistory, getWorkspacePlan, CREDIT_COSTS } from '../lib/credits.js';
+import { sendEmail, EmailTemplates } from '../lib/email.js';
 
 const router = express.Router();
 wrapAsyncRoutes(router);
@@ -104,6 +105,19 @@ router.post('/invites', requireAuth, validateBody(schemas.workspaceInviteCreateS
       status: invite.status,
     },
   });
+
+  // Send invite email (fire-and-forget — never block the HTTP response)
+  const appUrl = String(process.env.CORS_ORIGIN || 'https://app.aimlead.io').replace(/\/$/, '');
+  const inviteUrl = `${appUrl}/login?mode=signup&email=${encodeURIComponent(email)}&invite_id=${invite.id}`;
+  const workspaceName = req.user?.workspace_name || req.user?.full_name?.split(' ')[0] + "'s workspace" || 'your workspace';
+  sendEmail(EmailTemplates.workspaceInvite({
+    toEmail: email,
+    inviterName: req.user?.full_name || req.user?.email || 'A teammate',
+    workspaceName,
+    inviteUrl,
+    role: invite.role,
+  })).catch(() => {}); // ignore email errors — never block the response
+
   return res.status(201).json({ data: invite });
 });
 

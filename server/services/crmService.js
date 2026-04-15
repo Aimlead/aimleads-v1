@@ -10,6 +10,7 @@
  * is used here solely because RLS would require passing auth tokens.
  */
 
+import crypto from 'node:crypto';
 import { createId } from '../lib/utils.js';
 import { logger } from '../lib/observability.js';
 import { getRuntimeConfig } from '../lib/config.js';
@@ -70,10 +71,66 @@ async function supabaseRequest(table, { method = 'GET', query = {}, body } = {})
   return payload;
 }
 
+// ─── Token encryption (AES-256-GCM) ──────────────────────────────────────────
+// Tokens are encrypted at rest using a derived key from CRM_ENCRYPTION_KEY or
+// SESSION_SECRET. Encrypted tokens are prefixed with "enc:" to allow
+// backwards-compatible migration of plaintext tokens already in the database.
+
+const ENC_PREFIX = 'enc:';
+const SALT = 'aimleads-crm-token-salt-v1';
+
+function getCrmEncryptionKey() {
+  const secret = String(process.env.CRM_ENCRYPTION_KEY || process.env.SESSION_SECRET || '').trim();
+  if (!secret || secret === 'aimleads-dev-only-secret-do-not-use-in-production') return null;
+  return crypto.scryptSync(secret, SALT, 32);
+}
+
+function encryptToken(plaintext) {
+  if (!plaintext) return plaintext;
+  const key = getCrmEncryptionKey();
+  if (!key) return plaintext; // No key in dev — store plaintext
+
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+
+  return `${ENC_PREFIX}${iv.toString('base64')}:${authTag.toString('base64')}:${encrypted.toString('base64')}`;
+}
+
+function decryptToken(stored) {
+  if (!stored) return stored;
+  if (!stored.startsWith(ENC_PREFIX)) return stored; // Legacy plaintext — return as-is
+
+  const key = getCrmEncryptionKey();
+  if (!key) {
+    logger.warn('crm_token_decrypt_no_key', {});
+    return null; // Cannot decrypt without key
+  }
+
+  try {
+    const parts = stored.slice(ENC_PREFIX.length).split(':');
+    if (parts.length !== 3) return null;
+
+    const [ivB64, authTagB64, ciphertextB64] = parts;
+    const iv = Buffer.from(ivB64, 'base64');
+    const authTag = Buffer.from(authTagB64, 'base64');
+    const ciphertext = Buffer.from(ciphertextB64, 'base64');
+
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(authTag);
+    return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
+  } catch (err) {
+    logger.warn('crm_token_decrypt_failed', { error: err.message });
+    return null;
+  }
+}
+
 // ─── Token masking ────────────────────────────────────────────────────────────
 
 function maskToken(integration) {
   if (!integration) return integration;
+  // Mask the plaintext token (after decryption), never expose encrypted value
   const token = String(integration.api_token || '');
   return {
     ...integration,
@@ -81,10 +138,22 @@ function maskToken(integration) {
   };
 }
 
+/**
+ * Returns an integration with its token decrypted (for internal use only).
+ * Never pass the result of this function directly to HTTP clients — use maskToken first.
+ */
+function withDecryptedToken(integration) {
+  if (!integration) return integration;
+  return {
+    ...integration,
+    api_token: decryptToken(integration.api_token),
+  };
+}
+
 // ─── crm_integrations CRUD ───────────────────────────────────────────────────
 
 /**
- * Returns the raw (unmasked) integration row for internal use.
+ * Returns the raw integration with the token decrypted (for internal use only).
  * Never expose the result of this function directly to HTTP clients.
  */
 export async function getCrmIntegration(workspaceId, crmType) {
@@ -95,7 +164,8 @@ export async function getCrmIntegration(workspaceId, crmType) {
       limit: '1',
     },
   });
-  return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  const row = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  return row ? withDecryptedToken(row) : null;
 }
 
 /**
@@ -116,19 +186,23 @@ export async function upsertCrmIntegration(workspaceId, { crmType, apiToken, con
   const existing = await getCrmIntegration(workspaceId, crmType);
   const now = new Date().toISOString();
 
+  // Encrypt token before persisting
+  const encryptedToken = encryptToken(apiToken);
+
   if (existing) {
     const rows = await supabaseRequest('crm_integrations', {
       method: 'PATCH',
       query: { id: `eq.${existing.id}` },
       body: {
-        api_token: apiToken,
+        api_token: encryptedToken,
         config: crmConfig,
         is_active: true,
         updated_at: now,
       },
     });
     const updated = Array.isArray(rows) ? rows[0] : rows;
-    return maskToken(updated);
+    // Return masked plaintext token (decrypt then mask)
+    return maskToken({ ...updated, api_token: apiToken });
   }
 
   const rows = await supabaseRequest('crm_integrations', {
@@ -137,7 +211,7 @@ export async function upsertCrmIntegration(workspaceId, { crmType, apiToken, con
       id: createId('crm'),
       workspace_id: workspaceId,
       crm_type: crmType,
-      api_token: apiToken,
+      api_token: encryptedToken,
       config: crmConfig,
       is_active: true,
       created_at: now,
@@ -145,7 +219,8 @@ export async function upsertCrmIntegration(workspaceId, { crmType, apiToken, con
     },
   });
   const created = Array.isArray(rows) ? rows[0] : rows;
-  return maskToken(created);
+  // Return masked plaintext token
+  return maskToken({ ...created, api_token: apiToken });
 }
 
 /**

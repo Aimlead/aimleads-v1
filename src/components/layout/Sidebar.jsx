@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/routes';
 import {
   BarChart3, Kanban,
-  Database, LayoutDashboard, LogOut, Mail, ScrollText, Settings, Sparkles, Target, Users,
+  Database, LayoutDashboard, LifeBuoy, LogOut, Mail, ScrollText, Settings, Sparkles, Target, Users,
 } from 'lucide-react';
 import BrandLogo from '@/components/brand/BrandLogo';
 

@@ -249,8 +249,70 @@ export const logTokenUsage = (req, parentAction, usage) => {
 // Express middleware factory
 // ─────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────
+// Internal: check billing status for a workspace
+// Returns null if allowed, or an error object { status, message, code, ... }
+// ─────────────────────────────────────────────────────────────────
+const checkBillingStatus = async (workspaceId) => {
+  if (!workspaceId || !isSupabase()) return null;
+
+  try {
+    const plan = await getWorkspacePlan(workspaceId);
+    const { billing_status, trial_ends_at } = plan;
+
+    // Active paid subscription → always allow
+    if (billing_status === 'active') return null;
+
+    // Trial → check expiry
+    if (billing_status === 'trial' || !billing_status) {
+      if (trial_ends_at && new Date(trial_ends_at) < new Date()) {
+        return {
+          status: 402,
+          message: 'Your trial has expired. Please upgrade to a paid plan to continue.',
+          code: 'TRIAL_EXPIRED',
+          trial_ends_at,
+        };
+      }
+      return null;
+    }
+
+    // Canceled or past due → block
+    if (billing_status === 'canceled' || billing_status === 'past_due') {
+      return {
+        status: 402,
+        message: 'Your subscription is inactive. Please update your billing details.',
+        code: 'SUBSCRIPTION_INACTIVE',
+        billing_status,
+      };
+    }
+
+    return null;
+  } catch (err) {
+    // Fail open — billing check errors must not block users
+    logger.warn('billing_status_check_error', { workspaceId, error: err?.message });
+    return null;
+  }
+};
+
+/**
+ * requireActiveBilling — standalone middleware that blocks expired trials and
+ * inactive subscriptions. Use on routes that don't consume credits but should
+ * still be gated by billing status (e.g. analytics, exports).
+ *
+ * No-op in local/dev mode (DATA_PROVIDER != supabase).
+ */
+export const requireActiveBilling = async (req, res, next) => {
+  const workspaceId = getUserWorkspaceId(req.user);
+  const billingError = await checkBillingStatus(workspaceId);
+  if (billingError) {
+    return res.status(billingError.status).json(billingError);
+  }
+  return next();
+};
+
 /**
  * requireCredits(action) — deducts CREDIT_COSTS[action] credits before the handler runs.
+ * Also checks billing status (trial expiry, subscription inactive) before deducting.
  * Returns 402 with { code: 'INSUFFICIENT_CREDITS', balance, required } if not enough credits.
  *
  * Usage:
@@ -265,6 +327,12 @@ export const requireCredits = (action) => async (req, res, next) => {
 
   const workspaceId = getUserWorkspaceId(req.user);
   const userId = String(req.user?.id || '');
+
+  // Check billing status before deducting credits
+  const billingError = await checkBillingStatus(workspaceId);
+  if (billingError) {
+    return res.status(billingError.status).json(billingError);
+  }
 
   const result = await deductCredits(workspaceId, userId, action, amount, {
     path: req.path,
