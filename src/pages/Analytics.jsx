@@ -21,6 +21,7 @@ import {
 } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import EmptyState from '@/components/ui/EmptyState';
 import { LEAD_STATUS } from '@/constants/leads';
 import { dataClient } from '@/services/dataClient';
 
@@ -264,7 +265,7 @@ export default function Analytics() {
           </CardHeader>
           <CardContent>
             {categoryData.length === 0 ? (
-              <p className="text-slate-500 text-sm py-8 text-center">No analyzed leads yet</p>
+              <EmptyState icon={BarChart3} title="Aucun lead analysé" description="Analysez vos leads pour voir la répartition ICP ici." />
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
@@ -318,7 +319,7 @@ export default function Analytics() {
           </CardHeader>
           <CardContent>
             {industryData.length === 0 ? (
-              <p className="text-slate-500 text-sm py-8 text-center">No industry data yet</p>
+              <EmptyState icon={Users} title="Pas encore de données secteur" description="Importez des leads avec un secteur renseigné pour voir ce graphique." />
             ) : (
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={industryData} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
@@ -340,7 +341,7 @@ export default function Analytics() {
           </CardHeader>
           <CardContent>
             {sourceListData.length === 0 ? (
-              <p className="text-slate-500 text-sm py-8 text-center">No source list data yet</p>
+              <EmptyState icon={TrendingUp} title="Pas encore de données source" description="Importez des leads avec une liste source pour comparer les performances." />
             ) : (
               <ResponsiveContainer width="100%" height={240}>
                 <AreaChart data={sourceListData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>

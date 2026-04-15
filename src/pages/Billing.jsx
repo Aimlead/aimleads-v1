@@ -3,6 +3,7 @@ import { CreditCard, CheckCircle2, ExternalLink, Zap, Users, Building2, Trending
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import EmptyState from '@/components/ui/EmptyState';
 import { useAuth } from '@/lib/AuthContext';
 import { dataClient } from '@/services/dataClient';
 
@@ -123,7 +124,7 @@ function CreditsSection({ balance, transactions, costs, plan, isOwner }) {
             </div>
           </div>
         ) : (
-          <p className="text-xs text-slate-400 text-center py-2">No transactions yet — credits are deducted as you use AI features.</p>
+          <EmptyState icon={Zap} title="Aucune transaction" description="Les crédits sont débités à chaque utilisation des fonctionnalités IA." className="py-8" />
         )}
 
         {isOwner && (

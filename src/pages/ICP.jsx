@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Brain, Building2, Edit, Globe, Loader2, MapPin, Plus, Save, Sliders, Sparkles, Target, Users, X } from 'lucide-react';
+import { SkeletonCard } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -339,8 +340,18 @@ export default function ICP() {
 
   if (isLoading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-brand-sky animate-spin" />
+      <div className="max-w-4xl mx-auto space-y-4">
+        <div className="flex justify-between items-start gap-4 mb-6">
+          <div className="space-y-2 flex-1">
+            <div className="h-8 w-48 bg-slate-200 rounded-lg animate-pulse" />
+            <div className="h-4 w-72 bg-slate-100 rounded animate-pulse" />
+          </div>
+          <div className="flex gap-2">
+            <div className="h-9 w-28 bg-slate-100 rounded-lg animate-pulse" />
+            <div className="h-9 w-28 bg-slate-100 rounded-lg animate-pulse" />
+          </div>
+        </div>
+        {[1, 2, 3].map((i) => <SkeletonCard key={i} className="h-32" />)}
       </div>
     );
   }
