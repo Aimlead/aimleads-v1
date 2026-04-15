@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { BarChart3, Calendar, Loader2, Target, TrendingUp, Users, X, Zap } from 'lucide-react';
+import { BarChart3, Calendar, Target, TrendingUp, Users, X, Zap } from 'lucide-react';
+import { SkeletonChart, SkeletonStats } from '@/components/ui/skeleton';
 import {
   Area,
   AreaChart,
@@ -159,8 +160,16 @@ export default function Analytics() {
 
   if (isLoading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-brand-sky animate-spin" />
+      <div className="space-y-6">
+        <div>
+          <div className="h-8 w-48 bg-slate-200 rounded-lg animate-pulse mb-2" />
+          <div className="h-4 w-64 bg-slate-100 rounded animate-pulse" />
+        </div>
+        <SkeletonStats count={4} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <SkeletonChart />
+          <SkeletonChart />
+        </div>
       </div>
     );
   }
@@ -169,8 +178,8 @@ export default function Analytics() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Analytics</h1>
-          <p className="text-slate-500 mt-1 text-sm">Lead scoring performance and pipeline insights</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Analytiques</h1>
+          <p className="text-slate-500 mt-1 text-sm">Performance du scoring leads et insights pipeline</p>
         </div>
         <div className="flex items-center gap-1.5 flex-wrap">
           <Calendar className="w-4 h-4 text-slate-400 shrink-0" />

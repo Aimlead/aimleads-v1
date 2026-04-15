@@ -10,7 +10,7 @@ import { dataClient } from '@/services/dataClient';
 import { useAuth } from '@/lib/AuthContext';
 
 const INVITE_ROLE_OPTIONS = [
-  { value: 'member', label: 'Member' },
+  { value: 'member', label: 'Membre' },
   { value: 'admin', label: 'Admin' },
 ];
 
@@ -77,12 +77,12 @@ export default function Team() {
   const canManageRoles = currentRole === 'owner';
   const membershipIssue = !isLoadingMembers && !currentMember;
   const accessSummary = membershipIssue
-    ? 'Membership verification needed'
+    ? 'Vérification de l\'appartenance requise'
     : canManageRoles
-      ? 'Full access'
+      ? 'Accès complet'
       : canManageInvites
-        ? 'Invite access only'
-        : 'Read-only';
+        ? 'Accès invitations uniquement'
+        : 'Lecture seule';
   const inviteRoleOptions = currentRole === 'admin'
     ? INVITE_ROLE_OPTIONS.filter((option) => option.value === 'member')
     : INVITE_ROLE_OPTIONS;
@@ -99,21 +99,21 @@ export default function Team() {
   const copyInviteSignupUrl = async (email, key = email) => {
     const inviteLink = buildInviteSignupUrl(email);
     if (!inviteLink) {
-      toast.error('Create an invite before copying the signup link.');
+      toast.error('Créez une invitation avant de copier le lien.');
       return;
     }
 
     if (!navigator?.clipboard?.writeText) {
-      toast.error('Clipboard access is not available in this browser.');
+      toast.error('Accès au presse-papier non disponible dans ce navigateur.');
       return;
     }
 
     try {
       await navigator.clipboard.writeText(inviteLink);
       setCopiedInviteKey(String(key || email));
-      toast.success('Signup link copied.');
+      toast.success('Lien d\'inscription copié.');
     } catch {
-      toast.error('Failed to copy the signup link.');
+      toast.error('Échec de la copie du lien d\'inscription.');
     }
   };
 
@@ -130,7 +130,7 @@ export default function Team() {
   const inviteMutation = useMutation({
     mutationFn: (payload) => dataClient.workspace.inviteMember(payload),
     onSuccess: (invite, variables) => {
-      toast.success(`Invite created for ${variables.email}.`);
+      toast.success(`Invitation créée pour ${variables.email}.`);
       setInviteEmail('');
       setInviteRole('member');
       setLastCreatedInvite(invite || null);
@@ -138,42 +138,42 @@ export default function Team() {
       queryClient.invalidateQueries({ queryKey: ['workspace-invites'] });
     },
     onError: (error) => {
-      toast.error(error?.message || 'Failed to create invite');
+      toast.error(error?.message || 'Échec de la création de l\'invitation.');
     },
   });
 
   const roleMutation = useMutation({
     mutationFn: ({ memberUserId, role }) => dataClient.workspace.updateMemberRole(memberUserId, { role }),
     onSuccess: () => {
-      toast.success('Role updated.');
+      toast.success('Rôle mis à jour.');
       queryClient.invalidateQueries({ queryKey: ['workspace-members'] });
     },
     onError: (error) => {
-      toast.error(error?.message || 'Failed to update member role');
+      toast.error(error?.message || 'Échec de la mise à jour du rôle.');
     },
   });
 
   const transferOwnershipMutation = useMutation({
     mutationFn: (memberUserId) => dataClient.workspace.transferOwnership(memberUserId),
     onSuccess: (result) => {
-      const nextOwnerLabel = result?.new_owner?.full_name || result?.new_owner?.email || 'the selected member';
-      toast.success(`Ownership transferred to ${nextOwnerLabel}. You are now an admin.`);
+      const nextOwnerLabel = result?.new_owner?.full_name || result?.new_owner?.email || 'le membre sélectionné';
+      toast.success(`Propriété transférée à ${nextOwnerLabel}. Vous êtes maintenant admin.`);
       queryClient.invalidateQueries({ queryKey: ['workspace-members'] });
       queryClient.invalidateQueries({ queryKey: ['workspace-invites'] });
     },
     onError: (error) => {
-      toast.error(error?.message || 'Failed to transfer ownership');
+      toast.error(error?.message || 'Échec du transfert de propriété.');
     },
   });
 
   const revokeInviteMutation = useMutation({
     mutationFn: (inviteId) => dataClient.workspace.revokeInvite(inviteId),
     onSuccess: () => {
-      toast.success('Invite revoked.');
+      toast.success('Invitation révoquée.');
       queryClient.invalidateQueries({ queryKey: ['workspace-invites'] });
     },
     onError: (error) => {
-      toast.error(error?.message || 'Failed to revoke invite');
+      toast.error(error?.message || 'Échec de la révocation de l\'invitation.');
     },
   });
 
@@ -181,7 +181,7 @@ export default function Team() {
     event.preventDefault();
     const email = String(inviteEmail || '').trim().toLowerCase();
     if (!email) {
-      toast.error('Enter an email address.');
+      toast.error('Entrez une adresse email.');
       return;
     }
 
@@ -190,16 +190,16 @@ export default function Team() {
       role: inviteRole,
     });
   };
-  const memberCountLabel = `${members.length} member${members.length === 1 ? '' : 's'}`;
+  const memberCountLabel = `${members.length} membre${members.length === 1 ? '' : 's'}`;
   const pendingInviteCount = canManageInvites ? invites.length : 0;
-  const inviteCountLabel = `${pendingInviteCount} pending invite${pendingInviteCount === 1 ? '' : 's'}`;
+  const inviteCountLabel = `${pendingInviteCount} invitation${pendingInviteCount === 1 ? '' : 's'} en attente`;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Team</h1>
-          <p className="mt-1 text-slate-500">Manage who can access this workspace and who can qualify leads.</p>
+          <h1 className="text-2xl font-bold text-slate-900">Équipe</h1>
+          <p className="mt-1 text-slate-500">Gérez qui accède à ce workspace et qui qualifie les leads.</p>
           <p className="mt-2 text-sm text-slate-400">
             {memberCountLabel}
             {canManageInvites ? ` • ${inviteCountLabel}` : ''}
@@ -208,29 +208,29 @@ export default function Team() {
 
         <div className="space-y-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
           <div className="flex items-center gap-2">
-            <span>Your role</span>
+            <span>Votre rôle</span>
             <RoleBadge role={currentRole || 'member'} />
           </div>
-          <p className="text-xs font-medium text-slate-600">Access mode: {accessSummary}</p>
+          <p className="text-xs font-medium text-slate-600">Accès : {accessSummary}</p>
           <p className="text-xs text-slate-400">
             {membershipIssue
-              ? 'We could not match this session to a valid workspace membership yet.'
+              ? 'L\'appartenance à ce workspace ne peut pas être vérifiée pour la session actuelle.'
               : canManageRoles
-                ? 'You can manage invites, roles, ownership transfer, and access changes.'
+                ? 'Vous gérez les invitations, les rôles, le transfert de propriété et les accès.'
                 : canManageInvites
-                  ? 'You can invite teammates and manage pending invites.'
-                  : 'You can use the workspace, but access changes stay read-only.'}
+                  ? 'Vous pouvez inviter des membres et gérer les invitations en attente.'
+                  : 'Vous pouvez utiliser le workspace, mais les changements d\'accès sont en lecture seule.'}
           </p>
         </div>
       </div>
 
       {membershipIssue ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900">
-          Membership could not be verified for the current session. Team management stays read-only until the workspace membership record is repaired.
+          L&apos;appartenance au workspace ne peut pas être vérifiée pour cette session. La gestion de l&apos;équipe reste en lecture seule jusqu&apos;à la réparation de l&apos;enregistrement de membership.
         </div>
       ) : !canManageInvites ? (
         <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-          Access mode: <span className="font-semibold">{accessSummary}</span>. Invite creation and role changes are only available to admins and owners.
+          Mode d&apos;accès : <span className="font-semibold">{accessSummary}</span>. La création d&apos;invitations et les changements de rôle sont réservés aux admins et propriétaires.
         </div>
       ) : null}
 
@@ -238,10 +238,10 @@ export default function Team() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
-            Invite teammate
+            Inviter un collaborateur
           </CardTitle>
           <CardDescription>
-            This creates a pending invite for this email. The teammate will join this workspace when they sign up with the same email address.
+            Crée une invitation pour cet email. Le collaborateur rejoindra ce workspace en s&apos;inscrivant avec la même adresse email.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -269,18 +269,18 @@ export default function Team() {
                 </select>
                 <Button type="submit" disabled={inviteMutation.isPending}>
                   {inviteMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
-                  Create invite
+                  Inviter
                 </Button>
               </form>
 
               <div className="rounded-xl border border-brand-sky/20 bg-brand-sky/5 p-4 text-xs text-slate-600">
-                <p className="font-medium text-slate-800">How teammates join</p>
+                <p className="font-medium text-slate-800">Comment les collaborateurs rejoignent</p>
                 <p className="mt-1">
-                  They need to create their account with the invited email address. If you are not sending transactional emails yet, copy the signup link below and share it manually.
+                  Ils doivent créer leur compte avec l&apos;email invité. Si les emails transactionnels ne sont pas encore configurés, copiez le lien d&apos;inscription ci-dessous et partagez-le manuellement.
                 </p>
                 {lastCreatedInvite?.email ? (
                   <div className="mt-3 rounded-xl border border-white/70 bg-white/80 p-3">
-                    <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Latest invite</p>
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Dernière invitation</p>
                     <p className="mt-1 text-sm font-medium text-slate-900">{lastCreatedInvite.email}</p>
                     <p className="mt-1 break-all font-mono text-[11px] text-slate-500">
                       {buildInviteSignupUrl(lastCreatedInvite.email)}
@@ -295,7 +295,7 @@ export default function Team() {
                         {copiedInviteKey === `latest:${lastCreatedInvite.id || lastCreatedInvite.email}`
                           ? <Check className="mr-2 h-4 w-4" />
                           : <Copy className="mr-2 h-4 w-4" />}
-                        {copiedInviteKey === `latest:${lastCreatedInvite.id || lastCreatedInvite.email}` ? 'Copied' : 'Copy signup link'}
+                        {copiedInviteKey === `latest:${lastCreatedInvite.id || lastCreatedInvite.email}` ? 'Copié' : 'Copier le lien'}
                       </Button>
                     </div>
                   </div>
@@ -304,7 +304,7 @@ export default function Team() {
             </>
           ) : (
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-              Only workspace owners and admins can create invites. Members can still use the workspace normally.
+              Seuls les propriétaires et admins peuvent créer des invitations. Les membres peuvent utiliser le workspace normalement.
             </div>
           )}
         </CardContent>
@@ -314,28 +314,28 @@ export default function Team() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
-            Pending invites
+            Invitations en attente
           </CardTitle>
           <CardDescription>
-            Pending invites stay here until the teammate signs up with the invited email or you revoke the invite.
+            Les invitations restent ici jusqu&apos;à ce que le collaborateur s&apos;inscrive ou que vous la révoquez.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {!canManageInvites ? (
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-              Pending invites are visible only to admins and owners.
+              Les invitations en attente sont visibles uniquement par les admins et propriétaires.
             </div>
           ) : isLoadingInvites ? (
             <div className="flex items-center gap-2 text-sm text-slate-500">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Loading invites...
+              Chargement des invitations…
             </div>
           ) : invitesError ? (
-            <p className="text-sm text-rose-600">{invitesError.message || 'Failed to load invites.'}</p>
+            <p className="text-sm text-rose-600">{invitesError.message || 'Échec du chargement des invitations.'}</p>
           ) : invites.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-200 p-4 text-sm text-slate-500">
-              <p>No pending invites.</p>
-              <p className="mt-1 text-xs text-slate-400">Create an invite to add your first teammate.</p>
+              <p>Aucune invitation en attente.</p>
+              <p className="mt-1 text-xs text-slate-400">Créez une invitation pour ajouter votre premier collaborateur.</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white">
@@ -346,10 +346,10 @@ export default function Team() {
                   <div key={invite.id} className="grid gap-3 p-4 md:grid-cols-[minmax(0,1.5fr)_140px_120px_auto] md:items-center">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-slate-900">{invite.email}</p>
-                      <p className="text-xs text-slate-500">Created {formatDate(invite.created_at)}</p>
+                      <p className="text-xs text-slate-500">Créé le {formatDate(invite.created_at)}</p>
                     </div>
                     <RoleBadge role={invite.role} />
-                    <span className="text-xs font-medium uppercase tracking-wide text-amber-600">Pending</span>
+                    <span className="text-xs font-medium uppercase tracking-wide text-amber-600">En attente</span>
                     <div className="flex flex-wrap justify-start gap-2 md:justify-end">
                       <Button
                         type="button"
@@ -358,7 +358,7 @@ export default function Team() {
                         onClick={() => copyInviteSignupUrl(invite.email, invite.id)}
                       >
                         {copiedInviteKey === invite.id ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
-                        {copiedInviteKey === invite.id ? 'Copied' : 'Copy signup link'}
+                        {copiedInviteKey === invite.id ? 'Copié' : 'Copier le lien'}
                       </Button>
                       <Button
                         variant="outline"
@@ -366,7 +366,7 @@ export default function Team() {
                         disabled={isRevoking}
                         onClick={() => revokeInviteMutation.mutate(invite.id)}
                       >
-                        {isRevoking ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Revoke'}
+                        {isRevoking ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Révoquer'}
                       </Button>
                     </div>
                   </div>
@@ -381,25 +381,25 @@ export default function Team() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Members
+            Membres
           </CardTitle>
           <CardDescription>
             {members.length <= 1
-              ? "You're the only member in this workspace."
-              : 'Manage who can collaborate on qualification, pipeline reviews, and outreach.'}
+              ? 'Vous êtes le seul membre de ce workspace.'
+              : 'Gérez qui peut collaborer sur la qualification, le pipeline et la prospection.'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {isLoadingMembers ? (
             <div className="flex items-center gap-2 text-sm text-slate-500">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Loading members...
+              Chargement des membres…
             </div>
           ) : membersError ? (
-            <p className="text-sm text-rose-600">{membersError.message || 'Failed to load workspace members.'}</p>
+            <p className="text-sm text-rose-600">{membersError.message || 'Échec du chargement des membres du workspace.'}</p>
           ) : members.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-200 p-4 text-sm text-slate-500">
-              No team members found.
+              Aucun membre trouvé.
             </div>
           ) : (
             <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white">
@@ -416,7 +416,7 @@ export default function Team() {
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-slate-900">
                         {member.full_name || member.email || member.user_id}
-                        {isCurrentUser ? <span className="ml-2 text-xs text-slate-400">You</span> : null}
+                        {isCurrentUser ? <span className="ml-2 text-xs text-slate-400">Vous</span> : null}
                       </p>
                       {member.email ? <p className="truncate text-xs text-slate-500">{member.email}</p> : null}
                     </div>
@@ -456,22 +456,22 @@ export default function Team() {
                           onClick={() => {
                             const memberLabel = member.full_name || member.email || member.user_id;
                             const confirmed = window.confirm(
-                              `Transfer workspace ownership to ${memberLabel}? You will become an admin.`
+                              `Transférer la propriété du workspace à ${memberLabel} ? Vous deviendrez admin.`
                             );
                             if (!confirmed) return;
                             transferOwnershipMutation.mutate(member.user_id);
                           }}
                         >
                           {isTransferringOwnership ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                          Transfer ownership
+                          Transférer la propriété
                         </Button>
                       ) : null}
                       <span className="text-xs text-slate-400">
                         {member.role === 'owner'
-                          ? 'Transfer ownership before removing this owner'
+                          ? 'Transférez la propriété avant de retirer ce propriétaire'
                           : canManageRoles
-                            ? 'Role managed above'
-                            : 'Read only'}
+                            ? 'Rôle géré ci-dessus'
+                            : 'Lecture seule'}
                       </span>
                     </div>
                   </div>
@@ -481,28 +481,28 @@ export default function Team() {
           )}
 
           <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-xs text-slate-600">
-            Owners can transfer ownership safely before offboarding. Non-owner members can be removed without breaking workspace access.
+            Les propriétaires peuvent transférer la propriété avant de quitter. Les membres non-propriétaires peuvent être retirés sans impacter l&apos;accès au workspace.
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Roles & permissions</CardTitle>
-          <CardDescription>Keep the role choice simple and explicit while safe offboarding stays intentionally limited.</CardDescription>
+          <CardTitle>Rôles et permissions</CardTitle>
+          <CardDescription>Choix de rôle simple et explicite. Le départ sécurisé est intentionnellement limité.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-slate-600">
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p className="font-medium text-slate-900">Owner</p>
-            <p className="mt-1 text-xs text-slate-500">Full workspace control, including role management and ownership transfer.</p>
+            <p className="font-medium text-slate-900">Propriétaire</p>
+            <p className="mt-1 text-xs text-slate-500">Contrôle total du workspace : gestion des rôles et transfert de propriété.</p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <p className="font-medium text-slate-900">Admin</p>
-            <p className="mt-1 text-xs text-slate-500">Can invite members and manage pending invites.</p>
+            <p className="mt-1 text-xs text-slate-500">Peut inviter des membres et gérer les invitations en attente.</p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p className="font-medium text-slate-900">Member</p>
-            <p className="mt-1 text-xs text-slate-500">Can use the workspace but cannot manage access.</p>
+            <p className="font-medium text-slate-900">Membre</p>
+            <p className="mt-1 text-xs text-slate-500">Peut utiliser le workspace mais ne peut pas gérer les accès.</p>
           </div>
         </CardContent>
       </Card>

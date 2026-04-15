@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { ClipboardList, Download, Filter, Loader2, Mail, RefreshCcw, Search, Shield, Sparkles, Tag, Trash2, TrendingUp, Users } from 'lucide-react';
+import { ClipboardList, Download, Filter, Mail, RefreshCcw, Search, Shield, Sparkles, Tag, Trash2, TrendingUp, Users } from 'lucide-react';
+import { SkeletonList } from '@/components/ui/skeleton';
 import { formatDistanceToNow, format } from 'date-fns';
 import { dataClient } from '@/services/dataClient';
 import { Button } from '@/components/ui/button';
@@ -222,15 +223,15 @@ export default function AuditLog() {
       {/* Table */}
       <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
         {isLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-6 h-6 text-slate-300 animate-spin" />
+          <div className="p-4">
+            <SkeletonList rows={6} />
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center">
               <ClipboardList className="w-5 h-5 text-slate-300" />
             </div>
-            <p className="text-sm text-slate-400">No audit entries found</p>
+            <p className="text-sm text-slate-400">Aucun événement d&apos;audit trouvé</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
