@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="14" fill="#0f172a"/>
+  <defs>
+    <linearGradient id="fav-lg" x1="6" y1="58" x2="58" y2="6" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#7c3aed"/>
+      <stop offset="45%"  stop-color="#be185d"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+  </defs>
+  <!-- Left leg of A -->
+  <line x1="7"  y1="56" x2="32" y2="10" stroke="url(#fav-lg)" stroke-width="5.5" stroke-linecap="round"/>
+  <!-- Right outer leg -->
+  <line x1="57" y1="56" x2="32" y2="10" stroke="url(#fav-lg)" stroke-width="5.5" stroke-linecap="round"/>
+  <!-- Inner right element -->
+  <line x1="44" y1="36" x2="32" y2="10" stroke="url(#fav-lg)" stroke-width="5.5" stroke-linecap="round"/>
+  <!-- Crossbar -->
+  <line x1="16" y1="36" x2="47" y2="36" stroke="url(#fav-lg)" stroke-width="5.5" stroke-linecap="round"/>
+  <!-- Signal dot -->
+  <circle cx="32" cy="9" r="5" fill="#f97316"/>
+</svg>

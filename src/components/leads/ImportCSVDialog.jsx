@@ -1,0 +1,569 @@
+import React, { useRef, useState } from 'react';
+import { AlertCircle, ArrowRight, CheckCircle2, FileText, Loader2, Sparkles, Target, Upload, XCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { dataClient } from '@/services/dataClient';
+import { ACTIVATION_ANALYZE_BATCH_SIZE } from '@/constants/activation';
+
+// ─── Parsers ──────────────────────────────────────────────────────────────────
+
+/**
+ * RFC-4180 compliant CSV parser — handles quoted fields with commas + newlines.
+ */
+const parseCsv = (text) => {
+  const lines = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const next = text[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === '\n' && !inQuotes) {
+      lines.push(current.trimEnd());
+      current = '';
+    } else if (char === '\r' && next === '\n' && !inQuotes) {
+      lines.push(current.trimEnd());
+      current = '';
+      i++;
+    } else {
+      current += char;
+    }
+  }
+  if (current.trim()) lines.push(current.trimEnd());
+
+  const nonEmpty = lines.filter((l) => l.trim());
+  if (nonEmpty.length < 2) return [];
+
+  const splitRow = (line) => {
+    const fields = [];
+    let field = '';
+    let quoted = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      const n = line[i + 1];
+      if (c === '"') {
+        if (quoted && n === '"') { field += '"'; i++; }
+        else { quoted = !quoted; }
+      } else if (c === ',' && !quoted) {
+        fields.push(field);
+        field = '';
+      } else {
+        field += c;
+      }
+    }
+    fields.push(field);
+    return fields;
+  };
+
+  const headers = splitRow(nonEmpty[0]).map((h) => h.trim().toLowerCase().replace(/"/g, ''));
+
+  return nonEmpty
+    .slice(1)
+    .map((line) => {
+      const values = splitRow(line);
+      return headers.reduce((row, header, idx) => ({ ...row, [header]: (values[idx] || '').trim() }), {});
+    })
+    .filter((row) => row.company_name || row['company name'] || row.name);
+};
+
+/**
+ * Parse XLSX files in the browser.
+ * Returns rows normalized with lowercase header keys.
+ */
+const parseXlsx = async (file) => {
+  const { default: readXlsxFile } = await import('read-excel-file/browser');
+  const rows = await readXlsxFile(file);
+  if (rows.length < 2) return [];
+
+  const headers = rows[0].map((header) => String(header ?? '').trim().toLowerCase());
+
+  return rows
+    .slice(1)
+    .map((row) =>
+      headers.reduce((normalized, header, idx) => {
+        normalized[header] = String(row[idx] ?? '').trim();
+        return normalized;
+      }, {})
+    )
+    .filter((row) => row.company_name || row['company name'] || row.name);
+};
+
+// ─── Column mapping ────────────────────────────────────────────────────────────
+
+const COLUMN_MAP = {
+  'company name': 'company_name',
+  name: 'company_name',
+  nom: 'company_name',
+  entreprise: 'company_name',
+  website: 'website_url',
+  site: 'website_url',
+  url: 'website_url',
+  secteur: 'industry',
+  sector: 'industry',
+  taille: 'company_size',
+  size: 'company_size',
+  employees: 'company_size',
+  pays: 'country',
+  'contact name': 'contact_name',
+  contact: 'contact_name',
+  'nom contact': 'contact_name',
+  role: 'contact_role',
+  poste: 'contact_role',
+  title: 'contact_role',
+  email: 'contact_email',
+  mail: 'contact_email',
+  notes: 'notes',
+  source: 'source_list',
+};
+
+const normalizeRow = (row) => {
+  const result = { ...row };
+  for (const [alias, canonical] of Object.entries(COLUMN_MAP)) {
+    if (row[alias] !== undefined && result[canonical] === undefined) {
+      result[canonical] = row[alias];
+    }
+  }
+  return result;
+};
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export default function ImportCSVDialog({
+  open,
+  onOpenChange,
+  onImportSuccess,
+  hasActiveIcp = false,
+  onReviewIcp,
+  onFocusImportedLeads,
+  onAnalyzeImportedLeads,
+}) {
+  const { t } = useTranslation();
+  const [preview, setPreview] = useState([]);
+  const [allRows, setAllRows] = useState([]);
+  const [importing, setImporting] = useState(false);
+  const [imported, setImported] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [handoffAction, setHandoffAction] = useState(null);
+  const [error, setError] = useState(null);
+  const [fileName, setFileName] = useState('');
+  const fileInputRef = useRef(null);
+
+  const resetDialog = () => {
+    setPreview([]);
+    setAllRows([]);
+    setImported(false);
+    setImportResult(null);
+    setHandoffAction(null);
+    setError(null);
+    setImporting(false);
+    setFileName('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleOpenChange = (nextOpen) => {
+    if (!nextOpen) resetDialog();
+    onOpenChange(nextOpen);
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setError(null);
+    setImported(false);
+    setFileName(file.name);
+
+    const isXlsx = /\.xlsx$/i.test(file.name);
+    const isLegacySpreadsheet = /\.(xls|ods)$/i.test(file.name);
+
+    if (isLegacySpreadsheet) {
+      setError(t('import.dialog.errors.legacyFormat', { defaultValue: 'Les fichiers .xls et .ods sont désactivés pour des raisons de sécurité. Réexportez en .xlsx ou .csv.' }));
+      return;
+    }
+
+    if (isXlsx) {
+      void (async () => {
+        try {
+          const rows = (await parseXlsx(file)).map(normalizeRow);
+          if (rows.length === 0) {
+            setError(t('import.dialog.errors.noValidRows', { defaultValue: 'Aucune ligne exploitable trouvée. Vérifiez la présence d’une colonne company_name ou équivalente.' }));
+            return;
+          }
+          setAllRows(rows);
+          setPreview(rows.slice(0, 5));
+        } catch (err) {
+          setError(t('import.dialog.errors.excelParse', { defaultValue: 'Impossible de lire le fichier Excel : {{message}}', message: err?.message || 'unknown error' }));
+        }
+      })();
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const rows = parseCsv(String(e.target?.result || '')).map(normalizeRow);
+          if (rows.length === 0) {
+            setError(t('import.dialog.errors.csvInvalid', { defaultValue: 'Le CSV doit contenir au moins une ligne valide avec company_name.' }));
+            return;
+          }
+          setAllRows(rows);
+          setPreview(rows.slice(0, 5));
+        } catch {
+          setError(t('import.dialog.errors.csvParse', { defaultValue: 'Impossible de lire ce fichier CSV.' }));
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleImport = async () => {
+    if (allRows.length === 0) return;
+    setImporting(true);
+
+    try {
+      const validRows = allRows.filter((r) => r.company_name || r['company name'] || r.name);
+      const skippedRows = allRows
+        .map((r, i) => ({ row: i + 2, data: r }))
+        .filter((_, i) => !(allRows[i].company_name || allRows[i]['company name'] || allRows[i].name));
+
+      const created = await dataClient.leads.bulkCreate(validRows);
+
+      const result = { created: created.length, skipped: skippedRows.length, skippedRows, createdLeads: created };
+      setImportResult(result);
+      setImported(true);
+
+      if (skippedRows.length > 0) {
+        toast.success(
+          t('import.dialog.toasts.importPartial', {
+            defaultValue: '{{created}} leads importés. {{skipped}} ligne(s) ignorée(s).',
+            created: created.length,
+            skipped: skippedRows.length,
+          })
+        );
+      } else {
+        toast.success(
+          t('import.dialog.toasts.importSuccess', {
+            defaultValue: '{{created}} leads importés avec succès.',
+            created: created.length,
+          })
+        );
+      }
+
+      onImportSuccess?.(result);
+    } catch (err) {
+      console.warn('Import failed', err);
+      toast.error(t('import.dialog.toasts.importFailed', { defaultValue: "L'import a échoué. Vérifiez le format puis réessayez." }));
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const PREVIEW_COLS = ['company_name', 'website_url', 'industry', 'company_size', 'country'];
+  const previewHeaders = preview.length > 0
+    ? PREVIEW_COLS.filter((col) => preview.some((row) => row[col]))
+    : [];
+  const stage = imported ? 'done' : preview.length > 0 ? 'review' : 'upload';
+
+  const handleHandoff = async (action, callback) => {
+    if (!callback || !importResult) return;
+    setHandoffAction(action);
+    try {
+      await callback(importResult);
+    } finally {
+      setHandoffAction(null);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{t('import.dialog.title', { defaultValue: 'Importer vos leads' })}</DialogTitle>
+          <DialogDescription>
+            {t('import.dialog.subtitle', {
+              defaultValue: 'CSV et Excel (.xlsx) sont pris en charge. Le but ici est simple: vérifier votre fichier, importer proprement, puis vous envoyer vers la bonne prochaine action.',
+            })}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="grid gap-2 sm:grid-cols-3">
+            {[
+              {
+                id: 'upload',
+                label: t('import.dialog.stages.upload', { defaultValue: 'Charger le fichier' }),
+              },
+              {
+                id: 'review',
+                label: t('import.dialog.stages.review', { defaultValue: 'Vérifier l’aperçu' }),
+              },
+              {
+                id: 'done',
+                label: t('import.dialog.stages.done', { defaultValue: 'Lancer la suite' }),
+              },
+            ].map((item, index) => {
+              const isCurrent = item.id === stage;
+              const isDone = ['upload', 'review', 'done'].indexOf(item.id) < ['upload', 'review', 'done'].indexOf(stage);
+              return (
+                <div
+                  key={item.id}
+                  className={`rounded-2xl border px-3 py-3 text-sm transition-colors ${
+                    isCurrent
+                      ? 'border-brand-sky/30 bg-brand-sky/5 text-slate-950'
+                      : isDone
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                        : 'border-slate-200 bg-slate-50 text-slate-500'
+                  }`}
+                >
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em]">
+                    {t('import.dialog.stepLabel', { defaultValue: 'Étape {{count}}', count: index + 1 })}
+                  </p>
+                  <p className="mt-1 font-medium">{item.label}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+            <p className="font-semibold text-slate-900">
+              {t('import.dialog.formatTitle', { defaultValue: 'Formats et colonnes utiles' })}
+            </p>
+            <p className="mt-1">
+              {t('import.dialog.formatBody', {
+                defaultValue: 'Formats acceptés: CSV et .xlsx. Colonne requise: company_name. Colonnes utiles: website_url, industry, company_size, country, contact_name, contact_role, contact_email, notes, source_list.',
+              })}
+            </p>
+          </div>
+
+          {!hasActiveIcp ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <p className="font-semibold">
+                {t('import.dialog.icpMissing.title', { defaultValue: "ICP actif recommandé avant l'import" })}
+              </p>
+              <p className="mt-1">
+                {t('import.dialog.icpMissing.body', {
+                  defaultValue: "Vous pouvez importer maintenant, mais la première analyse sera plus utile avec un ICP actif. On vous redirigera vers ce setup juste après si besoin.",
+                })}
+              </p>
+            </div>
+          ) : null}
+
+          {!imported ? (
+            <>
+              <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:border-brand-sky/40 transition-colors">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,.xlsx"
+                  className="hidden"
+                  id="lead-file-upload"
+                  onChange={handleFileChange}
+                />
+                <label htmlFor="lead-file-upload" className="cursor-pointer">
+                  <Upload className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+                  {fileName ? (
+                    <p className="text-sm font-medium text-brand-sky">{fileName}</p>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-slate-700">
+                        {t('import.dialog.dropzone.title', { defaultValue: 'Cliquez pour charger un fichier CSV ou Excel' })}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        {t('import.dialog.dropzone.subtitle', { defaultValue: '.csv · .xlsx' })}
+                      </p>
+                    </>
+                  )}
+                </label>
+              </div>
+
+              {error && (
+                <div className="flex items-start gap-2 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 border border-red-100">
+                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  {error}
+                </div>
+              )}
+
+              {preview.length > 0 && (
+                <div>
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    <p className="text-sm font-medium text-slate-700">
+                      {t('import.dialog.preview.title', {
+                        defaultValue: 'Aperçu prêt — {{count}} lignes détectées',
+                        count: allRows.length,
+                      })}
+                    </p>
+                    <Badge variant="outline">
+                      {t('import.dialog.preview.badge', { defaultValue: 'Vérifiez avant import' })}
+                    </Badge>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-lg border border-slate-200">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {previewHeaders.map((header) => (
+                            <TableHead key={header} className="text-xs whitespace-nowrap">{header}</TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {preview.map((row, rowIndex) => (
+                          <TableRow key={rowIndex}>
+                            {previewHeaders.map((header, colIndex) => (
+                              <TableCell key={colIndex} className="text-xs max-w-[160px] truncate">
+                                {row[header] || '-'}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-sm font-semibold text-slate-900">
+                      {t('import.dialog.preview.checkTitle', { defaultValue: 'À vérifier avant de continuer' })}
+                    </p>
+                    <div className="mt-2 grid gap-2 text-sm text-slate-600 sm:grid-cols-3">
+                      {[
+                        t('import.dialog.preview.checkOne', { defaultValue: 'Les noms d’entreprises sont bien remplis' }),
+                        t('import.dialog.preview.checkTwo', { defaultValue: 'Les colonnes website / industry sont correctes' }),
+                        t('import.dialog.preview.checkThree', { defaultValue: 'Le volume attendu correspond à votre fichier' }),
+                      ].map((item) => (
+                        <div key={item} className="rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200">
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 mt-4">
+                    <Button
+                      onClick={handleImport}
+                      disabled={importing}
+                      className="gap-2 bg-gradient-to-r from-brand-sky to-brand-sky-2"
+                    >
+                      {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                      {importing
+                        ? t('import.dialog.actions.importing', { defaultValue: 'Import en cours…' })
+                        : t('import.dialog.actions.importCount', {
+                            defaultValue: 'Importer {{count}} leads',
+                            count: allRows.length,
+                          })}
+                    </Button>
+                    <Button variant="outline" onClick={() => handleOpenChange(false)}>
+                      {t('common.cancel', { defaultValue: 'Annuler' })}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="space-y-4">
+              <div className="text-center py-6">
+                <CheckCircle2 className="w-14 h-14 text-emerald-500 mx-auto mb-3" />
+                <h3 className="text-lg font-semibold text-slate-900 mb-1">
+                  {t('import.dialog.success.title', { defaultValue: 'Import terminé' })}
+                </h3>
+                <p className="text-slate-500">
+                  <span className="font-semibold text-emerald-600">{importResult?.created ?? 0} leads</span>{' '}
+                  {t('import.dialog.success.body', { defaultValue: 'importés avec succès.' })}
+                  {importResult?.skipped > 0 && (
+                    <span className="text-amber-600">
+                      {' '}
+                      {t('import.dialog.success.skipped', {
+                        defaultValue: '{{count}} ligne(s) ignorée(s).',
+                        count: importResult.skipped,
+                      })}
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-sky-100 bg-sky-50/70 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-sky-700">
+                  {t('import.dialog.nextBestStep', { defaultValue: 'Meilleure suite' })}
+                </p>
+                <p className="mt-1 text-sm text-slate-600">
+                  {hasActiveIcp
+                    ? t('import.dialog.success.analyzeHint', {
+                        defaultValue: 'Analysez les {{count}} premiers leads importés pour générer score, signaux et copy commerciale prête à exploiter.',
+                        count: Math.min(importResult?.created ?? 0, ACTIVATION_ANALYZE_BATCH_SIZE),
+                      })
+                    : t('import.dialog.success.icpHint', {
+                        defaultValue: 'Activez maintenant un ICP pour scorer les leads importés avec le bon profil.',
+                      })}
+                </p>
+              </div>
+
+              {importResult?.skippedRows?.length > 0 && (
+                <div className="border border-amber-200 rounded-xl bg-amber-50 p-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-amber-700 mb-2">
+                    <XCircle className="w-3.5 h-3.5" />
+                    {t('import.dialog.skipped.title', { defaultValue: 'Lignes ignorées (company_name manquant)' })}
+                  </div>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {importResult.skippedRows.map(({ row, data }) => (
+                      <div key={row} className="text-xs text-amber-700 flex gap-2">
+                        <span className="font-mono font-bold">
+                          {t('import.dialog.skipped.row', { defaultValue: 'Ligne {{row}} :', row })}
+                        </span>
+                        <span className="truncate text-amber-600">{JSON.stringify(data).slice(0, 80)}…</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handleHandoff('focus', onFocusImportedLeads)}
+                  disabled={handoffAction !== null}
+                  className="gap-2"
+                >
+                  {handoffAction === 'focus' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+                  {t('import.dialog.actions.reviewImported', { defaultValue: 'Voir les leads importés' })}
+                </Button>
+                <Button
+                  onClick={() => handleHandoff(hasActiveIcp ? 'analyze' : 'icp', hasActiveIcp ? onAnalyzeImportedLeads : onReviewIcp)}
+                  disabled={handoffAction !== null}
+                  className="gap-2 bg-gradient-to-r from-brand-sky to-brand-sky-2"
+                >
+                  {handoffAction === 'analyze' || handoffAction === 'icp' ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : hasActiveIcp ? (
+                    <Sparkles className="w-4 h-4" />
+                  ) : (
+                    <Target className="w-4 h-4" />
+                  )}
+                  {hasActiveIcp
+                    ? t('import.dialog.actions.analyzeImported', {
+                        defaultValue: 'Analyser les {{count}} premiers',
+                        count: Math.min(importResult?.created ?? 0, ACTIVATION_ANALYZE_BATCH_SIZE),
+                      })
+                    : t('import.dialog.actions.configureIcp', { defaultValue: "Activer l'ICP avant l'analyse" })}
+                </Button>
+              </div>
+
+              <Button variant="ghost" onClick={() => handleOpenChange(false)} className="w-full">
+                {t('import.dialog.actions.doLater', { defaultValue: 'Je termine ça plus tard' })}
+              </Button>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

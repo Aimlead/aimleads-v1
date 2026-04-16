@@ -1,0 +1,36 @@
+services:
+   app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: aimleads:latest
+    container_name: aimleads
+    restart: unless-stopped
+    # Secrets and runtime config loaded from .env file (never commit .env)
+    env_file:
+      - .env
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.aimleads.rule=Host(`aimlead.io`) || Host(`www.aimlead.io`)
+      - traefik.http.routers.aimleads.entrypoints=websecure
+      - traefik.http.services.aimleads.loadbalancer.server.port=3010
+      - traefik.http.services.aimleads.loadbalancer.server.scheme=http
+    environment:
+      - NODE_ENV=production
+      - API_PORT=3010
+      - TRUST_PROXY=1
+      - CORS_ORIGIN=https://aimlead.io
+      - VITE_API_BASE_URL=https://aimlead.io/api
+      - DATA_PROVIDER=supabase
+      - AUTH_PROVIDER=supabase
+      - ENABLE_DEMO_BOOTSTRAP=false
+      - ENABLE_API_DOCS=false
+      - SUPABASE_FALLBACK_TO_LOCAL=false
+      - VITE_ALLOW_API_FALLBACK=0
+    ports:
+      - "127.0.0.1:3010:3010"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="110" fill="#0f172a"/>
+  <defs>
+    <linearGradient id="pwa-lg" x1="50" y1="460" x2="462" y2="50" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#7c3aed"/>
+      <stop offset="45%"  stop-color="#be185d"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+  </defs>
+  <!-- Left leg of A -->
+  <line x1="55"  y1="440" x2="256" y2="76" stroke="url(#pwa-lg)" stroke-width="42" stroke-linecap="round"/>
+  <!-- Right outer leg -->
+  <line x1="457" y1="440" x2="256" y2="76" stroke="url(#pwa-lg)" stroke-width="42" stroke-linecap="round"/>
+  <!-- Inner right element -->
+  <line x1="350" y1="278" x2="256" y2="76" stroke="url(#pwa-lg)" stroke-width="42" stroke-linecap="round"/>
+  <!-- Crossbar -->
+  <line x1="126" y1="278" x2="374" y2="278" stroke="url(#pwa-lg)" stroke-width="42" stroke-linecap="round"/>
+  <!-- Signal dot -->
+  <circle cx="256" cy="68" r="40" fill="#f97316"/>
+</svg>

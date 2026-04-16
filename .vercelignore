@@ -1,0 +1,11 @@
+node_modules
+.git
+tests
+src/tests
+reports
+server/data/db.json
+*.log
+tmp-*
+.env
+.env.*
+coverage

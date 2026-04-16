@@ -1,0 +1,27 @@
+{
+  "name": "AimLeads – AI Lead Intelligence",
+  "short_name": "AimLeads",
+  "description": "ICP-first lead prioritization with AI intent reinforcement",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#7c3aed",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/brand/icon-pwa.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/icon-pwa.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["business", "productivity"]
+}

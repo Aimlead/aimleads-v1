@@ -1,0 +1,304 @@
+/**
+ * CRM Routes
+ *
+ * Endpoints for managing HubSpot / Salesforce CRM integrations
+ * and syncing leads to external CRM systems.
+ *
+ * All routes require authentication. Token management is restricted
+ * to workspace owners and admins (enforced in the service layer).
+ */
+
+import express from 'express';
+import { requireAuth, wrapAsyncRoutes } from '../lib/middleware.js';
+import { schemas, validateBody } from '../lib/validation.js';
+import { dataStore } from '../lib/dataStore.js';
+import { getUserWorkspaceId } from '../lib/scope.js';
+import { writeAuditLog } from '../lib/auditLog.js';
+import { createUserRateLimit } from '../lib/rateLimit.js';
+import { getWorkspacePlan } from '../lib/credits.js';
+import { getPlanEntitlements } from '../lib/plans.js';
+import {
+  listCrmIntegrations,
+  upsertCrmIntegration,
+  updateCrmConfig,
+  deleteCrmIntegration,
+  testCrmConnection,
+  syncLeadToCrm,
+  getLeadSyncStatus,
+} from '../services/crmService.js';
+
+const CRM_TYPES = ['hubspot', 'salesforce'];
+
+// 200 sync calls per hour per user — generous for manual pushes
+const crmSyncLimiter = createUserRateLimit({
+  namespace: 'crm_sync_user',
+  windowMs: 60 * 60 * 1000,
+  max: 200,
+  message: 'Too many CRM sync requests. Please wait before syncing again.',
+});
+
+const router = express.Router();
+wrapAsyncRoutes(router);
+router.use(requireAuth);
+
+const buildCrmCapacity = ({ entitlements, integrations }) => {
+  const crmSlotsIncluded = Number(entitlements?.crm_integrations ?? 0);
+  const activeIntegrations = Array.isArray(integrations)
+    ? integrations.filter((integration) => integration?.is_active)
+    : [];
+
+  return {
+    crm_slots_included: crmSlotsIncluded,
+    crm_slots_used: activeIntegrations.length,
+    crm_slots_remaining: Math.max(0, crmSlotsIncluded - activeIntegrations.length),
+    crm_limit_reached: crmSlotsIncluded > 0 ? activeIntegrations.length >= crmSlotsIncluded : true,
+    connected_crm_types: activeIntegrations
+      .map((integration) => String(integration?.crm_type || '').trim())
+      .filter(Boolean),
+  };
+};
+
+// ─── Integration management ───────────────────────────────────────────────────
+
+/**
+ * GET /crm
+ * Returns all configured CRM integrations for the workspace.
+ * Tokens are masked (***last4).
+ */
+router.get('/', async (req, res) => {
+  const workspaceId = getUserWorkspaceId(req.user);
+  const integrations = await listCrmIntegrations(workspaceId);
+  return res.json({ data: integrations });
+});
+
+/**
+ * POST /crm
+ * Save (create or update) a CRM integration.
+ * Body: { crm_type, api_token, config?: { instance_url? } }
+ */
+router.post('/', validateBody(schemas.crmSaveSchema), async (req, res) => {
+  const workspaceId = getUserWorkspaceId(req.user);
+  const { crm_type, api_token, config: crmConfig } = req.validatedBody;
+  const plan = await getWorkspacePlan(workspaceId).catch(() => null);
+  const entitlements = getPlanEntitlements(plan?.plan_slug);
+  const crmSlotsIncluded = Number(entitlements?.crm_integrations ?? 0);
+
+  if (crmSlotsIncluded <= 0) {
+    return res.status(409).json({
+      message: 'Your current plan does not include CRM integrations.',
+      code: 'WORKSPACE_CRM_LIMIT_REACHED',
+      entitlements,
+      usage: buildCrmCapacity({ entitlements, integrations: [] }),
+    });
+  }
+
+  const integrations = await listCrmIntegrations(workspaceId).catch(() => []);
+  const capacity = buildCrmCapacity({ entitlements, integrations });
+  const alreadyConnected = capacity.connected_crm_types.includes(crm_type);
+
+  if (!alreadyConnected && capacity.crm_slots_used >= crmSlotsIncluded) {
+    return res.status(409).json({
+      message: 'Your workspace has reached the CRM integration limit for the current plan.',
+      code: 'WORKSPACE_CRM_LIMIT_REACHED',
+      entitlements,
+      usage: capacity,
+    });
+  }
+
+  const integration = await upsertCrmIntegration(workspaceId, {
+    crmType: crm_type,
+    apiToken: api_token,
+    config: crmConfig,
+  });
+
+  await writeAuditLog({
+    user: req.user,
+    action: 'update',
+    resourceType: 'crm_integration',
+    resourceId: `${workspaceId}:${crm_type}`,
+    changes: { crm_type },
+  }).catch(() => {});
+
+  return res.json({ data: integration });
+});
+
+/**
+ * DELETE /crm/:crmType
+ * Remove a CRM integration.
+ */
+router.delete('/:crmType', async (req, res) => {
+  const { crmType } = req.params;
+
+  if (!CRM_TYPES.includes(crmType)) {
+    return res.status(400).json({ message: 'Invalid CRM type. Must be hubspot or salesforce.' });
+  }
+
+  const workspaceId = getUserWorkspaceId(req.user);
+  await deleteCrmIntegration(workspaceId, crmType);
+
+  await writeAuditLog({
+    user: req.user,
+    action: 'delete',
+    resourceType: 'crm_integration',
+    resourceId: `${workspaceId}:${crmType}`,
+    changes: { crm_type: crmType },
+  }).catch(() => {});
+
+  return res.json({ data: { deleted: true, crm_type: crmType } });
+});
+
+// ─── Field mapping ────────────────────────────────────────────────────────────
+
+/**
+ * GET /crm/field-mapping/:crmType
+ * Returns the saved field mapping for a CRM type.
+ */
+router.get('/field-mapping/:crmType', async (req, res) => {
+  const { crmType } = req.params;
+  if (!CRM_TYPES.includes(crmType)) {
+    return res.status(400).json({ message: 'Invalid CRM type.' });
+  }
+  const workspaceId = getUserWorkspaceId(req.user);
+  const integrations = await listCrmIntegrations(workspaceId);
+  const integration = integrations.find((i) => i.crm_type === crmType);
+  const fieldMapping = integration?.config?.field_mapping || {};
+  return res.json({ data: fieldMapping });
+});
+
+/**
+ * PUT /crm/field-mapping/:crmType
+ * Save the field mapping for a CRM type.
+ * Body: { mapping: Record<string, string> }
+ */
+router.put('/field-mapping/:crmType', async (req, res) => {
+  const { crmType } = req.params;
+  if (!CRM_TYPES.includes(crmType)) {
+    return res.status(400).json({ message: 'Invalid CRM type.' });
+  }
+
+  const mapping = req.body?.mapping;
+  if (!mapping || typeof mapping !== 'object' || Array.isArray(mapping)) {
+    return res.status(400).json({ message: 'mapping must be an object.' });
+  }
+
+  const workspaceId = getUserWorkspaceId(req.user);
+  const updated = await updateCrmConfig(workspaceId, crmType, { field_mapping: mapping });
+  if (!updated) {
+    return res.status(404).json({ message: 'CRM integration not found. Connect first.' });
+  }
+
+  await writeAuditLog({
+    user: req.user,
+    action: 'update',
+    resourceType: 'crm_field_mapping',
+    resourceId: `${workspaceId}:${crmType}`,
+    changes: { crm_type: crmType, field_mapping: mapping },
+  }).catch(() => {});
+
+  return res.json({ data: { ok: true, field_mapping: mapping } });
+});
+
+// ─── Connection test ──────────────────────────────────────────────────────────
+
+/**
+ * POST /crm/test
+ * Test the saved credentials for a CRM type.
+ * Body: { crm_type }
+ */
+router.post('/test', validateBody(schemas.crmTestSchema), async (req, res) => {
+  const workspaceId = getUserWorkspaceId(req.user);
+  const { crm_type } = req.validatedBody;
+
+  const result = await testCrmConnection(workspaceId, crm_type);
+  return res.json({ data: result });
+});
+
+// ─── Lead sync ────────────────────────────────────────────────────────────────
+
+/**
+ * POST /crm/sync/:leadId
+ * Push a single lead to the specified CRM.
+ * Body: { crm_type }
+ */
+router.post('/sync/:leadId', crmSyncLimiter, async (req, res) => {
+  const { leadId } = req.params;
+  const crmType = String(req.body?.crm_type || '').trim();
+
+  if (!CRM_TYPES.includes(crmType)) {
+    return res.status(400).json({ message: 'crm_type must be hubspot or salesforce.' });
+  }
+
+  const lead = await dataStore.getLeadById(req.user, leadId);
+  if (!lead) return res.status(404).json({ message: 'Lead not found.' });
+
+  const workspaceId = getUserWorkspaceId(req.user);
+  const result = await syncLeadToCrm(workspaceId, lead, crmType);
+
+  await writeAuditLog({
+    user: req.user,
+    action: 'create',
+    resourceType: 'crm_sync',
+    resourceId: leadId,
+    changes: {
+      crm_type: crmType,
+      success: result.success,
+      crm_object_id: result.crmObjectId || null,
+    },
+  }).catch(() => {});
+
+  const statusCode = result.success ? 200 : 502;
+  return res.status(statusCode).json({ data: result });
+});
+
+/**
+ * POST /crm/sync-bulk
+ * Push multiple leads to the specified CRM (sequential to avoid rate-limiting).
+ * Body: { lead_ids: string[], crm_type }
+ */
+router.post('/sync-bulk', crmSyncLimiter, validateBody(schemas.crmSyncBulkSchema), async (req, res) => {
+  const { lead_ids, crm_type } = req.validatedBody;
+  const workspaceId = getUserWorkspaceId(req.user);
+
+  const results = [];
+
+  for (const leadId of lead_ids) {
+    const lead = await dataStore.getLeadById(req.user, leadId);
+    if (!lead) {
+      results.push({ lead_id: leadId, success: false, error: 'not_found' });
+      continue;
+    }
+    const result = await syncLeadToCrm(workspaceId, lead, crm_type);
+    results.push({ lead_id: leadId, ...result });
+  }
+
+  const successCount = results.filter((r) => r.success).length;
+
+  return res.json({
+    data: {
+      results,
+      summary: {
+        total: lead_ids.length,
+        success: successCount,
+        failed: lead_ids.length - successCount,
+      },
+    },
+  });
+});
+
+/**
+ * GET /crm/sync-status/:leadId
+ * Returns the 10 most recent sync records for a lead.
+ */
+router.get('/sync-status/:leadId', async (req, res) => {
+  const { leadId } = req.params;
+
+  const lead = await dataStore.getLeadById(req.user, leadId);
+  if (!lead) return res.status(404).json({ message: 'Lead not found.' });
+
+  const workspaceId = getUserWorkspaceId(req.user);
+  const records = await getLeadSyncStatus(workspaceId, leadId);
+
+  return res.json({ data: records });
+});
+
+export default router;

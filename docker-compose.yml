@@ -1,0 +1,49 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_APP_VERSION: ${APP_VERSION:-1.0.0}
+        BUILD_APP_BUILD_TIME: ${APP_BUILD_TIME:-local-build}
+        BUILD_APP_COMMIT_SHA: ${APP_COMMIT_SHA:-local}
+    image: aimleads:${APP_VERSION:-latest}
+    container_name: aimleads
+    restart: unless-stopped
+    # Secrets and runtime config loaded from .env file (never commit .env)
+    env_file:
+      - .env
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.aimleads.rule=Host(`aimlead.io`) || Host(`www.aimlead.io`)
+      - traefik.http.routers.aimleads.entrypoints=websecure
+      - traefik.http.routers.aimleads.tls=true
+      - traefik.http.routers.aimleads.tls.certresolver=letsencrypt
+      - traefik.http.services.aimleads.loadbalancer.server.port=3010
+      - traefik.http.services.aimleads.loadbalancer.server.scheme=http
+      - com.aimleads.build.version=${APP_VERSION:-1.0.0}
+      - com.aimleads.build.time=${APP_BUILD_TIME:-local-build}
+      - com.aimleads.build.commit=${APP_COMMIT_SHA:-local}
+    environment:
+      - NODE_ENV=production
+      - API_PORT=3010
+      - TRUST_PROXY=1
+      - CORS_ORIGIN=https://aimlead.io
+      - VITE_API_BASE_URL=https://aimlead.io/api
+      - DATA_PROVIDER=supabase
+      - AUTH_PROVIDER=supabase
+      - ENABLE_DEMO_BOOTSTRAP=false
+      - ENABLE_API_DOCS=false
+      - SUPABASE_FALLBACK_TO_LOCAL=false
+      - VITE_ALLOW_API_FALLBACK=0
+      - APP_VERSION=${APP_VERSION:-1.0.0}
+      - APP_BUILD_TIME=${APP_BUILD_TIME:-local-build}
+      - APP_COMMIT_SHA=${APP_COMMIT_SHA:-local}
+      - APP_PUBLIC_URL=${APP_PUBLIC_URL:-https://aimlead.io}
+    ports:
+      - "127.0.0.1:3010:3010"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
