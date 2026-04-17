@@ -45,8 +45,8 @@ export default function Sidebar({ mobile = false, onNavigate, onOpenPalette, onS
       )}
     >
       {/* Brand */}
-      <div className="h-16 flex items-center px-5 border-b border-slate-200">
-        <BrandLogo variant="full" tone="light" className="h-7 w-auto max-w-[140px]" />
+      <div className="h-16 flex items-center px-5 border-b border-white/[0.06]">
+        <BrandLogo variant="full" tone="light" className="h-8 w-auto max-w-[150px]" />
       </div>
 
       {/* Search / Cmd+K */}

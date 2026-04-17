@@ -19,7 +19,7 @@ import { normalizeLeadForResponse } from '../lib/leadNormalization.js';
 import { getUserWorkspaceId } from '../lib/scope.js';
 import { logger } from '../lib/observability.js';
 import { runAiOperation } from '../services/aiRunService.js';
-import { ANALYSIS_PROMPT_VERSION } from '../services/llmService.js';
+import { ANALYSIS_PROMPT_VERSION, getIcpSummary } from '../services/llmService.js';
 import { SEQUENCE_PROMPT_VERSION } from '../services/sequenceService.js';
 import { addBreadcrumb } from '../lib/sentry.js';
 import { isFeatureFlagEnabled } from '../lib/featureFlags.js';
@@ -31,6 +31,13 @@ const sequenceLimiter = createUserRateLimit({
   windowMs: 60 * 60 * 1000,
   max: 20,
   message: 'Too many sequence generation requests, please wait.',
+});
+
+const scoreIcpLimiter = createUserRateLimit({
+  namespace: 'score_icp_user',
+  windowMs: 60 * 60 * 1000,
+  max: 60,
+  message: 'Too many Score ICP requests, please wait.',
 });
 
 const reanalyzeLimiter = createUserRateLimit({
@@ -594,6 +601,44 @@ router.post('/:leadId/external-signals', externalSignalsLimiter, validateBody(sc
       ingested_signals: normalizedSignals.length,
       extracted_from_findings: extractedSignals.length,
       reanalyzed,
+    },
+  });
+});
+
+// ─── Score ICP — deterministic scoring + Haiku summary (1 credit) ────────────
+router.post('/:leadId/score-icp', scoreIcpLimiter, requireCredits('score_icp'), async (req, res) => {
+  const lead = await dataStore.getLeadById(req.user, req.params.leadId);
+  if (!lead) return res.status(404).json({ message: 'Lead not found' });
+
+  const activeIcp = await dataStore.getActiveIcpProfile(req.user);
+  if (!activeIcp) return res.status(400).json({ message: 'No active ICP profile found' });
+
+  // Deterministic scoring only (no LLM in analyzeLead)
+  const analysis = await analyzeLead({ lead, icpProfile: activeIcp, skipLlm: true });
+
+  // Lightweight Haiku call for a 2-sentence summary + 3 improvement tips
+  const icpSummaryResult = await getIcpSummary(lead, activeIcp, analysis.icp_score, analysis.category);
+
+  // Persist ICP score fields + summary to lead
+  const scorePayload = toLeadAnalysisUpdatePayload(analysis);
+  const icpSummary = icpSummaryResult.summary
+    ? `${icpSummaryResult.summary}${icpSummaryResult.improvement_tips?.length ? `\n\nPistes d'amélioration:\n${icpSummaryResult.improvement_tips.map((t, i) => `${i + 1}. ${t}`).join('\n')}` : ''}`
+    : null;
+
+  const updatedLead = await dataStore.updateLead(req.user, lead.id, {
+    ...scorePayload,
+    ...(icpSummary ? { icp_summary: icpSummary } : {}),
+  });
+
+  return res.json({
+    data: {
+      lead: updatedLead,
+      icp_score: analysis.icp_score,
+      icp_category: analysis.category,
+      icp_priority: analysis.priority,
+      recommended_action: analysis.recommended_action,
+      summary: icpSummaryResult.summary,
+      improvement_tips: icpSummaryResult.improvement_tips,
     },
   });
 });

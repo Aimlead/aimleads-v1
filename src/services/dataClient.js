@@ -328,6 +328,7 @@ const apiClient = {
     bulkDelete: (ids) => apiRequest('/leads/bulk-delete', { method: 'POST', body: { ids } }),
     exportUrl: () => `${API_BASE_URL}/leads/export`,
     externalSignals: (id, payload) => apiRequest(`/leads/${id}/external-signals`, { method: 'POST', body: payload }),
+    scoreIcp: (id) => apiRequest(`/leads/${id}/score-icp`, { method: 'POST' }),
     reanalyze: (id, payload = {}) => apiRequest(`/leads/${id}/reanalyze`, { method: 'POST', body: payload }),
     discoverSignals: (id, payload = {}) => apiRequest(`/leads/${id}/discover-signals`, { method: 'POST', body: payload }),
     generateSequence: (id, payload = {}) => apiRequest(`/leads/${id}/sequence`, { method: 'POST', body: payload }),
@@ -603,6 +604,15 @@ export const dataClient = {
         operationName: 'leads.externalSignals',
         apiCall: () => apiClient.leads.externalSignals(id, payload),
         fallbackCall: () => leadsMockApi.externalSignals(id, payload),
+        passAuthErrors: true,
+      });
+    },
+
+    async scoreIcp(id) {
+      return runWithMode({
+        operationName: 'leads.scoreIcp',
+        apiCall: () => apiClient.leads.scoreIcp(id),
+        fallbackCall: mockUnsupported,
         passAuthErrors: true,
       });
     },

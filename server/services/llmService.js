@@ -430,6 +430,79 @@ export async function analyzeDeep(lead, icpProfile, deterministicResult, webRese
   return enrichWithLlm(lead, icpProfile, forcedDeterministic, webResearchContext);
 }
 
+// ─── Score ICP summary (lightweight Haiku call) ───────────────────────────────
+
+/**
+ * Quick ICP fit summary using Haiku — used by the "Score ICP" button.
+ * Returns: { summary: string, improvement_tips: string[] }
+ * No tool use — plain JSON response for speed and simplicity.
+ */
+export async function getIcpSummary(lead, icpProfile, icpScore, icpCategory) {
+  if (!hasAnthropic) return { summary: null, improvement_tips: [] };
+  if (circuitBreaker.isOpen()) return { summary: null, improvement_tips: [] };
+
+  const aiConfig = getRuntimeConfig().ai;
+  const model = aiConfig.haikuModel;
+
+  const icpWeights = icpProfile?.weights || {};
+  const primaires = (icpWeights.industrie?.primaires || []).join(', ') || 'non défini';
+  const roles = (icpWeights.roles?.exacts || []).join(', ') || 'non défini';
+  const geo = (icpWeights.geo?.primaire || []).join(', ') || 'non défini';
+
+  const prompt = `Tu es un expert en qualification B2B. Voici un lead et son score ICP.
+
+Lead:
+- Entreprise: ${String(lead.company_name || '').slice(0, 80)}
+- Secteur: ${String(lead.industry || 'Inconnu').slice(0, 60)}
+- Rôle contact: ${String(lead.contact_role || 'Inconnu').slice(0, 60)}
+- Taille: ${String(lead.company_size || 'Inconnue').slice(0, 40)}
+- Pays: ${String(lead.country || 'Inconnu').slice(0, 40)}
+
+Profil ICP actif ("${String(icpProfile?.name || 'ICP').slice(0, 60)}"):
+- Secteurs cibles: ${primaires}
+- Rôles cibles: ${roles}
+- Géographie: ${geo}
+
+Score ICP calculé: ${icpScore}/100 (${icpCategory})
+
+Réponds UNIQUEMENT en JSON valide avec cette structure exacte:
+{
+  "summary": "2 phrases max expliquant pourquoi ce lead obtient ce score et ce qui le qualifie ou disqualifie.",
+  "improvement_tips": ["tip 1 concret pour améliorer la qualification", "tip 2", "tip 3"]
+}
+Ne réponds rien d'autre que le JSON.`;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
+  try {
+    const message = await anthropicClient.messages.create(
+      {
+        model,
+        max_tokens: 400,
+        messages: [{ role: 'user', content: prompt }],
+      },
+      { signal: controller.signal }
+    );
+    const text = message.content?.find((b) => b.type === 'text')?.text?.trim() || '';
+    const jsonStart = text.indexOf('{');
+    const jsonEnd = text.lastIndexOf('}');
+    if (jsonStart === -1 || jsonEnd === -1) return { summary: null, improvement_tips: [] };
+    const parsed = JSON.parse(text.slice(jsonStart, jsonEnd + 1));
+    circuitBreaker.recordSuccess();
+    return {
+      summary: typeof parsed.summary === 'string' ? parsed.summary : null,
+      improvement_tips: Array.isArray(parsed.improvement_tips) ? parsed.improvement_tips.slice(0, 3) : [],
+      usage: message.usage ?? null,
+      model,
+    };
+  } catch {
+    circuitBreaker.recordFailure();
+    return { summary: null, improvement_tips: [] };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export const llmAvailable = hasAnyLLM;
 export const llmProviders = { anthropic: hasAnthropic };
 

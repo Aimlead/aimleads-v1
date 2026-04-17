@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Check, ChevronDown, ChevronUp, Copy, Database, ExternalLink, Loader2, Linkedin, Mail, Phone, Sparkles } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Copy, Database, ExternalLink, Globe, Loader2, Linkedin, Mail, Phone, Sparkles, Target } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -30,48 +30,15 @@ import StatusBadge from './StatusBadge';
 const INTENT_SIGNAL_GROUPS = [
   {
     key: 'pre_call',
-    label: 'Pre-call',
-    items: [
-      { key: 'profile_fit', label: 'Profil correspondant a la cible' },
-      { key: 'compatible_activity', label: "Activite compatible avec l'offre" },
-      { key: 'matching_segment', label: 'Segment correspondant' },
-      { key: 'offer_related_needs', label: "Besoins lies a l'offre" },
-      { key: 'recent_funding', label: 'Levee de fond recente' },
-      { key: 'major_org_change', label: 'Changements organisationnels importants' },
-      { key: 'recent_timing_event', label: 'Evenement recent opportun' },
-      { key: 'strong_growth', label: 'Forte croissance' },
-      { key: 'regulatory_need', label: 'Contrainte reglementaire pertinente' },
-      { key: 'active_rfp', label: "Appel d'offre en cours" },
-      { key: 'recent_role_change', label: 'Prise de poste recente' },
-    ],
+    items: ['profile_fit', 'compatible_activity', 'matching_segment', 'offer_related_needs', 'recent_funding', 'major_org_change', 'recent_timing_event', 'strong_growth', 'regulatory_need', 'active_rfp', 'recent_role_change'],
   },
   {
     key: 'post_contact',
-    label: 'Post-contact',
-    items: [
-      { key: 'already_equipped', label: 'Deja equipe' },
-      { key: 'budget_available', label: 'Budget disponible' },
-      { key: 'clear_priority', label: 'Priorite claire' },
-      { key: 'good_timing', label: 'Bon timing' },
-      { key: 'decision_maker_involved', label: 'Decideur implique' },
-      { key: 'actively_responding', label: 'Repond activement' },
-      { key: 'good_relationship', label: 'Bon relationnel' },
-    ],
+    items: ['already_equipped', 'budget_available', 'clear_priority', 'good_timing', 'decision_maker_involved', 'actively_responding', 'good_relationship'],
   },
   {
     key: 'negative',
-    label: 'Negatifs',
-    items: [
-      { key: 'no_budget', label: 'Aucun budget' },
-      { key: 'not_concerned', label: 'Pas concerne' },
-      { key: 'out_of_scope', label: 'Hors perimetre' },
-      { key: 'no_decision_power', label: 'Sans pouvoir decisionnel' },
-      { key: 'changed_business', label: 'A change metier' },
-      { key: 'retired', label: 'A la retraite' },
-      { key: 'liquidation_or_bankruptcy', label: 'Liquidation / redressement' },
-      { key: 'signed_competitor', label: 'Engage avec un concurrent' },
-      { key: 'closed_or_dead', label: 'Entreprise fermee / inactive' },
-    ],
+    items: ['no_budget', 'not_concerned', 'out_of_scope', 'no_decision_power', 'changed_business', 'retired', 'liquidation_or_bankruptcy', 'signed_competitor', 'closed_or_dead'],
   },
 ];
 
@@ -182,6 +149,9 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
   const [internetSignals, setInternetSignals] = useState([]);
   const [saving, setSaving] = useState(false);
   const [savingAndAnalyzing, setSavingAndAnalyzing] = useState(false);
+  const [scoringIcp, setScoringIcp] = useState(false);
+  const [discoveringWeb, setDiscoveringWeb] = useState(false);
+  const [icpSummary, setIcpSummary] = useState(lead?.icp_summary || null);
   const [showManualOverrides, setShowManualOverrides] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [activeJob, setActiveJob] = useState(null);
@@ -401,6 +371,50 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
     }
   };
 
+  const handleScoreIcp = async () => {
+    if (!lead) return;
+    setScoringIcp(true);
+    try {
+      const response = await dataClient.leads.scoreIcp(lead.id);
+      if (response?.data) {
+        const { icp_score, icp_category, summary, improvement_tips } = response.data;
+        const summaryText = summary
+          ? `${summary}${improvement_tips?.length ? `\n\nPistes d'amélioration :\n${improvement_tips.map((tip, i) => `${i + 1}. ${tip}`).join('\n')}` : ''}`
+          : null;
+        setIcpSummary(summaryText);
+        queryClient.invalidateQueries({ queryKey: ['lead', lead.id] });
+        queryClient.invalidateQueries({ queryKey: ['leads'] });
+        toast.success(t('leads.scoreIcpSuccess', { company: lead.company_name, score: icp_score, category: icp_category }));
+        onLeadUpdated?.();
+      }
+    } catch (error) {
+      toast.error(t('leads.scoreIcpFailed', { company: lead.company_name }));
+    } finally {
+      setScoringIcp(false);
+    }
+  };
+
+  const handleDiscoverWeb = async () => {
+    if (!lead) return;
+    setDiscoveringWeb(true);
+    try {
+      const response = await runSignalDiscovery({ reanalyze: false });
+      if (response?.jobId) {
+        setHandledJobId(null);
+        setActiveJob({ jobId: response.jobId, type: 'discover_web', label: t('leads.discoverWebBtn') });
+        toast.success(t('leads.asyncJobQueued', { defaultValue: 'Scan en cours en arrière-plan…' }));
+        return;
+      }
+      const signalMsg = buildDiscoverToast(response, t);
+      toast.success(signalMsg || t('leads.signalDiscovered'));
+      onLeadUpdated?.();
+    } catch (error) {
+      toast.error(error?.message || t('common.error'));
+    } finally {
+      setDiscoveringWeb(false);
+    }
+  };
+
   if (!lead) return null;
 
   const icebreakers = [
@@ -555,29 +569,31 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
             {showManualOverrides ? (
               <Tabs defaultValue="pre_call" className="space-y-3 mt-3">
                 <TabsList className="grid grid-cols-3 w-full">
-                  <TabsTrigger value="pre_call">{t('leads.preCall')}</TabsTrigger>
-                  <TabsTrigger value="post_contact">{t('leads.postContact')}</TabsTrigger>
-                  <TabsTrigger value="negative">{t('leads.negativeSignals')}</TabsTrigger>
+                  {INTENT_SIGNAL_GROUPS.map((group) => (
+                    <TabsTrigger key={group.key} value={group.key}>
+                      {t(`leads.signalGroups.${group.key}`, group.key)}
+                    </TabsTrigger>
+                  ))}
                 </TabsList>
 
                 {INTENT_SIGNAL_GROUPS.map((group) => (
                   <TabsContent key={group.key} value={group.key} className="space-y-2">
                     <p className="text-xs text-slate-500">{t('leads.manualSelectionCount', { count: (intentSignals[group.key] || []).length })}</p>
                     <div className="flex flex-wrap gap-2">
-                      {group.items.map((item) => {
-                        const selected = (intentSignals[group.key] || []).includes(item.key);
+                      {group.items.map((signalKey) => {
+                        const selected = (intentSignals[group.key] || []).includes(signalKey);
                         return (
                           <button
-                            key={item.key}
+                            key={signalKey}
                             type="button"
-                            onClick={() => toggleIntentSignal(group.key, item.key)}
+                            onClick={() => toggleIntentSignal(group.key, signalKey)}
                             className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
                               selected
                                 ? 'bg-brand-sky text-white border-brand-sky'
                                 : 'bg-white text-slate-700 border-slate-300 hover:border-brand-sky/40 hover:text-brand-sky'
                             }`}
                           >
-                            {item.label}
+                            {t(`leads.signalLabels.${signalKey}`, signalKey)}
                           </button>
                         );
                       })}
@@ -588,14 +604,59 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
             ) : null}
           </div>
 
-          <div className="flex gap-2">
-            <Button onClick={handleSaveAndAnalyze} disabled={savingAndAnalyzing || saving || isJobActive} className="gap-2">
-              {savingAndAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              {t('leads.saveAndReanalyze')}
-              {!savingAndAnalyzing && <span className="text-[10px] opacity-60 font-normal">{t('leads.creditsCost', { count: 3 })}</span>}
-            </Button>
-            <Button variant="outline" onClick={handleSave} disabled={saving || savingAndAnalyzing || isJobActive}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t('leads.saveDraft')}
+          {/* Action buttons — 3 levels: cheap → medium → expensive */}
+          <div className="space-y-2">
+            <div className="grid grid-cols-3 gap-2">
+              {/* 1. Score ICP — deterministic + Haiku (1 crédit) */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleScoreIcp}
+                disabled={scoringIcp || isJobActive}
+                className="flex-col h-auto py-2 gap-0.5 text-center"
+                title={t('leads.scoreIcpCost')}
+              >
+                {scoringIcp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Target className="w-4 h-4 text-brand-sky" />}
+                <span className="text-[11px] font-medium leading-tight">
+                  {scoringIcp ? t('leads.scoreIcpBtnLoading') : t('leads.scoreIcpBtn')}
+                </span>
+                <span className="text-[9px] text-slate-400">{t('leads.scoreIcpCost')}</span>
+              </Button>
+
+              {/* 2. Analyser signaux — full Haiku/Sonnet analysis (3 crédits) */}
+              <Button
+                size="sm"
+                onClick={handleSaveAndAnalyze}
+                disabled={savingAndAnalyzing || isJobActive}
+                className="flex-col h-auto py-2 gap-0.5 text-center"
+                title={t('leads.analyseSignalsCost')}
+              >
+                {savingAndAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                <span className="text-[11px] font-medium leading-tight">
+                  {savingAndAnalyzing ? t('leads.analyseSignalsBtnLoading') : t('leads.analyseSignalsBtn')}
+                </span>
+                <span className="text-[9px] opacity-60">{t('leads.analyseSignalsCost')}</span>
+              </Button>
+
+              {/* 3. Découvrir web — internet signals (3 crédits) */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDiscoverWeb}
+                disabled={discoveringWeb || isJobActive}
+                className="flex-col h-auto py-2 gap-0.5 text-center"
+                title={t('leads.discoverWebCost')}
+              >
+                {discoveringWeb ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4 text-emerald-600" />}
+                <span className="text-[11px] font-medium leading-tight">
+                  {discoveringWeb ? t('leads.discoverWebBtnLoading') : t('leads.discoverWebBtn')}
+                </span>
+                <span className="text-[9px] text-slate-400">{t('leads.discoverWebCost')}</span>
+              </Button>
+            </div>
+            <Button variant="ghost" size="sm" onClick={handleSave} disabled={saving || isJobActive} className="w-full text-xs text-slate-500">
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
+              {isDirty ? t('leads.saveChangesCta') : t('leads.saveDraft')}
             </Button>
           </div>
         </div>
@@ -651,6 +712,16 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
               </TabsContent>
             ))}
           </Tabs>
+        )}
+
+        {icpSummary && (
+          <div className="mb-4 rounded-xl border border-brand-sky/20 bg-brand-sky/4 p-4">
+            <p className="text-xs font-semibold text-brand-sky mb-1.5 flex items-center gap-1.5">
+              <Target className="w-3.5 h-3.5" />
+              {t('leads.icpSummary')}
+            </p>
+            <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{icpSummary}</p>
+          </div>
         )}
 
         {lead.analysis_summary && (

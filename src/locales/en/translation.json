@@ -328,6 +328,26 @@
       "terms": "terms",
       "and": "and our",
       "privacy": "privacy policy"
+    },
+    "bookingModal": {
+      "title": "Book your free audit",
+      "subtitle": "30 minutes to identify your top 3 AI priorities. Response within 24h, no commitment.",
+      "placeholderName": "First & Last Name",
+      "placeholderCompany": "Your company",
+      "placeholderEmail": "Work email",
+      "placeholderTeamSize": "Size of your sales team",
+      "selectInterestDefault": "I'm interested in…",
+      "interestConseil": "Consulting & Claude Training",
+      "interestLeadScorer": "Lead Scorer SaaS",
+      "interestBdr": "Automated BDR",
+      "interestAll": "All 3 solutions",
+      "placeholderNotes": "Context, objective or urgency (optional)",
+      "submit": "Request my audit →",
+      "submitting": "Sending…",
+      "footer": "Confirmation directly in the app · Manual follow-up by the AimLeads team",
+      "successTitle": "Request received!",
+      "successNote": "Your request has been submitted. The AimLeads team will get back to you within 24 business hours.",
+      "errorFallback": "Unable to send the request right now. Please try again in a few moments."
     }
   },
   "authCallback": {
@@ -732,6 +752,52 @@
       "negotiation": "Negotiation",
       "closed_won": "Won",
       "closed_lost": "Lost"
+    },
+    "scoreIcpBtn": "Score ICP",
+    "scoreIcpBtnLoading": "Scoring…",
+    "scoreIcpCost": "1 credit",
+    "scoreIcpSuccess": "ICP score computed for {{company}}",
+    "scoreIcpFailed": "ICP score failed for {{company}}",
+    "analyseSignalsBtn": "Analyse signals",
+    "analyseSignalsBtnLoading": "Analysing…",
+    "analyseSignalsCost": "3 credits",
+    "discoverWebBtn": "Discover web",
+    "discoverWebBtnLoading": "Scanning…",
+    "discoverWebCost": "3 credits",
+    "icpSummary": "ICP Summary",
+    "signalGroups": {
+      "pre_call": "Pre-call",
+      "post_contact": "Post-contact",
+      "negative": "Negative signals"
+    },
+    "signalLabels": {
+      "profile_fit": "Profile matches target",
+      "compatible_activity": "Activity compatible with offer",
+      "matching_segment": "Matching segment",
+      "offer_related_needs": "Needs related to offer",
+      "recent_funding": "Recent funding round",
+      "major_org_change": "Major organisational change",
+      "recent_timing_event": "Timely recent event",
+      "strong_growth": "Strong growth",
+      "regulatory_need": "Relevant regulatory constraint",
+      "active_rfp": "Active RFP",
+      "recent_role_change": "Recent role change",
+      "already_equipped": "Already equipped",
+      "budget_available": "Budget available",
+      "clear_priority": "Clear priority",
+      "good_timing": "Good timing",
+      "decision_maker_involved": "Decision-maker involved",
+      "actively_responding": "Actively responding",
+      "good_relationship": "Good rapport",
+      "no_budget": "No budget",
+      "not_concerned": "Not concerned",
+      "out_of_scope": "Out of scope",
+      "no_decision_power": "No decision power",
+      "changed_business": "Changed business",
+      "retired": "Retired",
+      "liquidation_or_bankruptcy": "Liquidation / bankruptcy",
+      "signed_competitor": "Signed with competitor",
+      "closed_or_dead": "Company closed / inactive"
     }
   },
   "accountSettings": {
@@ -1480,7 +1546,12 @@
     "firstValue": "First qualified lead",
     "inviteTeam": "Invite a teammate",
     "accountRecovery": "Account recovery",
-    "troubleshooting": "Troubleshooting",
+    "troubleshooting": {
+      "csv": "CSV import: start with company_name and website_url, then add contact fields if available.",
+      "invites": "Invites: the teammate must sign up with the exact invited email for automatic workspace join.",
+      "integrations": "Integrations: scoring and sequence quality improve when Anthropic, Hunter, and NewsAPI are configured.",
+      "offboarding": "Offboarding: safe member removal is intentionally disabled until the tenancy model is hardened."
+    },
     "contactSupport": "Contact support",
     "page": {
       "title": "Help Center",
@@ -1521,12 +1592,6 @@
         "title": "Team lifecycle",
         "body": "Invites and role changes are live. Owner transfer and safe offboarding are still restricted until the platform tenancy model is hardened."
       }
-    },
-    "troubleshooting": {
-      "csv": "CSV import: start with company_name and website_url, then add contact fields if available.",
-      "invites": "Invites: the teammate must sign up with the exact invited email for automatic workspace join.",
-      "integrations": "Integrations: scoring and sequence quality improve when Anthropic, Hunter, and NewsAPI are configured.",
-      "offboarding": "Offboarding: safe member removal is intentionally disabled until the tenancy model is hardened."
     }
   },
   "analytics": {
