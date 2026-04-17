@@ -1,7 +1,9 @@
 import { useEffect, useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { dataClient } from '@/services/dataClient';
 
 export default function BookingModal({ open, onClose }) {
+  const { t } = useTranslation();
   const [submitted, setSubmitted] = useState(false);
   const [submissionNote, setSubmissionNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -58,10 +60,10 @@ export default function BookingModal({ open, onClose }) {
         },
       }).catch(() => {});
 
-      setSubmissionNote("Votre demande a bien ete transmise. L'equipe AimLeads revient vers vous sous 24h ouvrées.");
+      setSubmissionNote(t('landing.bookingModal.successNote'));
       setSubmitted(true);
     } catch (submitError) {
-      setError(submitError?.message || "Impossible d'envoyer la demande pour le moment. Reessayez dans quelques instants.");
+      setError(submitError?.message || t('landing.bookingModal.errorFallback'));
     } finally {
       setSubmitting(false);
     }
@@ -80,43 +82,41 @@ export default function BookingModal({ open, onClose }) {
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
       >
-        <button className="modal-close" type="button" onClick={onClose} aria-label="Fermer">✕</button>
+        <button className="modal-close" type="button" onClick={onClose} aria-label={t('common.close')}>✕</button>
 
         {submitted ? (
           <div style={{ textAlign: 'center', padding: '32px 0' }}>
             <div style={{ fontSize: 40, marginBottom: 16 }}>✅</div>
-            <div id={titleId} className="modal-title">Demande recue !</div>
-            <p id={descriptionId} className="modal-sub">{submissionNote || "Votre demande a bien ete transmise."}</p>
+            <div id={titleId} className="modal-title">{t('landing.bookingModal.successTitle')}</div>
+            <p id={descriptionId} className="modal-sub">{submissionNote || t('landing.bookingModal.successNote')}</p>
             <button className="m-submit" type="button" onClick={onClose} style={{ marginTop: 16 }}>
-              Fermer
+              {t('common.close')}
             </button>
           </div>
         ) : (
           <>
-            <div id={titleId} className="modal-title">Reservez votre audit offert</div>
-            <p id={descriptionId} className="modal-sub">
-              30 minutes pour identifier vos 3 priorites IA. Reponse sous 24h, sans engagement.
-            </p>
+            <div id={titleId} className="modal-title">{t('landing.bookingModal.title')}</div>
+            <p id={descriptionId} className="modal-sub">{t('landing.bookingModal.subtitle')}</p>
             <form className="m-form" onSubmit={handleSubmit}>
               <div className="m-row">
-                <input type="text" name="full_name" className="m-input" placeholder="Prenom &amp; Nom" required />
-                <input type="text" name="company" className="m-input" placeholder="Votre entreprise" required />
+                <input type="text" name="full_name" className="m-input" placeholder={t('landing.bookingModal.placeholderName')} required />
+                <input type="text" name="company" className="m-input" placeholder={t('landing.bookingModal.placeholderCompany')} required />
               </div>
-              <input type="email" name="email" className="m-input" placeholder="Email professionnel" required />
-              <input type="text" name="team_size" className="m-input" placeholder="Taille de votre equipe commerciale" />
+              <input type="email" name="email" className="m-input" placeholder={t('landing.bookingModal.placeholderEmail')} required />
+              <input type="text" name="team_size" className="m-input" placeholder={t('landing.bookingModal.placeholderTeamSize')} />
               <select name="interest" className="m-select" defaultValue="">
-                <option disabled value="">Je suis interesse par…</option>
-                <option>Conseil &amp; Formation Claude</option>
-                <option>Lead-Scoreur SaaS</option>
-                <option>BDR Automatise</option>
-                <option>Les 3 solutions</option>
+                <option disabled value="">{t('landing.bookingModal.selectInterestDefault')}</option>
+                <option>{t('landing.bookingModal.interestConseil')}</option>
+                <option>{t('landing.bookingModal.interestLeadScorer')}</option>
+                <option>{t('landing.bookingModal.interestBdr')}</option>
+                <option>{t('landing.bookingModal.interestAll')}</option>
               </select>
-              <textarea name="notes" className="m-input" placeholder="Contexte, objectif ou urgence (optionnel)" rows={3} />
+              <textarea name="notes" className="m-input" placeholder={t('landing.bookingModal.placeholderNotes')} rows={3} />
               {error ? <p className="m-note" style={{ color: '#b91c1c' }}>{error}</p> : null}
               <button className="m-submit" type="submit" disabled={submitting}>
-                {submitting ? 'Envoi en cours...' : 'Demander mon audit →'}
+                {submitting ? t('landing.bookingModal.submitting') : t('landing.bookingModal.submit')}
               </button>
-              <p className="m-note">Confirmation directement dans l'app · Suivi manuel par l'equipe AimLeads</p>
+              <p className="m-note">{t('landing.bookingModal.footer')}</p>
             </form>
           </>
         )}

@@ -393,6 +393,26 @@
       "terms": "CGU",
       "and": "et notre",
       "privacy": "politique de confidentialité"
+    },
+    "bookingModal": {
+      "title": "Réservez votre audit offert",
+      "subtitle": "30 minutes pour identifier vos 3 priorités IA. Réponse sous 24h, sans engagement.",
+      "placeholderName": "Prénom & Nom",
+      "placeholderCompany": "Votre entreprise",
+      "placeholderEmail": "Email professionnel",
+      "placeholderTeamSize": "Taille de votre équipe commerciale",
+      "selectInterestDefault": "Je suis intéressé par…",
+      "interestConseil": "Conseil & Formation Claude",
+      "interestLeadScorer": "Lead-Scoreur SaaS",
+      "interestBdr": "BDR Automatisé",
+      "interestAll": "Les 3 solutions",
+      "placeholderNotes": "Contexte, objectif ou urgence (optionnel)",
+      "submit": "Demander mon audit →",
+      "submitting": "Envoi en cours…",
+      "footer": "Confirmation directement dans l'app · Suivi manuel par l'équipe AimLeads",
+      "successTitle": "Demande reçue !",
+      "successNote": "Votre demande a bien été transmise. L'équipe AimLeads revient vers vous sous 24h ouvrées.",
+      "errorFallback": "Impossible d'envoyer la demande pour le moment. Réessayez dans quelques instants."
     }
   },
   "authCallback": {
@@ -797,6 +817,52 @@
       "negotiation": "Négociation",
       "closed_won": "Gagné",
       "closed_lost": "Perdu"
+    },
+    "scoreIcpBtn": "Score ICP",
+    "scoreIcpBtnLoading": "Calcul…",
+    "scoreIcpCost": "1 crédit",
+    "scoreIcpSuccess": "Score ICP calculé pour {{company}}",
+    "scoreIcpFailed": "Échec du score ICP pour {{company}}",
+    "analyseSignalsBtn": "Analyser signaux",
+    "analyseSignalsBtnLoading": "Analyse…",
+    "analyseSignalsCost": "3 crédits",
+    "discoverWebBtn": "Découvrir web",
+    "discoverWebBtnLoading": "Scan…",
+    "discoverWebCost": "3 crédits",
+    "icpSummary": "Résumé ICP",
+    "signalGroups": {
+      "pre_call": "Pré-appel",
+      "post_contact": "Post-contact",
+      "negative": "Signaux négatifs"
+    },
+    "signalLabels": {
+      "profile_fit": "Profil correspondant à la cible",
+      "compatible_activity": "Activité compatible avec l'offre",
+      "matching_segment": "Segment correspondant",
+      "offer_related_needs": "Besoins liés à l'offre",
+      "recent_funding": "Levée de fonds récente",
+      "major_org_change": "Changements organisationnels importants",
+      "recent_timing_event": "Événement récent opportun",
+      "strong_growth": "Forte croissance",
+      "regulatory_need": "Contrainte réglementaire pertinente",
+      "active_rfp": "Appel d'offre en cours",
+      "recent_role_change": "Prise de poste récente",
+      "already_equipped": "Déjà équipé",
+      "budget_available": "Budget disponible",
+      "clear_priority": "Priorité claire",
+      "good_timing": "Bon timing",
+      "decision_maker_involved": "Décideur impliqué",
+      "actively_responding": "Répond activement",
+      "good_relationship": "Bon relationnel",
+      "no_budget": "Aucun budget",
+      "not_concerned": "Pas concerné",
+      "out_of_scope": "Hors périmètre",
+      "no_decision_power": "Sans pouvoir décisionnel",
+      "changed_business": "A changé de métier",
+      "retired": "À la retraite",
+      "liquidation_or_bankruptcy": "Liquidation / redressement",
+      "signed_competitor": "Engagé avec un concurrent",
+      "closed_or_dead": "Entreprise fermée / inactive"
     }
   },
   "pipeline": {
@@ -833,17 +899,44 @@
     }
   },
   "analytics": {
-    "title": "Analytiques",
-    "scoreDistribution": "Distribution des scores",
-    "leadsByIndustry": "Leads par secteur",
-    "leadsByCountry": "Leads par pays",
-    "leadsByStatus": "Leads par statut",
-    "conversionRate": "Taux de conversion",
-    "avgIcpScore": "Score ICP moyen",
-    "totalAnalyzed": "Total analysés",
-    "topIndustries": "Top secteurs",
-    "noData": "Pas encore de données analytiques.",
-    "noDataSubtitle": "Analysez vos leads pour voir les statistiques ici."
+    "title": "Analytics",
+    "subtitle": "Performance du scoring lead et insights pipeline.",
+    "unlistedSource": "Sans liste",
+    "ranges": {
+      "last7": "7 derniers jours",
+      "last30": "30 derniers jours",
+      "last90": "90 derniers jours",
+      "last365": "365 derniers jours"
+    },
+    "clearDateFilter": "Effacer le filtre de date",
+    "cards": {
+      "totalLeads": "Total leads",
+      "qualificationRate": "Taux de qualification",
+      "qualifiedCount": "{{count}} qualifiés",
+      "avgFinalScore": "Score final moyen",
+      "avgFinalScoreHint": "sur l’ensemble des leads",
+      "excellentLeads": "Leads excellents",
+      "excellentLeadsHint": "Score ≥ 80"
+    },
+    "aiBanner": "<strong>{{count}} leads</strong> enrichis avec raisonnement IA, signaux internet vérifiés et ajustements de score ciblés.",
+    "charts": {
+      "categoryBreakdown": "Répartition des catégories ICP",
+      "scoreDistribution": "Distribution des scores",
+      "topIndustries": "Top secteurs",
+      "sourceListPerformance": "Performance par liste source"
+    },
+    "empty": {
+      "analyzedLeads": "Aucun lead analysé pour le moment",
+      "industryData": "Pas encore de données secteur",
+      "sourceListData": "Pas encore de données par liste source"
+    },
+    "tooltip": {
+      "leadsCount": "{{count}} leads"
+    },
+    "legend": {
+      "avgScore": "Score moyen",
+      "convRate": "Taux de conv. %"
+    }
   },
   "icp": {
     "title": "Profil ICP",
@@ -1048,13 +1141,121 @@
     }
   },
   "settings": {
-    "title": "Paramètres",
-    "workspace": "Workspace",
-    "integrations": "Intégrations",
-    "developerTools": "Outils développeur",
-    "aiScoring": "Scoring IA",
-    "aiScoringActive": "Scoring IA actif",
-    "aiScoringSubtitle": "ICP · Signaux · Priorisation"
+    "pageTitle": "Paramètres",
+    "pageSubtitle": "Centre de configuration pour l'ICP, les intégrations et les options workspace.",
+    "cards": {
+      "icp": {
+        "title": "Profil ICP",
+        "description": "Gérez votre profil client idéal et vos critères de scoring",
+        "body": "Ajustez les secteurs, rôles, tailles d'entreprise, géographie et poids qui définissent vos meilleurs leads.",
+        "action": "Configurer le profil ICP"
+      },
+      "api": {
+        "title": "Clés API",
+        "description": "État réel des connexions nécessaires au scoring et à l'enrichissement",
+        "providers": {
+          "claude": {
+            "label": "Claude (Anthropic)",
+            "description": "Scoring IA, web research, enrichissement des signaux"
+          },
+          "hunter": {
+            "label": "Hunter.io",
+            "description": "Recherche et vérification d'emails"
+          },
+          "newsApi": {
+            "label": "NewsAPI",
+            "description": "Signaux d'intention et actualités entreprise"
+          }
+        },
+        "connected": "Connecté",
+        "notConfigured": "Non configuré",
+        "configureHint": "Pour configurer :",
+        "footer": "Hunter et NewsAPI restent optionnels. Anthropic est le connecteur critique pour le scoring IA."
+      },
+      "team": {
+        "title": "Équipe & permissions",
+        "description": "Rôles membres et modèle d'accès au workspace"
+      },
+      "billing": {
+        "title": "Facturation & abonnement",
+        "description": "Plan, usage et gestion des quotas"
+      }
+    },
+    "featureFlags": {
+      "title": "Feature flags",
+      "subtitle": "Pilotez les rollouts workspace par workspace.",
+      "body": "Utilisez ces toggles pour préparer ou ouvrir progressivement des capacités produit et plateforme sans déployer tout le monde en même temps.",
+      "readOnly": "Seuls les owners et admins du workspace peuvent modifier ces flags.",
+      "defaultState": "État par défaut : {{state}}",
+      "toggleAria": "Activer ou désactiver le flag {{flag}}",
+      "toasts": {
+        "enabled": "{{flag}} activé.",
+        "disabled": "{{flag}} désactivé.",
+        "failed": "Impossible de mettre à jour ce feature flag."
+      }
+    },
+    "livePlan": {
+      "teamCapacityLabel": "Capacité équipe",
+      "teamBody": "Cette page vous permet maintenant de voir immédiatement si la limite équipe du plan commence à freiner l’invitation, la collaboration ou le déploiement du workflow.",
+      "manageTeam": "Gérer l’équipe",
+      "manageCrm": "Voir les CRM",
+      "planLabel": "Plan actif",
+      "balanceLoading": "Lecture des quotas en cours…",
+      "balanceSummary": "{{count}} crédits encore disponibles.",
+      "runwayLabel": "Autonomie",
+      "crmSummary": "{{used}} CRM actif(s) sur {{total}}, {{remaining}} restant(s).",
+      "billingBody": "Le plan, le solde crédits, l’autonomie projetée et la capacité CRM restent visibles ici sans devoir quitter Settings.",
+      "manageBilling": "Ouvrir billing",
+      "comparePlans": "Comparer les plans"
+    },
+    "scoring": {
+      "title": "Paramètres de scoring",
+      "subtitle": "Ajustez les poids ICP/IA et les seuils de qualification sans toucher au code.",
+      "activeProfile": "Profil actif :",
+      "noActiveProfile": "Aucun profil ICP actif trouvé. Créez d'abord un profil ICP.",
+      "blendSummary": "Répartition normalisée utilisée par l'analyse : ICP {{icp}} % + IA {{ai}} %.",
+      "quickPresets": "Presets rapides",
+      "icpThresholdPreview": "Seuils ICP : Excellent ≥ {{excellent}}, Fort ≥ {{strong}}, Moyen ≥ {{medium}}.",
+      "finalThresholdPreview": "Seuils finaux : Excellent ≥ {{excellent}}, Fort ≥ {{strong}}, Moyen ≥ {{medium}}.",
+      "previewCategories": "Aperçu des catégories : ICP 55 => {{icp55}}, ICP 80 => {{icp80}}, Final 45 => {{final45}}, Final 70 => {{final70}}.",
+      "icpCategoryThresholds": "Seuils des catégories ICP",
+      "finalCategoryThresholds": "Seuils des catégories finales (ICP + IA)",
+      "categories": {
+        "excellent": "Excellent",
+        "strong": "Fort",
+        "medium": "Moyen",
+        "low": "Faible"
+      },
+      "fields": {
+        "icpWeight": "Poids ICP (%)",
+        "aiWeight": "Poids IA (%)",
+        "excellent": "Excellent >=",
+        "strong": "Fort >=",
+        "medium": "Moyen >="
+      },
+      "presets": {
+        "balanced": {
+          "label": "Équilibré",
+          "description": "Mélange stable pour des pipelines outbound mixtes."
+        },
+        "icpFirst": {
+          "label": "ICP d'abord",
+          "description": "Fit plus strict avant de booster par l'intention."
+        },
+        "intentFirst": {
+          "label": "Intent d'abord",
+          "description": "Plus réactif aux signaux d'achat externes."
+        }
+      },
+      "actions": {
+        "reset": "Réinitialiser",
+        "save": "Enregistrer les paramètres de scoring"
+      },
+      "toasts": {
+        "saved": "Paramètres de scoring enregistrés. Les nouvelles analyses utilisent désormais ces poids et seuils.",
+        "failed": "Impossible d'enregistrer les paramètres de scoring."
+      }
+    }
   },
   "accountSettings": {
     "title": "Mon compte",
@@ -1463,130 +1664,18 @@
       }
     }
   },
-  "settings": {
-    "pageTitle": "Paramètres",
-    "pageSubtitle": "Centre de configuration pour l'ICP, les intégrations et les options workspace.",
-    "cards": {
-      "icp": {
-        "title": "Profil ICP",
-        "description": "Gérez votre profil client idéal et vos critères de scoring",
-        "body": "Ajustez les secteurs, rôles, tailles d'entreprise, géographie et poids qui définissent vos meilleurs leads.",
-        "action": "Configurer le profil ICP"
-      },
-      "api": {
-        "title": "Clés API",
-        "description": "État réel des connexions nécessaires au scoring et à l'enrichissement",
-        "providers": {
-          "claude": {
-            "label": "Claude (Anthropic)",
-            "description": "Scoring IA, web research, enrichissement des signaux"
-          },
-          "hunter": {
-            "label": "Hunter.io",
-            "description": "Recherche et vérification d'emails"
-          },
-          "newsApi": {
-            "label": "NewsAPI",
-            "description": "Signaux d'intention et actualités entreprise"
-          }
-        },
-        "connected": "Connecté",
-        "notConfigured": "Non configuré",
-        "configureHint": "Pour configurer :",
-        "footer": "Hunter et NewsAPI restent optionnels. Anthropic est le connecteur critique pour le scoring IA."
-      },
-      "team": {
-        "title": "Équipe & permissions",
-        "description": "Rôles membres et modèle d'accès au workspace"
-      },
-      "billing": {
-        "title": "Facturation & abonnement",
-        "description": "Plan, usage et gestion des quotas"
-      }
-    },
-    "featureFlags": {
-      "title": "Feature flags",
-      "subtitle": "Pilotez les rollouts workspace par workspace.",
-      "body": "Utilisez ces toggles pour préparer ou ouvrir progressivement des capacités produit et plateforme sans déployer tout le monde en même temps.",
-      "readOnly": "Seuls les owners et admins du workspace peuvent modifier ces flags.",
-      "defaultState": "État par défaut : {{state}}",
-      "toggleAria": "Activer ou désactiver le flag {{flag}}",
-      "toasts": {
-        "enabled": "{{flag}} activé.",
-        "disabled": "{{flag}} désactivé.",
-        "failed": "Impossible de mettre à jour ce feature flag."
-      }
-    },
-    "livePlan": {
-      "teamCapacityLabel": "Capacité équipe",
-      "teamBody": "Cette page vous permet maintenant de voir immédiatement si la limite équipe du plan commence à freiner l’invitation, la collaboration ou le déploiement du workflow.",
-      "manageTeam": "Gérer l’équipe",
-      "manageCrm": "Voir les CRM",
-      "planLabel": "Plan actif",
-      "balanceLoading": "Lecture des quotas en cours…",
-      "balanceSummary": "{{count}} crédits encore disponibles.",
-      "runwayLabel": "Autonomie",
-      "crmSummary": "{{used}} CRM actif(s) sur {{total}}, {{remaining}} restant(s).",
-      "billingBody": "Le plan, le solde crédits, l’autonomie projetée et la capacité CRM restent visibles ici sans devoir quitter Settings.",
-      "manageBilling": "Ouvrir billing",
-      "comparePlans": "Comparer les plans"
-    },
-    "scoring": {
-      "title": "Paramètres de scoring",
-      "subtitle": "Ajustez les poids ICP/IA et les seuils de qualification sans toucher au code.",
-      "activeProfile": "Profil actif :",
-      "noActiveProfile": "Aucun profil ICP actif trouvé. Créez d'abord un profil ICP.",
-      "blendSummary": "Répartition normalisée utilisée par l'analyse : ICP {{icp}} % + IA {{ai}} %.",
-      "quickPresets": "Presets rapides",
-      "icpThresholdPreview": "Seuils ICP : Excellent ≥ {{excellent}}, Fort ≥ {{strong}}, Moyen ≥ {{medium}}.",
-      "finalThresholdPreview": "Seuils finaux : Excellent ≥ {{excellent}}, Fort ≥ {{strong}}, Moyen ≥ {{medium}}.",
-      "previewCategories": "Aperçu des catégories : ICP 55 => {{icp55}}, ICP 80 => {{icp80}}, Final 45 => {{final45}}, Final 70 => {{final70}}.",
-      "icpCategoryThresholds": "Seuils des catégories ICP",
-      "finalCategoryThresholds": "Seuils des catégories finales (ICP + IA)",
-      "categories": {
-        "excellent": "Excellent",
-        "strong": "Fort",
-        "medium": "Moyen",
-        "low": "Faible"
-      },
-      "fields": {
-        "icpWeight": "Poids ICP (%)",
-        "aiWeight": "Poids IA (%)",
-        "excellent": "Excellent >=",
-        "strong": "Fort >=",
-        "medium": "Moyen >="
-      },
-      "presets": {
-        "balanced": {
-          "label": "Équilibré",
-          "description": "Mélange stable pour des pipelines outbound mixtes."
-        },
-        "icpFirst": {
-          "label": "ICP d'abord",
-          "description": "Fit plus strict avant de booster par l'intention."
-        },
-        "intentFirst": {
-          "label": "Intent d'abord",
-          "description": "Plus réactif aux signaux d'achat externes."
-        }
-      },
-      "actions": {
-        "reset": "Réinitialiser",
-        "save": "Enregistrer les paramètres de scoring"
-      },
-      "toasts": {
-        "saved": "Paramètres de scoring enregistrés. Les nouvelles analyses utilisent désormais ces poids et seuils.",
-        "failed": "Impossible d'enregistrer les paramètres de scoring."
-      }
-    }
-  },
   "help": {
     "title": "Centre d'aide",
     "subtitle": "Guides et ressources pour bien utiliser AimLeads.",
     "firstValue": "Premier lead qualifié",
     "inviteTeam": "Inviter un collègue",
     "accountRecovery": "Récupération de compte",
-    "troubleshooting": "Résolution de problèmes",
+    "troubleshooting": {
+      "csv": "Import CSV : commencez avec company_name et website_url, puis ajoutez les champs contact si disponibles.",
+      "invites": "Invitations : le collègue doit s’inscrire avec exactement l’email invité pour rejoindre automatiquement le bon workspace.",
+      "integrations": "Intégrations : la qualité du scoring et des séquences monte quand Anthropic, Hunter et NewsAPI sont configurés.",
+      "offboarding": "Offboarding : la suppression sûre de membre reste volontairement encadrée tant que le modèle de tenancy n’est pas finalisé."
+    },
     "contactSupport": "Contacter le support",
     "page": {
       "title": "Centre d'aide",
@@ -1627,52 +1716,6 @@
         "title": "Cycle de vie équipe",
         "body": "Les invitations et changements de rôle sont actifs. Le transfert d’owner et l’offboarding sûr restent volontairement encadrés tant que le modèle de tenancy n’est pas totalement durci."
       }
-    },
-    "troubleshooting": {
-      "csv": "Import CSV : commencez avec company_name et website_url, puis ajoutez les champs contact si disponibles.",
-      "invites": "Invitations : le collègue doit s’inscrire avec exactement l’email invité pour rejoindre automatiquement le bon workspace.",
-      "integrations": "Intégrations : la qualité du scoring et des séquences monte quand Anthropic, Hunter et NewsAPI sont configurés.",
-      "offboarding": "Offboarding : la suppression sûre de membre reste volontairement encadrée tant que le modèle de tenancy n’est pas finalisé."
-    }
-  },
-  "analytics": {
-    "title": "Analytics",
-    "subtitle": "Performance du scoring lead et insights pipeline.",
-    "unlistedSource": "Sans liste",
-    "ranges": {
-      "last7": "7 derniers jours",
-      "last30": "30 derniers jours",
-      "last90": "90 derniers jours",
-      "last365": "365 derniers jours"
-    },
-    "clearDateFilter": "Effacer le filtre de date",
-    "cards": {
-      "totalLeads": "Total leads",
-      "qualificationRate": "Taux de qualification",
-      "qualifiedCount": "{{count}} qualifiés",
-      "avgFinalScore": "Score final moyen",
-      "avgFinalScoreHint": "sur l’ensemble des leads",
-      "excellentLeads": "Leads excellents",
-      "excellentLeadsHint": "Score ≥ 80"
-    },
-    "aiBanner": "<strong>{{count}} leads</strong> enrichis avec raisonnement IA, signaux internet vérifiés et ajustements de score ciblés.",
-    "charts": {
-      "categoryBreakdown": "Répartition des catégories ICP",
-      "scoreDistribution": "Distribution des scores",
-      "topIndustries": "Top secteurs",
-      "sourceListPerformance": "Performance par liste source"
-    },
-    "empty": {
-      "analyzedLeads": "Aucun lead analysé pour le moment",
-      "industryData": "Pas encore de données secteur",
-      "sourceListData": "Pas encore de données par liste source"
-    },
-    "tooltip": {
-      "leadsCount": "{{count}} leads"
-    },
-    "legend": {
-      "avgScore": "Score moyen",
-      "convRate": "Taux de conv. %"
     }
   },
   "auditLog": {
