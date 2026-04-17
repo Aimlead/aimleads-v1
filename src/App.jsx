@@ -33,6 +33,7 @@ const Outreach = lazy(() => import('@/pages/Outreach'));
 const CrmIntegration = lazy(() => import('@/pages/CrmIntegration'));
 const Help = lazy(() => import('@/pages/Help'));
 const AuthCallback = lazy(() => import('@/pages/AuthCallback'));
+const LandingV2 = lazy(() => import('@/pages/LandingV2'));
 
 function PageLoader() {
   return (
@@ -98,6 +99,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path={ROUTES.home} element={<Landing />} />
+      <Route path={ROUTES.landingV2} element={<LandingV2 />} />
       <Route path={ROUTES.pricing} element={<Pricing />} />
       <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
       <Route path={ROUTES.resetPassword} element={<ResetPassword />} />
