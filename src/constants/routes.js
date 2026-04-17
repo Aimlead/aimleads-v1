@@ -1,6 +1,6 @@
 export const ROUTES = {
   home: '/',
-  landingV2: '/v2',
+  landingLegacy: '/v1',
   login: '/login',
   dashboard: '/dashboard',
   onboarding: '/onboarding',

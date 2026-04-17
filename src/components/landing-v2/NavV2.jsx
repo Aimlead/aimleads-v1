@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
+import BrandLogo from '@/components/brand/BrandLogo';
 
 export default function NavV2({ onOpenBooking }) {
   const scrollTo = (id) => (e) => {
@@ -10,7 +11,7 @@ export default function NavV2({ onOpenBooking }) {
   return (
     <nav className="lv2-nav" aria-label="Navigation principale">
       <Link to="/" className="lv2-nav-brand" aria-label="AimLeads — accueil">
-        <span className="lv2-nav-logo" aria-hidden="true" />
+        <BrandLogo variant="mark" tone="light" className="lv2-nav-brand-mark" alt="AimLeads" />
         <span>AimLeads</span>
       </Link>
 

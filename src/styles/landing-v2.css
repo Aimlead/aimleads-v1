@@ -199,21 +199,15 @@
   text-decoration: none;
   color: var(--lv2-text);
 }
-.lv2-nav-logo {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: conic-gradient(from 180deg, #3a8dff, #5ad38c, #3a8dff);
-  box-shadow: 0 0 14px rgba(58, 141, 255, 0.5);
-  position: relative;
-  overflow: hidden;
+.lv2-nav-brand-mark {
+  height: 28px !important;
+  width: auto !important;
+  filter: drop-shadow(0 0 10px rgba(58, 141, 255, 0.35));
 }
-.lv2-nav-logo::after {
-  content: '';
-  position: absolute;
-  inset: 3px;
-  border-radius: 5px;
-  background: var(--lv2-bg-2);
+.lv2-footer-wordmark {
+  height: 32px !important;
+  width: auto !important;
+  filter: drop-shadow(0 0 14px rgba(58, 141, 255, 0.25));
 }
 .lv2-nav-links {
   display: flex;
