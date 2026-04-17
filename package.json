@@ -21,13 +21,16 @@
     "test:ui": "vitest run",
     "test:ui:watch": "vitest",
     "test:ui:coverage": "vitest run --coverage",
-    "export:supabase": "node scripts/export-db-for-supabase.mjs"
+    "export:supabase": "node scripts/export-db-for-supabase.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report e2e-report"
   },
-    "overrides": {
-          "lodash": "^4.17.21"
-    },
+  "overrides": {
+    "lodash": "^4.17.21"
+  },
   "dependencies": {
-    "@anthropic-ai/sdk" : "^0.81.0",
+    "@anthropic-ai/sdk": "^0.81.0",
     "@hello-pangea/dnd": "^17.0.0",
     "@hookform/resolvers": "^4.1.2",
     "@radix-ui/react-accordion": "^1.2.3",
@@ -86,6 +89,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
+    "@playwright/test": "^1.59.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.5.2",

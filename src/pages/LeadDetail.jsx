@@ -14,6 +14,7 @@ import { FOLLOW_UP_STATUS_LIST } from '@/constants/leads';
 import { dataClient } from '@/services/dataClient';
 import ScoreGauge from '@/components/leads/ScoreGauge';
 import SignalBadge from '@/components/leads/SignalBadge';
+import ScoreExplainability from '@/components/leads/ScoreExplainability';
 
 const toMetric = (value) => (Number.isFinite(Number(value)) ? Number(value) : null);
 
@@ -317,6 +318,7 @@ export default function LeadDetail() {
                 )}
                 <p className="text-[11px] text-slate-400">Score final = ICP déterministe + signaux internet (web research, news, email)</p>
               </div>
+              <ScoreExplainability lead={lead} />
             </CardContent>
           </Card>
 
