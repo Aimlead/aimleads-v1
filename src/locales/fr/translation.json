@@ -868,6 +868,92 @@
     "profileSaved": "Profil ICP enregistré.",
     "weights": "Pondérations",
     "removeTag": "Retirer {{value}}",
+    "unsavedChanges": "⚠ Modifications non enregistrées — cliquez sur Enregistrer pour les appliquer au scoring",
+    "defaults": {
+      "profileName": "Mon ICP"
+    },
+    "actions": {
+      "generateWithAi": "Générer avec l'IA",
+      "generateShort": "IA",
+      "editProfile": "Modifier le profil"
+    },
+    "dialog": {
+      "title": "Générer un ICP avec l'IA",
+      "description": "Décrivez votre client idéal en langage naturel. Claude remplira automatiquement les industries, rôles, taille d'entreprise et géographie.",
+      "placeholder": "Ex : PME SaaS B2B française de 50 à 500 employés, décideur IT, secteurs finance ou industrie, budget annuel > 50 k€, déjà équipée d'un CRM…",
+      "hint": "Si la génération échoue, vérifiez d’abord Anthropic : clé backend, crédits disponibles, ou circuit breaker temporaire.",
+      "generate": "Générer",
+      "creditCost": "3 crédits"
+    },
+    "tabs": {
+      "criteria": "Critères",
+      "weights": "Pondérations du scoring"
+    },
+    "sections": {
+      "profileInformation": "Informations du profil",
+      "criterionImportance": "Importance des critères",
+      "criterionImportanceBody": "Ajustez le poids de chaque critère dans le score ICP. 100 % = poids normal, 150 % = critique, 0 % = ignoré.",
+      "blendTitle": "Équilibre IA vs ICP",
+      "blendBody": "Score final = score ICP de base + renfort des signaux IA. Ajustez le poids de chaque côté.",
+      "scoreThresholds": "Seuils de score",
+      "scoreThresholdsBody": "Définissez à partir de quel score un lead devient Excellent, Fort ou Moyen.",
+      "thresholdHint": "Les leads sous le seuil Moyen restent en Low Fit. Les exclusions doivent venir uniquement de règles dures.",
+      "weightDescriptions": {
+        "industry": "À quel point le secteur compte-t-il ? Primaire = +30 pts × poids",
+        "roles": "À quel point le rôle du contact compte-t-il ? Exact = +25 pts × poids",
+        "clientType": "À quel point le modèle B2B/B2C compte-t-il ? Match = +25 pts × poids",
+        "companySize": "À quel point la taille d'entreprise compte-t-elle ? Primaire = +15 pts × poids",
+        "geography": "À quel point le pays compte-t-il ? Primaire = +15 pts × poids"
+      }
+    },
+    "labels": {
+      "primaryIndustries": "Secteurs primaires (+30 pts)",
+      "secondaryIndustries": "Secteurs secondaires (+15 pts)",
+      "excludedIndustries": "Secteurs exclus (élimine le lead)",
+      "exactRoles": "Rôles exacts (+25 pts)",
+      "similarRoles": "Rôles proches (+10 pts)",
+      "excludedRoles": "Rôles exclus (élimine le lead)",
+      "primaryMinEmployees": "Min employés (primaire)",
+      "primaryMaxEmployees": "Max employés (primaire)",
+      "secondaryMinEmployees": "Min employés (secondaire)",
+      "secondaryMaxEmployees": "Max employés (secondaire)",
+      "primaryCountries": "Pays prioritaires (+15 pts)",
+      "secondaryCountries": "Pays secondaires (+5 pts)",
+      "clientTypeSection": "Type de client",
+      "primaryClientType": "Type de client principal (B2B / B2C / B2B2C)",
+      "secondaryClientType": "Type de client secondaire",
+      "icpWeight": "Poids ICP",
+      "aiWeight": "Poids IA",
+      "moreIcp": "Plus de règles ICP",
+      "moreAi": "Plus piloté par l'IA",
+      "excellentThreshold": "Excellent ≥",
+      "strongThreshold": "Fort ≥",
+      "mediumThreshold": "Moyen ≥"
+    },
+    "placeholders": {
+      "profileDescription": "Résumé court de ce profil",
+      "industries": "ex. SaaS, FinTech, Cybersécurité",
+      "secondaryIndustries": "ex. Conseil, MarTech",
+      "excludedIndustries": "ex. Hôpitaux, secteur public",
+      "exactRoles": "ex. CEO, CTO, VP Sales",
+      "similarRoles": "ex. Director, Head of, Manager",
+      "excludedRoles": "ex. Stagiaire, étudiant, RH",
+      "primaryCountries": "ex. France, Allemagne",
+      "secondaryCountries": "ex. Belgique, Espagne",
+      "primaryClientType": "ex. B2B",
+      "secondaryClientType": "ex. B2B2C"
+    },
+    "weightScale": {
+      "ignored": "0 % (ignoré)",
+      "normal": "100 % (normal)",
+      "critical": "150 % (critique)"
+    },
+    "errors": {
+      "credit": "Génération impossible : crédits Anthropic insuffisants. Rechargez le compte puis réessayez.",
+      "apiKey": "Génération impossible : la clé Anthropic n’est pas configurée côté backend.",
+      "circuitBreaker": "La génération IA est momentanément désactivée après plusieurs échecs. Attendez un instant puis réessayez.",
+      "generic": "Génération échouée. Vérifiez Anthropic puis réessayez."
+    },
     "toasts": {
       "generateUnavailable": "Génération impossible : vérifiez la configuration Anthropic côté backend.",
       "generated": "ICP \"{{name}}\" généré. Vérifiez-le puis enregistrez.",
@@ -1123,6 +1209,21 @@
       "connectionTestFailed": "Échec de la connexion {{crm}}. Vérifiez votre token.",
       "connectionTestUnavailable": "Impossible de tester la connexion {{crm}}.",
       "limitReached": "Le workspace a atteint la limite CRM du plan actuel."
+    },
+    "aimFields": {
+      "companyName": "Nom de l'entreprise",
+      "contactName": "Nom du contact",
+      "contactEmail": "Email du contact",
+      "contactRole": "Rôle du contact",
+      "industry": "Secteur",
+      "country": "Pays",
+      "companySize": "Taille de l'entreprise",
+      "website": "Site web",
+      "icpScore": "Score ICP",
+      "icpCategory": "Catégorie ICP",
+      "finalScore": "Score final",
+      "status": "Statut",
+      "notes": "Notes"
     }
   },
   "outreach": {
@@ -1141,7 +1242,49 @@
       "templates": "Templates",
       "sequences": "Séquences IA"
     },
+    "filters": {
+      "all": "Tous"
+    },
+    "channels": {
+      "email": "Email",
+      "emailFollowup": "Relance",
+      "linkedin": "LinkedIn",
+      "call": "Script d'appel"
+    },
     "templatesIntro": "Gérez vos scripts email, LinkedIn et appel. Utilisez {{syntax}} pour personnaliser.",
+    "emptyTemplates": "Aucun template pour ce canal.",
+    "emptyTemplatesCta": "Créer →",
+    "preview": {
+      "subtitle": "Aperçu du template {{channel}}",
+      "empty": "Cliquez sur un template pour le prévisualiser"
+    },
+    "editor": {
+      "newTitle": "Nouveau template",
+      "editTitle": "Modifier le template",
+      "fields": {
+        "name": "Nom",
+        "channel": "Canal",
+        "content": "Contenu",
+        "tags": "Tags (séparés par des virgules)"
+      },
+      "placeholders": {
+        "name": "Nom du template",
+        "content": "Rédigez votre template…",
+        "tags": "ex. cold, saas, decision-maker"
+      },
+      "variableHint": "utilisez {{variable_name}} pour les champs dynamiques",
+      "detectedVariables": "Variables détectées :",
+      "save": "Enregistrer le template"
+    },
+    "sequence": {
+      "title": "Générer une séquence 3 touches",
+      "subtitle": "Sélectionnez un lead — Claude génère un email J1, une relance J5 et un message LinkedIn J10 ultra-personnalisés.",
+      "selectLeadPlaceholder": "Choisir un lead…",
+      "noLeadOption": "Aucun lead disponible",
+      "writing": "Claude rédige votre séquence…",
+      "subjectLabel": "Sujet",
+      "creditCost": "3 crédits"
+    },
     "actions": {
       "newTemplate": "Nouveau template",
       "copyTemplate": "Copier le template",
@@ -1321,6 +1464,46 @@
     }
   },
   "settings": {
+    "pageTitle": "Paramètres",
+    "pageSubtitle": "Centre de configuration pour l'ICP, les intégrations et les options workspace.",
+    "cards": {
+      "icp": {
+        "title": "Profil ICP",
+        "description": "Gérez votre profil client idéal et vos critères de scoring",
+        "body": "Ajustez les secteurs, rôles, tailles d'entreprise, géographie et poids qui définissent vos meilleurs leads.",
+        "action": "Configurer le profil ICP"
+      },
+      "api": {
+        "title": "Clés API",
+        "description": "État réel des connexions nécessaires au scoring et à l'enrichissement",
+        "providers": {
+          "claude": {
+            "label": "Claude (Anthropic)",
+            "description": "Scoring IA, web research, enrichissement des signaux"
+          },
+          "hunter": {
+            "label": "Hunter.io",
+            "description": "Recherche et vérification d'emails"
+          },
+          "newsApi": {
+            "label": "NewsAPI",
+            "description": "Signaux d'intention et actualités entreprise"
+          }
+        },
+        "connected": "Connecté",
+        "notConfigured": "Non configuré",
+        "configureHint": "Pour configurer :",
+        "footer": "Hunter et NewsAPI restent optionnels. Anthropic est le connecteur critique pour le scoring IA."
+      },
+      "team": {
+        "title": "Équipe & permissions",
+        "description": "Rôles membres et modèle d'accès au workspace"
+      },
+      "billing": {
+        "title": "Facturation & abonnement",
+        "description": "Plan, usage et gestion des quotas"
+      }
+    },
     "featureFlags": {
       "title": "Feature flags",
       "subtitle": "Pilotez les rollouts workspace par workspace.",
@@ -1347,6 +1530,54 @@
       "billingBody": "Le plan, le solde crédits, l’autonomie projetée et la capacité CRM restent visibles ici sans devoir quitter Settings.",
       "manageBilling": "Ouvrir billing",
       "comparePlans": "Comparer les plans"
+    },
+    "scoring": {
+      "title": "Paramètres de scoring",
+      "subtitle": "Ajustez les poids ICP/IA et les seuils de qualification sans toucher au code.",
+      "activeProfile": "Profil actif :",
+      "noActiveProfile": "Aucun profil ICP actif trouvé. Créez d'abord un profil ICP.",
+      "blendSummary": "Répartition normalisée utilisée par l'analyse : ICP {{icp}} % + IA {{ai}} %.",
+      "quickPresets": "Presets rapides",
+      "icpThresholdPreview": "Seuils ICP : Excellent ≥ {{excellent}}, Fort ≥ {{strong}}, Moyen ≥ {{medium}}.",
+      "finalThresholdPreview": "Seuils finaux : Excellent ≥ {{excellent}}, Fort ≥ {{strong}}, Moyen ≥ {{medium}}.",
+      "previewCategories": "Aperçu des catégories : ICP 55 => {{icp55}}, ICP 80 => {{icp80}}, Final 45 => {{final45}}, Final 70 => {{final70}}.",
+      "icpCategoryThresholds": "Seuils des catégories ICP",
+      "finalCategoryThresholds": "Seuils des catégories finales (ICP + IA)",
+      "categories": {
+        "excellent": "Excellent",
+        "strong": "Fort",
+        "medium": "Moyen",
+        "low": "Faible"
+      },
+      "fields": {
+        "icpWeight": "Poids ICP (%)",
+        "aiWeight": "Poids IA (%)",
+        "excellent": "Excellent >=",
+        "strong": "Fort >=",
+        "medium": "Moyen >="
+      },
+      "presets": {
+        "balanced": {
+          "label": "Équilibré",
+          "description": "Mélange stable pour des pipelines outbound mixtes."
+        },
+        "icpFirst": {
+          "label": "ICP d'abord",
+          "description": "Fit plus strict avant de booster par l'intention."
+        },
+        "intentFirst": {
+          "label": "Intent d'abord",
+          "description": "Plus réactif aux signaux d'achat externes."
+        }
+      },
+      "actions": {
+        "reset": "Réinitialiser",
+        "save": "Enregistrer les paramètres de scoring"
+      },
+      "toasts": {
+        "saved": "Paramètres de scoring enregistrés. Les nouvelles analyses utilisent désormais ces poids et seuils.",
+        "failed": "Impossible d'enregistrer les paramètres de scoring."
+      }
     }
   },
   "help": {
@@ -1772,5 +2003,67 @@
     "accountDeleted": "Compte supprimé.",
     "signalDiscovered": "Signaux découverts.",
     "mappingsSaved": "Mapping enregistré."
+  },
+  "mentions": {
+    "blockLabel": "Informations légales",
+    "title": "Mentions légales",
+    "lastUpdated": "Dernière mise à jour : avril 2026",
+    "sections": {
+      "publisher": {
+        "title": "Éditeur du site",
+        "content": [
+          "Aimlead SAS",
+          "Société par actions simplifiée au capital de 1 000 €",
+          "RCS Paris — SIRET : 000 000 000 00000",
+          "Siège social : Paris, France",
+          "Email : contact@aimlead.io"
+        ]
+      },
+      "hosting": {
+        "title": "Hébergement",
+        "content": [
+          "Hostinger International Ltd.",
+          "61 Lordou Vironos Street, 6023 Larnaca, Chypre",
+          "Infrastructure : VPS + conteneurs Docker",
+          "Site : hostinger.com"
+        ]
+      },
+      "intellectualProperty": {
+        "title": "Propriété intellectuelle",
+        "content": [
+          "L’ensemble du contenu de ce site (textes, visuels, logos, composants d’interface, code source) est la propriété exclusive d’Aimlead SAS ou de ses partenaires.",
+          "Toute reproduction, représentation, adaptation ou exploitation partielle ou totale sans autorisation écrite préalable est interdite."
+        ]
+      },
+      "privacy": {
+        "title": "Données personnelles",
+        "content": [
+          "Aimlead SAS traite des données personnelles dans le cadre de la fourniture de ses services SaaS, de la relation commerciale et du support.",
+          "Conformément au RGPD, vous disposez d’un droit d’accès, de rectification, d’effacement, d’opposition et de portabilité de vos données.",
+          "Pour exercer ces droits ou poser une question liée à la confidentialité : privacy@aimlead.io"
+        ]
+      },
+      "cookies": {
+        "title": "Cookies",
+        "content": [
+          "Le site utilise des cookies fonctionnels nécessaires au bon fonctionnement du service et des cookies de mesure anonymisés pour améliorer l’expérience produit.",
+          "Aucun cookie publicitaire tiers n’est déposé sans votre consentement explicite."
+        ]
+      },
+      "liability": {
+        "title": "Limitation de responsabilité",
+        "content": [
+          "Aimlead SAS s’efforce de fournir des informations exactes et à jour, sans pouvoir garantir l’absence totale d’erreurs, d’interruptions ou d’omissions.",
+          "Aimlead SAS ne pourra être tenue responsable des dommages directs ou indirects liés à l’utilisation du site ou du service."
+        ]
+      },
+      "applicableLaw": {
+        "title": "Droit applicable",
+        "content": [
+          "Les présentes mentions légales sont régies par le droit français.",
+          "En cas de litige, compétence exclusive est attribuée aux juridictions du ressort de Paris, sauf disposition légale impérative contraire."
+        ]
+      }
+    }
   }
 }

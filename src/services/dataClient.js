@@ -404,6 +404,18 @@ export const dataClient = {
   },
 
   auth: {
+    ssoInit(provider) {
+      return typeof apiClient.auth?.ssoInit === 'function' ? apiClient.auth.ssoInit(provider) : '';
+    },
+
+    async ssoSession(payload) {
+      return runWithMode({
+        operationName: 'auth.ssoSession',
+        apiCall: () => apiClient.auth.ssoSession(payload),
+        fallbackCall: mockUnsupported,
+      });
+    },
+
     async isAuthenticated() {
       try {
         const user = await runWithMode({

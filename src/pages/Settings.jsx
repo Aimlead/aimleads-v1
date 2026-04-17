@@ -23,20 +23,20 @@ const DEFAULT_SCORING_SETTINGS = {
 const SCORING_PRESETS = [
   {
     key: 'balanced',
-    label: 'Balanced',
-    description: 'Stable blend for mixed outbound pipelines.',
+    labelKey: 'settings.scoring.presets.balanced.label',
+    descriptionKey: 'settings.scoring.presets.balanced.description',
     blendWeights: { icp: 60, ai: 40 },
   },
   {
     key: 'icp_first',
-    label: 'ICP-first',
-    description: 'Stricter fit before intent boosting.',
+    labelKey: 'settings.scoring.presets.icpFirst.label',
+    descriptionKey: 'settings.scoring.presets.icpFirst.description',
     blendWeights: { icp: 80, ai: 20 },
   },
   {
     key: 'intent_first',
-    label: 'Intent-first',
-    description: 'More reactive to internet buying signals.',
+    labelKey: 'settings.scoring.presets.intentFirst.label',
+    descriptionKey: 'settings.scoring.presets.intentFirst.description',
     blendWeights: { icp: 45, ai: 55 },
   },
 ];
@@ -83,14 +83,14 @@ const normalizeBlendWeights = (rawBlend = DEFAULT_SCORING_SETTINGS.blendWeights)
   return { icp, ai };
 };
 
-const getCategoryLabel = (score, thresholds) => {
+const getCategoryLabel = (score, thresholds, t) => {
   const value = Number(score);
   if (!Number.isFinite(value)) return 'n/a';
 
-  if (value >= thresholds.excellent) return 'Excellent';
-  if (value >= thresholds.strong) return 'Strong';
-  if (value >= thresholds.medium) return 'Medium';
-  return 'Low';
+  if (value >= thresholds.excellent) return t('settings.scoring.categories.excellent');
+  if (value >= thresholds.strong) return t('settings.scoring.categories.strong');
+  if (value >= thresholds.medium) return t('settings.scoring.categories.medium');
+  return t('settings.scoring.categories.low');
 };
 
 const createScoringSettingsFromProfile = (profile) => {
@@ -249,12 +249,12 @@ export default function Settings() {
 
   const previewCategories = useMemo(
     () => ({
-      icp55: getCategoryLabel(55, normalizedIcpThresholdPreview),
-      icp80: getCategoryLabel(80, normalizedIcpThresholdPreview),
-      final45: getCategoryLabel(45, normalizedFinalThresholdPreview),
-      final70: getCategoryLabel(70, normalizedFinalThresholdPreview),
+      icp55: getCategoryLabel(55, normalizedIcpThresholdPreview, t),
+      icp80: getCategoryLabel(80, normalizedIcpThresholdPreview, t),
+      final45: getCategoryLabel(45, normalizedFinalThresholdPreview, t),
+      final70: getCategoryLabel(70, normalizedFinalThresholdPreview, t),
     }),
-    [normalizedIcpThresholdPreview, normalizedFinalThresholdPreview]
+    [normalizedIcpThresholdPreview, normalizedFinalThresholdPreview, t]
   );
 
   useEffect(() => {
@@ -308,7 +308,7 @@ export default function Settings() {
 
   const saveScoringSettings = async () => {
     if (!activeIcpProfile) {
-      toast.error('No active ICP profile found. Create an ICP profile first.');
+      toast.error(t('settings.scoring.noActiveProfile'));
       return;
     }
 
@@ -349,10 +349,10 @@ export default function Settings() {
       setScoringDirty(false);
       invalidateWorkspaceData();
 
-      toast.success('Scoring settings saved. New analyses now use these weights and thresholds.');
+      toast.success(t('settings.scoring.toasts.saved'));
     } catch (error) {
       console.warn('Failed to save scoring settings', error);
-      toast.error(error?.message || 'Failed to save scoring settings');
+      toast.error(error?.message || t('settings.scoring.toasts.failed'));
     } finally {
       setIsSavingScoring(false);
     }
@@ -392,8 +392,8 @@ export default function Settings() {
   return (
     <div className="max-w-5xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Settings</h1>
-        <p className="text-slate-500 mt-1">Configuration center for ICP, integrations, and workspace options</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{t('settings.pageTitle')}</h1>
+        <p className="text-slate-500 mt-1">{t('settings.pageSubtitle')}</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -404,15 +404,15 @@ export default function Settings() {
                 <Target className="w-5 h-5 text-brand-sky" />
               </div>
               <div>
-                <CardTitle>ICP Profile</CardTitle>
-                <CardDescription>Manage your Ideal Customer Profile and scoring criteria</CardDescription>
+                <CardTitle>{t('settings.cards.icp.title')}</CardTitle>
+                <CardDescription>{t('settings.cards.icp.description')}</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-slate-600 mb-4">Adjust target industries, roles, company size, geography and score weights.</p>
+            <p className="text-sm text-slate-600 mb-4">{t('settings.cards.icp.body')}</p>
             <Button asChild className="bg-gradient-to-r from-brand-sky to-brand-sky-2 hover:from-brand-sky-2 hover:to-brand-navy-2">
-              <Link to={ROUTES.icp}>Configure ICP Profile</Link>
+              <Link to={ROUTES.icp}>{t('settings.cards.icp.action')}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -424,8 +424,8 @@ export default function Settings() {
                 <KeyRound className="w-5 h-5 text-violet-600" />
               </div>
               <div>
-                <CardTitle>API Keys</CardTitle>
-                <CardDescription>Etat réel des connexions nécessaires au scoring et à l'enrichissement</CardDescription>
+                <CardTitle>{t('settings.cards.api.title')}</CardTitle>
+                <CardDescription>{t('settings.cards.api.description')}</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -433,18 +433,18 @@ export default function Settings() {
             {[
               {
                 key: 'claude',
-                label: 'Claude (Anthropic)',
-                description: 'Scoring IA, web research, enrichissement signaux',
+                label: t('settings.cards.api.providers.claude.label'),
+                description: t('settings.cards.api.providers.claude.description'),
               },
               {
                 key: 'hunter',
-                label: 'Hunter.io',
-                description: 'Recherche et vérification d\'email',
+                label: t('settings.cards.api.providers.hunter.label'),
+                description: t('settings.cards.api.providers.hunter.description'),
               },
               {
                 key: 'newsApi',
-                label: 'NewsAPI',
-                description: 'Signaux d\'intention — actualités entreprise',
+                label: t('settings.cards.api.providers.newsApi.label'),
+                description: t('settings.cards.api.providers.newsApi.description'),
               },
             ].map(({ key, label, description }, i, arr) => (
               <div
@@ -456,17 +456,17 @@ export default function Settings() {
                   <p className="text-xs text-slate-500">{description}</p>
                 </div>
                 <Badge variant={integrationStatus[key] ? 'default' : 'secondary'} className={integrationStatus[key] ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : ''}>
-                  {integrationStatus[key] ? 'Connecté' : 'Non configuré'}
+                  {integrationStatus[key] ? t('settings.cards.api.connected') : t('settings.cards.api.notConfigured')}
                 </Badge>
               </div>
             ))}
             <p className="text-[11px] text-slate-400 pt-1">
-              Pour configurer : <code className="bg-slate-100 px-1 rounded text-[10px]">ANTHROPIC_API_KEY</code>,{' '}
+              {t('settings.cards.api.configureHint')} <code className="bg-slate-100 px-1 rounded text-[10px]">ANTHROPIC_API_KEY</code>,{' '}
               <code className="bg-slate-100 px-1 rounded text-[10px]">HUNTER_API_KEY</code>,{' '}
               <code className="bg-slate-100 px-1 rounded text-[10px]">NEWS_API_KEY</code>
             </p>
             <p className="text-[11px] text-slate-400">
-              Hunter et NewsAPI restent optionnels. Anthropic est le connecteur critique pour le scoring IA.
+              {t('settings.cards.api.footer')}
             </p>
           </CardContent>
         </Card>
@@ -560,8 +560,8 @@ export default function Settings() {
                 <Users className="w-5 h-5 text-emerald-600" />
               </div>
               <div>
-                <CardTitle>Team & Permissions</CardTitle>
-                <CardDescription>Member roles and workspace access model</CardDescription>
+                <CardTitle>{t('settings.cards.team.title')}</CardTitle>
+                <CardDescription>{t('settings.cards.team.description')}</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -628,8 +628,8 @@ export default function Settings() {
                 <CreditCard className="w-5 h-5 text-violet-600" />
               </div>
               <div>
-                <CardTitle>Billing & Subscription</CardTitle>
-                <CardDescription>Plan, usage, and subscription management</CardDescription>
+                <CardTitle>{t('settings.cards.billing.title')}</CardTitle>
+                <CardDescription>{t('settings.cards.billing.description')}</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -743,26 +743,26 @@ export default function Settings() {
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <CardTitle>Scoring Settings</CardTitle>
+              <CardTitle>{t('settings.scoring.title')}</CardTitle>
               <CardDescription>
-                Tune ICP/AI blend weights and qualification thresholds without touching code.
+                {t('settings.scoring.subtitle')}
               </CardDescription>
             </div>
             <div className="text-xs text-slate-500">
-              Active profile: <span className="font-semibold">{activeIcpProfile?.name || 'n/a'}</span>
+              {t('settings.scoring.activeProfile')} <span className="font-semibold">{activeIcpProfile?.name || 'n/a'}</span>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <ScoringNumberInput
-              label="ICP Weight (%)"
+              label={t('settings.scoring.fields.icpWeight')}
               value={scoringForm.blendWeights.icp}
               onChange={(value) => updateBlendWeight('icp', value)}
               disabled={isSavingScoring}
             />
             <ScoringNumberInput
-              label="AI Weight (%)"
+              label={t('settings.scoring.fields.aiWeight')}
               value={scoringForm.blendWeights.ai}
               onChange={(value) => updateBlendWeight('ai', value)}
               disabled={isSavingScoring}
@@ -770,12 +770,14 @@ export default function Settings() {
           </div>
 
           <p className="text-xs text-slate-500">
-            Normalized blend used by analysis: ICP <span className="font-semibold">{normalizedBlendPreview.icp}%</span> + AI{' '}
-            <span className="font-semibold">{normalizedBlendPreview.ai}%</span>.
+            {t('settings.scoring.blendSummary', {
+              icp: normalizedBlendPreview.icp,
+              ai: normalizedBlendPreview.ai,
+            })}
           </p>
 
           <div className="rounded-md border border-amber-200 bg-white/70 p-3 space-y-2">
-            <p className="text-xs font-semibold text-slate-700">Quick presets</p>
+            <p className="text-xs font-semibold text-slate-700">{t('settings.scoring.quickPresets')}</p>
             <div className="flex flex-wrap gap-2">
               {SCORING_PRESETS.map((preset) => (
                 <Button
@@ -785,45 +787,58 @@ export default function Settings() {
                   disabled={isSavingScoring}
                   onClick={() => applyPreset(preset.key)}
                 >
-                  {preset.label}
+                  {t(preset.labelKey)}
                 </Button>
               ))}
             </div>
             <p className="text-xs text-slate-500">
-              {SCORING_PRESETS.map((preset) => `${preset.label}: ${preset.description}`).join(' | ')}
+              {SCORING_PRESETS.map((preset) => `${t(preset.labelKey)}: ${t(preset.descriptionKey)}`).join(' | ')}
             </p>
           </div>
 
           <div className="rounded-md border border-amber-200 bg-white/70 p-3 text-xs text-slate-600 space-y-1">
             <p>
-              ICP thresholds: Excellent &ge; <span className="font-semibold">{normalizedIcpThresholdPreview.excellent}</span>, Strong &ge; <span className="font-semibold">{normalizedIcpThresholdPreview.strong}</span>, Medium &ge; <span className="font-semibold">{normalizedIcpThresholdPreview.medium}</span>.
+              {t('settings.scoring.icpThresholdPreview', {
+                excellent: normalizedIcpThresholdPreview.excellent,
+                strong: normalizedIcpThresholdPreview.strong,
+                medium: normalizedIcpThresholdPreview.medium,
+              })}
             </p>
             <p>
-              Final thresholds: Excellent &ge; <span className="font-semibold">{normalizedFinalThresholdPreview.excellent}</span>, Strong &ge; <span className="font-semibold">{normalizedFinalThresholdPreview.strong}</span>, Medium &ge; <span className="font-semibold">{normalizedFinalThresholdPreview.medium}</span>.
+              {t('settings.scoring.finalThresholdPreview', {
+                excellent: normalizedFinalThresholdPreview.excellent,
+                strong: normalizedFinalThresholdPreview.strong,
+                medium: normalizedFinalThresholdPreview.medium,
+              })}
             </p>
             <p>
-              Preview categories: ICP 55 =&gt; <span className="font-semibold">{previewCategories.icp55}</span>, ICP 80 =&gt; <span className="font-semibold">{previewCategories.icp80}</span>, Final 45 =&gt; <span className="font-semibold">{previewCategories.final45}</span>, Final 70 =&gt; <span className="font-semibold">{previewCategories.final70}</span>.
+              {t('settings.scoring.previewCategories', {
+                icp55: previewCategories.icp55,
+                icp80: previewCategories.icp80,
+                final45: previewCategories.final45,
+                final70: previewCategories.final70,
+              })}
             </p>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-slate-800">ICP Category Thresholds</h3>
+              <h3 className="text-sm font-semibold text-slate-800">{t('settings.scoring.icpCategoryThresholds')}</h3>
               <div className="grid gap-3 grid-cols-3">
                 <ScoringNumberInput
-                  label="Excellent >="
+                  label={t('settings.scoring.fields.excellent')}
                   value={scoringForm.icpThresholds.excellent}
                   onChange={(value) => updateThreshold('icpThresholds', 'excellent', value)}
                   disabled={isSavingScoring}
                 />
                 <ScoringNumberInput
-                  label="Strong >="
+                  label={t('settings.scoring.fields.strong')}
                   value={scoringForm.icpThresholds.strong}
                   onChange={(value) => updateThreshold('icpThresholds', 'strong', value)}
                   disabled={isSavingScoring}
                 />
                 <ScoringNumberInput
-                  label="Medium >="
+                  label={t('settings.scoring.fields.medium')}
                   value={scoringForm.icpThresholds.medium}
                   onChange={(value) => updateThreshold('icpThresholds', 'medium', value)}
                   disabled={isSavingScoring}
@@ -832,22 +847,22 @@ export default function Settings() {
             </div>
 
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-slate-800">Final Category Thresholds (ICP + AI)</h3>
+              <h3 className="text-sm font-semibold text-slate-800">{t('settings.scoring.finalCategoryThresholds')}</h3>
               <div className="grid gap-3 grid-cols-3">
                 <ScoringNumberInput
-                  label="Excellent >="
+                  label={t('settings.scoring.fields.excellent')}
                   value={scoringForm.finalThresholds.excellent}
                   onChange={(value) => updateThreshold('finalThresholds', 'excellent', value)}
                   disabled={isSavingScoring}
                 />
                 <ScoringNumberInput
-                  label="Strong >="
+                  label={t('settings.scoring.fields.strong')}
                   value={scoringForm.finalThresholds.strong}
                   onChange={(value) => updateThreshold('finalThresholds', 'strong', value)}
                   disabled={isSavingScoring}
                 />
                 <ScoringNumberInput
-                  label="Medium >="
+                  label={t('settings.scoring.fields.medium')}
                   value={scoringForm.finalThresholds.medium}
                   onChange={(value) => updateThreshold('finalThresholds', 'medium', value)}
                   disabled={isSavingScoring}
@@ -858,11 +873,11 @@ export default function Settings() {
 
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={resetScoringForm} disabled={isSavingScoring || !scoringDirty}>
-              Reset
+              {t('settings.scoring.actions.reset')}
             </Button>
             <Button onClick={saveScoringSettings} disabled={isSavingScoring || !scoringDirty} className="gap-2">
               {isSavingScoring ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Save scoring settings
+              {t('settings.scoring.actions.save')}
             </Button>
           </div>
         </CardContent>
@@ -871,9 +886,6 @@ export default function Settings() {
     </div>
   );
 }
-
-
-
 
 
 

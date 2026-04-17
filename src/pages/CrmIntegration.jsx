@@ -34,20 +34,22 @@ import {
 // ─── Field definitions ────────────────────────────────────────────────────────
 
 const AIMLEADS_FIELDS = [
-  { key: 'company_name', label: 'Nom de l\'entreprise' },
-  { key: 'contact_name', label: 'Nom du contact' },
-  { key: 'contact_email', label: 'Email du contact' },
-  { key: 'contact_role', label: 'Rôle du contact' },
-  { key: 'industry', label: 'Secteur' },
-  { key: 'country', label: 'Pays' },
-  { key: 'company_size', label: 'Taille de l\'entreprise' },
-  { key: 'website_url', label: 'Site web' },
-  { key: 'icp_score', label: 'Score ICP' },
-  { key: 'icp_category', label: 'Catégorie ICP' },
-  { key: 'final_score', label: 'Score final' },
-  { key: 'status', label: 'Statut' },
-  { key: 'notes', label: 'Notes' },
+  { key: 'company_name', labelKey: 'crm.aimFields.companyName' },
+  { key: 'contact_name', labelKey: 'crm.aimFields.contactName' },
+  { key: 'contact_email', labelKey: 'crm.aimFields.contactEmail' },
+  { key: 'contact_role', labelKey: 'crm.aimFields.contactRole' },
+  { key: 'industry', labelKey: 'crm.aimFields.industry' },
+  { key: 'country', labelKey: 'crm.aimFields.country' },
+  { key: 'company_size', labelKey: 'crm.aimFields.companySize' },
+  { key: 'website_url', labelKey: 'crm.aimFields.website' },
+  { key: 'icp_score', labelKey: 'crm.aimFields.icpScore' },
+  { key: 'icp_category', labelKey: 'crm.aimFields.icpCategory' },
+  { key: 'final_score', labelKey: 'crm.aimFields.finalScore' },
+  { key: 'status', labelKey: 'crm.aimFields.status' },
+  { key: 'notes', labelKey: 'crm.aimFields.notes' },
 ];
+
+const getRelativeFormatterLocale = (language) => (String(language || '').toLowerCase().startsWith('fr') ? 'fr' : 'en');
 
 const HUBSPOT_FIELDS = [
   { key: 'firstname', label: 'Prénom (firstname)' },
@@ -139,7 +141,7 @@ function FieldMappingSection({ crmType, isConnected }) {
             {AIMLEADS_FIELDS.map((field) => (
               <div key={field.key} className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
                 <div className="text-sm bg-slate-50 rounded-lg px-3 py-2 text-slate-700 border border-slate-200">
-                  {field.label}
+                  {t(field.labelKey)}
                 </div>
                 <div className="text-slate-400 text-xs">→</div>
                 <select
@@ -189,7 +191,7 @@ function CrmCard({
   onRefresh,
   quota,
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const isConnected = Boolean(integration?.is_active);
 
@@ -263,12 +265,12 @@ function CrmCard({
   const formatDate = (iso) => {
     if (!iso) return null;
     try {
-      return new Intl.RelativeTimeFormat('fr', { numeric: 'auto' }).format(
+      return new Intl.RelativeTimeFormat(getRelativeFormatterLocale(i18n.language), { numeric: 'auto' }).format(
         Math.round((new Date(iso) - Date.now()) / 60000),
         'minute'
       );
     } catch {
-      return new Date(iso).toLocaleString('fr');
+      return new Date(iso).toLocaleString(getRelativeFormatterLocale(i18n.language));
     }
   };
 

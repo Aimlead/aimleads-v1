@@ -17,10 +17,10 @@ import { dataClient } from '@/services/dataClient';
 import { cn } from '@/lib/utils';
 
 const CHANNEL_ICONS = {
-  email: { icon: Mail, label: 'Email', color: 'text-blue-500', bg: 'bg-blue-50', border: 'border-blue-100' },
-  email_followup: { icon: Mail, label: 'Follow-up', color: 'text-indigo-500', bg: 'bg-indigo-50', border: 'border-indigo-100' },
-  linkedin: { icon: Linkedin, label: 'LinkedIn', color: 'text-sky-600', bg: 'bg-sky-50', border: 'border-sky-100' },
-  call: { icon: Phone, label: 'Call Script', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
+  email: { icon: Mail, labelKey: 'outreach.channels.email', color: 'text-blue-500', bg: 'bg-blue-50', border: 'border-blue-100' },
+  email_followup: { icon: Mail, labelKey: 'outreach.channels.emailFollowup', color: 'text-indigo-500', bg: 'bg-indigo-50', border: 'border-indigo-100' },
+  linkedin: { icon: Linkedin, labelKey: 'outreach.channels.linkedin', color: 'text-sky-600', bg: 'bg-sky-50', border: 'border-sky-100' },
+  call: { icon: Phone, labelKey: 'outreach.channels.call', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
 };
 
 const INITIAL_TEMPLATES = [
@@ -97,7 +97,7 @@ function TemplateCard({ template, onEdit, onDelete, isSelected, onClick }) {
       {/* Channel badge */}
       <div className={cn('inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg border mb-3', meta.bg, meta.color, meta.border)}>
         <Icon className="w-3 h-3" />
-        {meta.label}
+        {t(meta.labelKey)}
       </div>
 
       <h3 className="font-semibold text-slate-800 text-sm mb-1.5">{template.name}</h3>
@@ -143,6 +143,7 @@ function TemplateCard({ template, onEdit, onDelete, isSelected, onClick }) {
 }
 
 function TemplatePreview({ template }) {
+  const { t } = useTranslation();
   const meta = CHANNEL_ICONS[template.channel] || CHANNEL_ICONS.email;
   const Icon = meta.icon;
 
@@ -160,7 +161,7 @@ function TemplatePreview({ template }) {
         </div>
         <div>
           <p className="text-sm font-semibold text-slate-800">{template.name}</p>
-          <p className="text-xs text-slate-400">{meta.label} template preview</p>
+          <p className="text-xs text-slate-400">{t('outreach.preview.subtitle', { channel: t(meta.labelKey) })}</p>
         </div>
       </div>
 
@@ -180,6 +181,7 @@ function TemplatePreview({ template }) {
 }
 
 function TemplateEditor({ template, onSave, onCancel }) {
+  const { t } = useTranslation();
   const [name, setName] = useState(template?.name || '');
   const [channel, setChannel] = useState(template?.channel || 'email');
   const [content, setContent] = useState(template?.content || '');
@@ -196,7 +198,7 @@ function TemplateEditor({ template, onSave, onCancel }) {
       className="bg-white rounded-2xl border border-slate-100 p-5 space-y-4"
     >
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-slate-800">{template ? 'Edit Template' : 'New Template'}</h3>
+        <h3 className="font-semibold text-slate-800">{template ? t('outreach.editor.editTitle') : t('outreach.editor.newTitle')}</h3>
         <button onClick={onCancel} className="text-slate-400 hover:text-slate-600">
           <X className="w-4 h-4" />
         </button>
@@ -204,12 +206,12 @@ function TemplateEditor({ template, onSave, onCancel }) {
 
       <div className="space-y-3">
         <div>
-          <label className="text-xs font-medium text-slate-600 mb-1 block">Name</label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Template name" className="rounded-xl h-9 text-sm" />
+          <label className="text-xs font-medium text-slate-600 mb-1 block">{t('outreach.editor.fields.name')}</label>
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('outreach.editor.placeholders.name')} className="rounded-xl h-9 text-sm" />
         </div>
 
         <div>
-          <label className="text-xs font-medium text-slate-600 mb-1 block">Channel</label>
+          <label className="text-xs font-medium text-slate-600 mb-1 block">{t('outreach.editor.fields.channel')}</label>
           <div className="flex gap-2">
             {Object.entries(CHANNEL_ICONS).map(([key, meta]) => {
               const Icon = meta.icon;
@@ -223,7 +225,7 @@ function TemplateEditor({ template, onSave, onCancel }) {
                   )}
                 >
                   <Icon className="w-3 h-3" />
-                  {meta.label}
+                  {t(meta.labelKey)}
                 </button>
               );
             })}
@@ -232,25 +234,25 @@ function TemplateEditor({ template, onSave, onCancel }) {
 
         <div>
           <label className="text-xs font-medium text-slate-600 mb-1 block">
-            Content <span className="text-slate-400 font-normal">— use {`{{variable_name}}`} for dynamic fields</span>
+            {t('outreach.editor.fields.content')} <span className="text-slate-400 font-normal">— {t('outreach.editor.variableHint')}</span>
           </label>
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={8}
             className="w-full text-xs font-mono rounded-xl border border-slate-200 p-3 resize-none focus:outline-none focus:ring-2 focus:ring-brand-sky/20 transition-all"
-            placeholder="Write your template…"
+            placeholder={t('outreach.editor.placeholders.content')}
           />
         </div>
 
         <div>
-          <label className="text-xs font-medium text-slate-600 mb-1 block">Tags (comma-separated)</label>
-          <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="e.g. cold, saas, decision-maker" className="rounded-xl h-9 text-sm" />
+          <label className="text-xs font-medium text-slate-600 mb-1 block">{t('outreach.editor.fields.tags')}</label>
+          <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder={t('outreach.editor.placeholders.tags')} className="rounded-xl h-9 text-sm" />
         </div>
 
         {uniqueVars.length > 0 && (
           <div>
-            <p className="text-xs font-medium text-slate-500 mb-1.5">Detected variables:</p>
+            <p className="text-xs font-medium text-slate-500 mb-1.5">{t('outreach.editor.detectedVariables')}</p>
             <div className="flex flex-wrap gap-1">
               {uniqueVars.map((v) => (
                 <span key={v} className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded', VARIABLE_COLOR[v] || 'bg-slate-100 text-slate-600')}>
@@ -270,10 +272,10 @@ function TemplateEditor({ template, onSave, onCancel }) {
           disabled={!name || !content}
         >
           <Save className="w-3.5 h-3.5" />
-          Save template
+          {t('outreach.editor.save')}
         </Button>
         <Button variant="ghost" size="sm" onClick={onCancel} className="rounded-xl">
-          Cancel
+          {t('common.cancel')}
         </Button>
       </div>
     </motion.div>
@@ -293,18 +295,19 @@ const loadTemplates = () => {
 // ─── AI Sequence Components ───────────────────────────────────────────────────
 
 function TouchCard({ touch }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const meta = CHANNEL_ICONS[touch.channel] || CHANNEL_ICONS.email;
   const Icon = meta.icon;
 
-  const fullText = [touch.subject && `Sujet : ${touch.subject}`, touch.body, touch.cta && `→ ${touch.cta}`]
+  const fullText = [touch.subject && `${t('outreach.sequence.subjectLabel')}: ${touch.subject}`, touch.body, touch.cta && `→ ${touch.cta}`]
     .filter(Boolean)
     .join('\n\n');
 
   const handleCopy = () => {
     navigator.clipboard.writeText(fullText);
     setCopied(true);
-    toast.success('Copié !');
+    toast.success(t('common.copied'));
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -316,16 +319,16 @@ function TouchCard({ touch }) {
             <span className="text-xs font-bold text-slate-400 tabular-nums">J{touch.day}</span>
             <span className={cn('inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-lg border', meta.bg, meta.color, meta.border)}>
               <Icon className="w-3 h-3" />
-              {meta.label}
+              {t(meta.labelKey)}
             </span>
           </div>
           <button
             onClick={handleCopy}
             className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-700 transition-colors px-2 py-1 rounded-lg hover:bg-slate-50"
-            aria-label="Copier le contenu"
+            aria-label={t('outreach.actions.copyContent')}
           >
             {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-            {copied ? 'Copié' : 'Copier'}
+            {copied ? t('common.copied') : t('common.copy')}
           </button>
         </div>
         {touch.subject && (
@@ -543,7 +546,7 @@ export default function Outreach() {
                   )}
                 >
                   {Icon && <Icon className="w-3 h-3" />}
-                  {ch === 'all' ? 'Tous' : meta.label}
+                  {ch === 'all' ? t('outreach.filters.all') : t(meta.labelKey)}
                   <span className={cn('text-[10px] px-1 rounded-full', channelFilter === ch ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500')}>
                     {ch === 'all' ? templates.length : templates.filter((t) => t.channel === ch).length}
                   </span>
@@ -578,8 +581,8 @@ export default function Outreach() {
               {filtered.length === 0 && !isNew && !editing && (
                 <div className="text-center py-12">
                   <BookOpen className="w-8 h-8 text-slate-200 mx-auto mb-2" />
-                  <p className="text-sm text-slate-400">Aucun template pour ce canal</p>
-                  <Button variant="ghost" size="sm" className="mt-2" onClick={() => setIsNew(true)}>Créer →</Button>
+                  <p className="text-sm text-slate-400">{t('outreach.emptyTemplates')}</p>
+                  <Button variant="ghost" size="sm" className="mt-2" onClick={() => setIsNew(true)}>{t('outreach.emptyTemplatesCta')}</Button>
                 </div>
               )}
             </div>
@@ -591,7 +594,7 @@ export default function Outreach() {
               ) : (
                 <div className="bg-slate-50 rounded-2xl border border-dashed border-slate-200 h-64 flex flex-col items-center justify-center gap-3 text-slate-400">
                   <BookOpen className="w-8 h-8 text-slate-200" />
-                  <p className="text-sm">Cliquez sur un template pour le prévisualiser</p>
+                  <p className="text-sm">{t('outreach.preview.empty')}</p>
                 </div>
               )}
             </div>
@@ -601,20 +604,18 @@ export default function Outreach() {
         {/* ── SÉQUENCES IA TAB ──────────────────────────────── */}
         <TabsContent value="sequences" className="mt-5 space-y-4">
           <div>
-            <h2 className="text-base font-semibold text-slate-800">Générer une séquence 3 touches</h2>
-            <p className="text-sm text-slate-500 mt-0.5">
-              Sélectionnez un lead — Claude génère un email J1, un follow-up J5 et un message LinkedIn J10 ultra-personnalisés.
-            </p>
+            <h2 className="text-base font-semibold text-slate-800">{t('outreach.sequence.title')}</h2>
+            <p className="text-sm text-slate-500 mt-0.5">{t('outreach.sequence.subtitle')}</p>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
             <Select value={selectedLeadId} onValueChange={(v) => { setSelectedLeadId(v); setSequence(null); }}>
               <SelectTrigger className="w-full sm:w-80">
-                <SelectValue placeholder="Choisir un lead…" />
+                <SelectValue placeholder={t('outreach.sequence.selectLeadPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
                 {leads.length === 0 && (
-                  <SelectItem value="__empty__" disabled>Aucun lead disponible</SelectItem>
+                  <SelectItem value="__empty__" disabled>{t('outreach.sequence.noLeadOption')}</SelectItem>
                 )}
                 {leads.map((l) => (
                   <SelectItem key={l.id} value={l.id}>
@@ -630,8 +631,8 @@ export default function Outreach() {
               className="gap-2 bg-gradient-to-r from-brand-sky to-brand-sky-2 shrink-0"
             >
               {sequenceMutation.isPending
-                ? <><RefreshCw className="w-4 h-4 animate-spin" /> Génération…</>
-                : <><Sparkles className="w-4 h-4" /> Générer la séquence <span className="text-[10px] opacity-70 font-normal">3 crédits</span></>}
+                ? <><RefreshCw className="w-4 h-4 animate-spin" /> {t('outreach.generating')}</>
+                : <><Sparkles className="w-4 h-4" /> {t('outreach.generateSequence')} <span className="text-[10px] opacity-70 font-normal">{t('outreach.sequence.creditCost')}</span></>}
             </Button>
           </div>
 
@@ -658,14 +659,14 @@ export default function Outreach() {
           {!sequence && !sequenceMutation.isPending && !activeJobId && (
             <div className="bg-slate-50 rounded-2xl border border-dashed border-slate-200 py-16 flex flex-col items-center justify-center gap-3 text-slate-400">
               <Sparkles className="w-8 h-8 text-slate-200" />
-              <p className="text-sm">Sélectionnez un lead et cliquez sur Générer</p>
+              <p className="text-sm">{t('outreach.noOutreachSubtitle')}</p>
             </div>
           )}
 
           {sequenceMutation.isPending && !activeJobId && (
             <div className="flex items-center justify-center py-16 gap-3 text-slate-400">
               <Loader2 className="w-5 h-5 animate-spin text-brand-sky" />
-              <p className="text-sm">Claude rédige votre séquence…</p>
+              <p className="text-sm">{t('outreach.sequence.writing')}</p>
             </div>
           )}
 

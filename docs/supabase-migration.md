@@ -1,77 +1,146 @@
-# Supabase Migration Guide
+# Supabase Migration Runbook
 
-This project supports two modes:
+AimLeads uses **versioned Supabase SQL migrations** as the single source of truth for database evolution.
 
-- Local mode: `DATA_PROVIDER=local`, `AUTH_PROVIDER=legacy`
-- Full Supabase mode: `DATA_PROVIDER=supabase`, `AUTH_PROVIDER=supabase`
+This repo already contains the migration history under:
 
-For SaaS-grade local validation, use full Supabase mode.
+- `/supabase/migrations`
 
-## 1) Create schema and policies
+Do **not** introduce Prisma or a parallel migration system. The target workflow is:
 
-In Supabase SQL Editor:
+1. keep schema changes in timestamped SQL files
+2. apply them in order with the Supabase CLI or Supabase SQL editor
+3. verify runtime assumptions after each rollout
 
-1. Run [supabase/schema.sql](/C:/Codex/Aimlead.io saas/aimleads-saas/supabase/schema.sql)
-2. Run each file from [supabase/migrations](/C:/Codex/Aimlead.io saas/aimleads-saas/supabase/migrations)
-3. Optional: run [supabase/seed.sql](/C:/Codex/Aimlead.io saas/aimleads-saas/supabase/seed.sql)
+## Current migration inventory
 
-If SQL editor warns about destructive operations, validate and continue only if this is a fresh project or expected reset.
+The repo currently includes versioned migrations for:
 
-## 2) Export local data (optional)
+- lead signal columns
+- audit log
+- native Supabase auth
+- phase 0 to phase 5 schema reconciliation
+- credits and RLS fixes
+- CRM integration
+- `pgcrypto` CRM preparation
+- `ai_runs`
+- `feature_flags`
 
-```bash
-npm run export:supabase
-```
+Before pushing to production, compare the files in `/supabase/migrations` with the migrations already applied on the target Supabase project.
 
-This writes JSON files under `supabase/export/`.
+## Source of truth
 
-Suggested import order:
+- Schema bootstrap: `/supabase/schema.sql`
+- Incremental changes: `/supabase/migrations/*.sql`
+- Optional seed data: `/supabase/seed.sql`
 
-1. `workspaces`
-2. `users`
-3. `workspace_members`
-4. `icp_profiles`
-5. `leads`
+## Recommended application order
 
-## 3) Configure environment
+For a fresh Supabase project:
 
-Set in `.env`:
+1. apply `/supabase/schema.sql`
+2. apply every file in `/supabase/migrations` in lexical order
+3. apply `/supabase/seed.sql` only if you really want demo/bootstrap data
+
+For an existing project:
+
+1. inspect which migrations are already applied
+2. back up the database first
+3. apply only the missing migration files in lexical order
+4. verify the runtime after each batch
+
+## Variables required for runtime validation
+
+Set these environment variables before running the app in full Supabase mode:
 
 - `DATA_PROVIDER=supabase`
 - `AUTH_PROVIDER=supabase`
 - `SUPABASE_URL=https://<project-ref>.supabase.co`
 - `SUPABASE_PUBLISHABLE_KEY=<publishable-key>`
-- `SUPABASE_SERVICE_ROLE_KEY=<secret-key>`
+- `SUPABASE_SERVICE_ROLE_KEY=<service-role-key>`
 - `SUPABASE_FALLBACK_TO_LOCAL=0`
 - `SESSION_SECRET=<strong-random-secret>`
 - `CORS_ORIGIN=<allowed-origins>`
 
-## 4) Run and validate
+Optional but strongly recommended:
+
+- `CRM_ENCRYPTION_KEY=<strong-secret>`
+
+## Supabase CLI workflow
+
+Recommended local commands:
 
 ```bash
-npm run dev:full
+supabase link --project-ref <project-ref>
+supabase db push
 ```
 
-Check:
+If you need to generate a new migration:
 
-1. `GET /api/health` returns:
-   - `provider: "supabase"`
-   - `auth_provider: "supabase"`
-   - `active_provider: "supabase"`
-2. Register/login works.
-3. `Settings > Dev Tools > Load Mantra (174)` imports and analyzes data.
-4. `Run Checkup` returns no critical warning.
+```bash
+supabase migration new <short_description>
+```
 
-## 5) Auth CAPTCHA note
+Then edit the created SQL file in `/supabase/migrations`.
 
-If registration/login returns `Security verification is required`:
+## Critical checks after migration
 
-- Supabase Bot Protection/CAPTCHA is enabled.
-- For local dev, disable it in Supabase Auth settings.
-- Or wire a captcha token in frontend and pass it to auth flow.
+After applying migrations, validate these product-critical areas:
+
+1. **CRM token encryption**
+   - confirm the `pgcrypto` preparation migration is applied
+   - confirm CRM tokens are never returned in clear text by the API
+   - confirm the runtime has a valid `CRM_ENCRYPTION_KEY`
+
+2. **Feature flags**
+   - confirm the `feature_flags` table exists
+   - confirm `/api/workspace/feature-flags` loads correctly
+
+3. **AI runs**
+   - confirm the `ai_runs` table exists
+   - confirm analyze/discover/sequence flows write runs successfully
+
+4. **Auth**
+   - confirm Supabase auth tables and the native auth migration are aligned
+   - confirm email/password login works
+   - confirm OAuth callback writes a valid app session
+
+5. **Workspace billing / credits**
+   - confirm `workspace/credits` still resolves usage, entitlements, and runway
+
+## Post-migration verification
+
+Run:
+
+```bash
+npm run lint
+npm run test:api
+npm run test:ui
+npm run build
+```
+
+Then validate the runtime:
+
+1. `GET /api/health`
+2. login with email/password
+3. optional SSO callback
+4. CRM page loads
+5. feature flags load
+6. analyze a lead
+7. verify `ai_runs` records exist
+
+## Safety checklist for production
+
+Before applying migrations in production:
+
+1. back up the production database
+2. export current environment variables
+3. confirm the exact migration list to apply
+4. apply changes during a low-risk window
+5. verify `/api/health` and one real login immediately after rollout
 
 ## Notes
 
-- Service role key bypasses RLS, so backend enforces workspace scoping.
-- RLS policies are still useful for direct SQL/client safety and future direct access patterns.
-- Never expose service role key in frontend env.
+- Service role keys bypass RLS, so backend workspace scoping still matters.
+- Never expose `SUPABASE_SERVICE_ROLE_KEY` in frontend env files.
+- If login fails with a CAPTCHA/security verification message, check Supabase Bot Protection settings or pass a real captcha token through the auth flow.

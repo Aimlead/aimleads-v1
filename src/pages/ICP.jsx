@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Brain, Building2, Edit, Globe, Loader2, MapPin, Plus, Save, Sliders, Sparkles, Target, Users, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -23,22 +22,22 @@ const SECTION_DEFAULTS = {
   geo: { weight: 100, scores: { parfait: 15, partiel: 5, aucun: -10 } },
 };
 
-const getIcpGenerationErrorMessage = (error) => {
+const getIcpGenerationErrorMessage = (error, t) => {
   const message = String(error?.message || '').toLowerCase();
 
   if (message.includes('credit balance is too low') || message.includes('credit') || message.includes('billing')) {
-    return 'Génération impossible : crédits Anthropic insuffisants. Recharge le compte puis réessaie.';
+    return t('icp.errors.credit');
   }
 
   if (message.includes('anthropic_api_key') || message.includes('api key') || message.includes('not configured')) {
-    return 'Génération impossible : la clé Anthropic n’est pas configurée côté backend.';
+    return t('icp.errors.apiKey');
   }
 
   if (message.includes('circuit breaker')) {
-    return 'La génération IA est momentanément désactivée après plusieurs échecs. Attends un instant puis réessaie.';
+    return t('icp.errors.circuitBreaker');
   }
 
-  return error?.message || 'Génération échouée. Vérifie Anthropic et réessaie.';
+  return error?.message || t('icp.errors.generic');
 };
 
 function TagInput({ label, values = [], onChange, placeholder, disabled, variant = 'default' }) {
@@ -106,6 +105,7 @@ function TagInput({ label, values = [], onChange, placeholder, disabled, variant
 }
 
 function WeightSlider({ label, value, onChange, disabled, description }) {
+  const { t } = useTranslation();
   const color = value >= 80 ? 'text-emerald-600' : value >= 50 ? 'text-amber-600' : 'text-rose-500';
 
   return (
@@ -125,9 +125,9 @@ function WeightSlider({ label, value, onChange, disabled, description }) {
         className="w-full"
       />
       <div className="flex justify-between text-[10px] text-slate-400">
-        <span>0% (ignored)</span>
-        <span>100% (normal)</span>
-        <span>150% (critical)</span>
+        <span>{t('icp.weightScale.ignored')}</span>
+        <span>{t('icp.weightScale.normal')}</span>
+        <span>{t('icp.weightScale.critical')}</span>
       </div>
     </div>
   );
@@ -163,7 +163,7 @@ export default function ICP() {
     mutationFn: (description) => dataClient.icp.generateIcp(description),
     onSuccess: (data) => {
       if (!data) {
-        const message = t('icp.toasts.generateUnavailable', { defaultValue: 'Generation unavailable: check Anthropic backend configuration.' });
+        const message = t('icp.toasts.generateUnavailable');
         setGenerateError(message);
         toast.error(message);
         return;
@@ -181,10 +181,10 @@ export default function ICP() {
       setEditing(true);
       setGenOpen(false);
       setGenDescription('');
-      toast.success(t('icp.toasts.generated', { defaultValue: 'ICP "{{name}}" generated. Review and save it.', name: data.name }));
+      toast.success(t('icp.toasts.generated', { name: data.name }));
     },
     onError: (error) => {
-      const message = getIcpGenerationErrorMessage(error);
+      const message = getIcpGenerationErrorMessage(error, t);
       setGenerateError(message);
       toast.error(message);
     },
@@ -204,7 +204,7 @@ export default function ICP() {
     if (activeProfile) {
       const defaults = createDefaultIcpFormData().weights;
       const merged = {
-        name: activeProfile.name || 'My ICP',
+        name: activeProfile.name || t('icp.defaults.profileName'),
         description: activeProfile.description || '',
         id: activeProfile.id,
         weights: {
@@ -247,20 +247,20 @@ export default function ICP() {
     if (thresholds) {
       const { excellent = 80, strong = 50, medium = 20 } = thresholds;
       if (excellent <= strong || strong <= medium) {
-        toast.error(t('icp.toasts.thresholdOrder', { defaultValue: 'Thresholds must be in descending order: Excellent > Strong > Medium.' }));
+        toast.error(t('icp.toasts.thresholdOrder'));
         return;
       }
     }
     setSaving(true);
     try {
       await dataClient.icp.saveActive(formData);
-      toast.success(t('icp.toasts.savedDetailed', { defaultValue: 'ICP profile saved. Re-analyze leads to apply the new weights.' }));
+      toast.success(t('icp.toasts.savedDetailed'));
       setEditing(false);
       queryClient.invalidateQueries({ queryKey: ['icpConfig'] });
       queryClient.invalidateQueries({ queryKey: ['icpProfilesQuickSwitch'] });
     } catch (error) {
       console.warn('Failed to save ICP profile', error);
-      toast.error(t('icp.toasts.saveFailed', { defaultValue: 'Failed to save ICP profile.' }));
+      toast.error(t('icp.toasts.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -271,7 +271,7 @@ export default function ICP() {
     if (activeProfile) {
       const defaults = createDefaultIcpFormData().weights;
       const merged = {
-        name: activeProfile.name || 'My ICP',
+        name: activeProfile.name || t('icp.defaults.profileName'),
         description: activeProfile.description || '',
         id: activeProfile.id,
         weights: {
@@ -308,13 +308,11 @@ export default function ICP() {
     <div className="max-w-4xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-start gap-4 mb-8">
         <div className="flex-1">
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">ICP Profile</h1>
-          <p className="text-slate-500 mt-1">
-            Define your Ideal Customer Profile and tune scoring weights
-          </p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{t('icp.title')}</h1>
+          <p className="text-slate-500 mt-1">{t('icp.subtitle')}</p>
           {editing && (
             <p className="text-xs text-amber-600 mt-1 font-medium">
-              ⚠ Unsaved changes — click Save to apply to scoring
+              {t('icp.unsavedChanges')}
             </p>
           )}
         </div>
@@ -327,19 +325,19 @@ export default function ICP() {
               className="gap-2"
             >
               <Sparkles className="w-4 h-4" />
-              <span className="hidden sm:inline">Générer avec l'IA</span>
-              <span className="sm:hidden">IA</span>
+              <span className="hidden sm:inline">{t('icp.actions.generateWithAi')}</span>
+              <span className="sm:hidden">{t('icp.actions.generateShort')}</span>
             </Button>
             <Button onClick={() => setEditing(true)} className="gap-2 bg-gradient-to-r from-brand-sky to-brand-sky-2">
               <Edit className="w-4 h-4" />
-              <span className="hidden sm:inline">Edit Profile</span>
-              <span className="sm:hidden">Edit</span>
+              <span className="hidden sm:inline">{t('icp.actions.editProfile')}</span>
+              <span className="sm:hidden">{t('common.edit')}</span>
             </Button>
           </div>
         ) : (
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleCancel}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleSave}
@@ -347,7 +345,7 @@ export default function ICP() {
               className="gap-2 bg-gradient-to-r from-brand-sky to-brand-sky-2"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Save Profile
+              {t('icp.saveProfile')}
             </Button>
           </div>
         )}
@@ -362,21 +360,21 @@ export default function ICP() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-brand-sky" />
-              Générer un ICP avec l'IA
+              {t('icp.dialog.title')}
             </DialogTitle>
             <DialogDescription>
-              Décrivez votre client idéal en langage naturel. Claude remplira automatiquement les industries, rôles, taille d'entreprise et géographie.
+              {t('icp.dialog.description')}
             </DialogDescription>
           </DialogHeader>
           <Textarea
             value={genDescription}
             onChange={(e) => setGenDescription(e.target.value)}
-            placeholder="Ex : PME SaaS B2B française de 50 à 500 employés, décideur IT (CTO, DSI, RSSI), secteurs finance ou industrie, budget annuel > 50 k€, déjà équipée d'un CRM…"
+            placeholder={t('icp.dialog.placeholder')}
             rows={5}
             className="resize-none"
           />
           <p className="text-xs text-slate-500">
-            Si la génération échoue, vérifie d’abord Anthropic : clé backend, crédits disponibles, ou circuit breaker temporaire.
+            {t('icp.dialog.hint')}
           </p>
           {generateError ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-sm text-amber-900">
@@ -385,7 +383,7 @@ export default function ICP() {
           ) : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => setGenOpen(false)}>
-              Annuler
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={() => generateMutation.mutate(genDescription)}
@@ -395,8 +393,8 @@ export default function ICP() {
               {generateMutation.isPending
                 ? <Loader2 className="w-4 h-4 animate-spin" />
                 : <Sparkles className="w-4 h-4" />}
-              Générer
-              {!generateMutation.isPending && <span className="text-[10px] opacity-70 font-normal">3 crédits</span>}
+              {t('icp.dialog.generate')}
+              {!generateMutation.isPending && <span className="text-[10px] opacity-70 font-normal">{t('icp.dialog.creditCost')}</span>}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -406,11 +404,11 @@ export default function ICP() {
         <TabsList className="mb-6 bg-slate-100">
           <TabsTrigger value="criteria" className="gap-2">
             <Target className="w-4 h-4" />
-            Criteria
+            {t('icp.tabs.criteria')}
           </TabsTrigger>
           <TabsTrigger value="weights" className="gap-2">
             <Sliders className="w-4 h-4" />
-            Scoring Weights
+            {t('icp.tabs.weights')}
           </TabsTrigger>
         </TabsList>
 
@@ -419,11 +417,11 @@ export default function ICP() {
           {/* Profile Info */}
           <Card className="border border-slate-200 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Profile Information</CardTitle>
+              <CardTitle className="text-base">{t('icp.sections.profileInformation')}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Profile Name</Label>
+                <Label>{t('icp.profileName')}</Label>
                 <Input
                   value={formData.name}
                   disabled={!editing}
@@ -431,78 +429,78 @@ export default function ICP() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Description</Label>
+                <Label>{t('icp.description')}</Label>
                 <Input
                   value={formData.description}
                   disabled={!editing}
                   onChange={(event) => setFormData((previous) => ({ ...previous, description: event.target.value }))}
-                  placeholder="Short description of this profile"
+                  placeholder={t('icp.placeholders.profileDescription')}
                 />
               </div>
             </CardContent>
           </Card>
 
           {/* Industries */}
-          <SectionCard icon={Building2} title="Industries" color="bg-violet-500">
+          <SectionCard icon={Building2} title={t('icp.industries')} color="bg-violet-500">
             <TagInput
-              label="Primary Industries (+30 pts)"
+              label={t('icp.labels.primaryIndustries')}
               values={formData.weights.industrie.primaires}
               onChange={(value) => updateWeights('industrie.primaires', value)}
-              placeholder="e.g. SaaS, FinTech, Cybersecurity"
+              placeholder={t('icp.placeholders.industries')}
               disabled={!editing}
               variant="default"
             />
             <TagInput
-              label="Secondary Industries (+15 pts)"
+              label={t('icp.labels.secondaryIndustries')}
               values={formData.weights.industrie.secondaires}
               onChange={(value) => updateWeights('industrie.secondaires', value)}
-              placeholder="e.g. Consulting, MarTech"
+              placeholder={t('icp.placeholders.secondaryIndustries')}
               disabled={!editing}
               variant="secondary"
             />
             <TagInput
-              label="Excluded Industries (eliminates lead)"
+              label={t('icp.labels.excludedIndustries')}
               values={formData.weights.industrie.exclusions || []}
               onChange={(value) => updateWeights('industrie.exclusions', value)}
-              placeholder="e.g. Hospitals, Public sector"
+              placeholder={t('icp.placeholders.excludedIndustries')}
               disabled={!editing}
               variant="danger"
             />
           </SectionCard>
 
           {/* Roles */}
-          <SectionCard icon={Users} title="Contact Roles" color="bg-blue-500">
+          <SectionCard icon={Users} title={t('icp.targetRoles')} color="bg-blue-500">
             <TagInput
-              label="Exact Roles (+25 pts)"
+              label={t('icp.labels.exactRoles')}
               values={formData.weights.roles.exacts}
               onChange={(value) => updateWeights('roles.exacts', value)}
-              placeholder="e.g. CEO, CTO, VP Sales"
+              placeholder={t('icp.placeholders.exactRoles')}
               disabled={!editing}
               variant="default"
             />
             <TagInput
-              label="Similar Roles (+10 pts)"
+              label={t('icp.labels.similarRoles')}
               values={formData.weights.roles.proches}
               onChange={(value) => updateWeights('roles.proches', value)}
-              placeholder="e.g. Director, Head of, Manager"
+              placeholder={t('icp.placeholders.similarRoles')}
               disabled={!editing}
               variant="secondary"
             />
             <TagInput
-              label="Excluded Roles (eliminates lead)"
+              label={t('icp.labels.excludedRoles')}
               values={formData.weights.roles.exclusions}
               onChange={(value) => updateWeights('roles.exclusions', value)}
-              placeholder="e.g. Intern, Student, HR"
+              placeholder={t('icp.placeholders.excludedRoles')}
               disabled={!editing}
               variant="danger"
             />
           </SectionCard>
 
           {/* Company Size */}
-          <SectionCard icon={Target} title="Company Size" color="bg-amber-500">
+          <SectionCard icon={Target} title={t('icp.companySize')} color="bg-amber-500">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Min employees (primary)</Label>
+                <Label>{t('icp.labels.primaryMinEmployees')}</Label>
                 <Input
                   type="number"
                   disabled={!editing}
@@ -511,7 +509,7 @@ export default function ICP() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Max employees (primary)</Label>
+                <Label>{t('icp.labels.primaryMaxEmployees')}</Label>
                 <Input
                   type="number"
                   disabled={!editing}
@@ -520,7 +518,7 @@ export default function ICP() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Min employees (secondary)</Label>
+                <Label>{t('icp.labels.secondaryMinEmployees')}</Label>
                 <Input
                   type="number"
                   disabled={!editing}
@@ -529,7 +527,7 @@ export default function ICP() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Max employees (secondary)</Label>
+                <Label>{t('icp.labels.secondaryMaxEmployees')}</Label>
                 <Input
                   type="number"
                   disabled={!editing}
@@ -541,40 +539,40 @@ export default function ICP() {
           </SectionCard>
 
           {/* Geography */}
-          <SectionCard icon={Globe} title="Geography" color="bg-emerald-500">
+          <SectionCard icon={Globe} title={t('icp.geography')} color="bg-emerald-500">
             <TagInput
-              label="Primary Countries (+15 pts)"
+              label={t('icp.labels.primaryCountries')}
               values={formData.weights.geo.primaire}
               onChange={(value) => updateWeights('geo.primaire', value)}
-              placeholder="e.g. France, Germany"
+              placeholder={t('icp.placeholders.primaryCountries')}
               disabled={!editing}
               variant="default"
             />
             <TagInput
-              label="Secondary Countries (+5 pts)"
+              label={t('icp.labels.secondaryCountries')}
               values={formData.weights.geo.secondaire}
               onChange={(value) => updateWeights('geo.secondaire', value)}
-              placeholder="e.g. Belgium, Spain"
+              placeholder={t('icp.placeholders.secondaryCountries')}
               disabled={!editing}
               variant="secondary"
             />
           </SectionCard>
 
           {/* Client Type */}
-          <SectionCard icon={MapPin} title="Client Type" color="bg-pink-500">
+          <SectionCard icon={MapPin} title={t('icp.labels.clientTypeSection')} color="bg-pink-500">
             <TagInput
-              label="Primary Client Type (B2B / B2C / B2B2C)"
+              label={t('icp.labels.primaryClientType')}
               values={formData.weights.typeClient.primaire || []}
               onChange={(value) => updateWeights('typeClient.primaire', value)}
-              placeholder="e.g. B2B"
+              placeholder={t('icp.placeholders.primaryClientType')}
               disabled={!editing}
               variant="default"
             />
             <TagInput
-              label="Secondary Client Type"
+              label={t('icp.labels.secondaryClientType')}
               values={formData.weights.typeClient.secondaire || []}
               onChange={(value) => updateWeights('typeClient.secondaire', value)}
-              placeholder="e.g. B2B2C"
+              placeholder={t('icp.placeholders.secondaryClientType')}
               disabled={!editing}
               variant="secondary"
             />
@@ -588,47 +586,47 @@ export default function ICP() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Sliders className="w-5 h-5 text-violet-600" />
-                Criterion Importance
+                {t('icp.sections.criterionImportance')}
               </CardTitle>
               <p className="text-sm text-slate-500 mt-1">
-                Adjust how much each criterion contributes to the ICP score. 100% = default weight, 150% = critical, 0% = ignored.
+                {t('icp.sections.criterionImportanceBody')}
               </p>
             </CardHeader>
             <CardContent className="space-y-6">
               <WeightSlider
-                label="Industry"
+                label={t('icp.industries')}
                 value={formData.weights.industrie.weight ?? 100}
                 onChange={(v) => updateWeights('industrie.weight', v)}
                 disabled={!editing}
-                description="How important is the industry match? Primary = +30pts × weight"
+                description={t('icp.sections.weightDescriptions.industry')}
               />
               <WeightSlider
-                label="Contact Role"
+                label={t('icp.targetRoles')}
                 value={formData.weights.roles.weight ?? 100}
                 onChange={(v) => updateWeights('roles.weight', v)}
                 disabled={!editing}
-                description="How important is the contact's role? Exact = +25pts × weight"
+                description={t('icp.sections.weightDescriptions.roles')}
               />
               <WeightSlider
-                label="Client Type (B2B/B2C)"
+                label={t('icp.labels.clientTypeSection')}
                 value={formData.weights.typeClient.weight ?? 100}
                 onChange={(v) => updateWeights('typeClient.weight', v)}
                 disabled={!editing}
-                description="How important is the business model match? Match = +25pts × weight"
+                description={t('icp.sections.weightDescriptions.clientType')}
               />
               <WeightSlider
-                label="Company Size"
+                label={t('icp.companySize')}
                 value={formData.weights.structure.weight ?? 100}
                 onChange={(v) => updateWeights('structure.weight', v)}
                 disabled={!editing}
-                description="How important is headcount matching? Primary = +15pts × weight"
+                description={t('icp.sections.weightDescriptions.companySize')}
               />
               <WeightSlider
-                label="Geography"
+                label={t('icp.geography')}
                 value={formData.weights.geo.weight ?? 100}
                 onChange={(v) => updateWeights('geo.weight', v)}
                 disabled={!editing}
-                description="How important is the country? Primary = +15pts × weight"
+                description={t('icp.sections.weightDescriptions.geography')}
               />
             </CardContent>
           </Card>
@@ -638,27 +636,27 @@ export default function ICP() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Brain className="w-5 h-5 text-brand-sky" />
-                AI vs ICP Blend
+                {t('icp.sections.blendTitle')}
               </CardTitle>
               <p className="text-sm text-slate-500 mt-1">
-                Final Score = ICP base score + AI signal boost. Adjust how much weight each side gets.
+                {t('icp.sections.blendBody')}
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-xl bg-violet-50 border border-violet-200 p-3 sm:p-4 text-center">
-                  <p className="text-xs uppercase tracking-wide text-violet-600 font-semibold mb-1">ICP Weight</p>
+                  <p className="text-xs uppercase tracking-wide text-violet-600 font-semibold mb-1">{t('icp.labels.icpWeight')}</p>
                   <p className="text-3xl font-bold text-violet-700">{icpWeight}%</p>
                 </div>
                 <div className="rounded-xl bg-brand-sky/5 border border-brand-sky/20 p-4 text-center">
-                  <p className="text-xs uppercase tracking-wide text-brand-sky font-semibold mb-1">AI Weight</p>
+                  <p className="text-xs uppercase tracking-wide text-brand-sky font-semibold mb-1">{t('icp.labels.aiWeight')}</p>
                   <p className="text-3xl font-bold text-brand-sky">{aiWeight}%</p>
                 </div>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-xs text-slate-500">
-                  <span>More ICP rules-based</span>
-                  <span>More AI-driven</span>
+                  <span>{t('icp.labels.moreIcp')}</span>
+                  <span>{t('icp.labels.moreAi')}</span>
                 </div>
                 <Slider
                   value={[icpWeight]}
@@ -678,15 +676,15 @@ export default function ICP() {
           {/* Score thresholds */}
           <Card className="border border-slate-200 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Score Thresholds</CardTitle>
+              <CardTitle className="text-base">{t('icp.sections.scoreThresholds')}</CardTitle>
               <p className="text-sm text-slate-500 mt-1">
-                Define at what score a lead becomes Excellent, Strong Fit, or Medium Fit.
+                {t('icp.sections.scoreThresholdsBody')}
               </p>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-emerald-700 font-semibold">Excellent ≥</Label>
+                  <Label className="text-emerald-700 font-semibold">{t('icp.labels.excellentThreshold')}</Label>
                   <Input
                     type="number"
                     min={1}
@@ -698,7 +696,7 @@ export default function ICP() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-blue-700 font-semibold">Strong Fit ≥</Label>
+                  <Label className="text-blue-700 font-semibold">{t('icp.labels.strongThreshold')}</Label>
                   <Input
                     type="number"
                     min={1}
@@ -710,7 +708,7 @@ export default function ICP() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-amber-700 font-semibold">Medium Fit ≥</Label>
+                  <Label className="text-amber-700 font-semibold">{t('icp.labels.mediumThreshold')}</Label>
                   <Input
                     type="number"
                     min={1}
@@ -723,7 +721,7 @@ export default function ICP() {
                 </div>
               </div>
               <p className="text-xs text-slate-500 mt-3">
-                Leads below the Medium threshold are marked as Low Fit. Excluded should only come from hard exclusion rules.
+                {t('icp.sections.thresholdHint')}
               </p>
             </CardContent>
           </Card>
