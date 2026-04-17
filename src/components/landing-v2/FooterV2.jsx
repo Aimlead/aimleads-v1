@@ -1,14 +1,14 @@
 import { Link } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
+import BrandLogo from '@/components/brand/BrandLogo';
 
 export default function FooterV2({ onOpenBooking }) {
   return (
     <footer className="lv2-footer">
       <div className="lv2-footer-inner">
         <div className="lv2-footer-brand">
-          <div className="lv2-nav-brand" style={{ gap: 10 }}>
-            <span className="lv2-nav-logo" aria-hidden="true" />
-            <span>AimLeads</span>
+          <div className="lv2-nav-brand" style={{ gap: 12 }}>
+            <BrandLogo variant="wordmark" tone="light" className="lv2-footer-wordmark" alt="AimLeads" />
           </div>
           <p>
             L'IA qui travaille pendant que vos équipes scalent. Lead-Scoreur, BDR automatisé et

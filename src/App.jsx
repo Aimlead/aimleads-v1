@@ -12,11 +12,12 @@ import { queryClientInstance } from '@/lib/query-client';
 
 // Eagerly loaded (critical path)
 import Dashboard from '@/pages/Dashboard';
-import Landing from '@/pages/Landing';
+import LandingV2 from '@/pages/LandingV2';
 import Login from '@/pages/Login';
 import LeadDetail from '@/pages/LeadDetail';
 
 // Lazily loaded (code-split bundles)
+const LandingLegacy = lazy(() => import('@/pages/Landing'));
 const AccountSettings = lazy(() => import('@/pages/AccountSettings'));
 const Analytics = lazy(() => import('@/pages/Analytics'));
 const Onboarding = lazy(() => import('@/pages/Onboarding'));
@@ -33,7 +34,6 @@ const Outreach = lazy(() => import('@/pages/Outreach'));
 const CrmIntegration = lazy(() => import('@/pages/CrmIntegration'));
 const Help = lazy(() => import('@/pages/Help'));
 const AuthCallback = lazy(() => import('@/pages/AuthCallback'));
-const LandingV2 = lazy(() => import('@/pages/LandingV2'));
 
 function PageLoader() {
   return (
@@ -98,8 +98,8 @@ function PublicOnlyGuard({ children }) {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path={ROUTES.home} element={<Landing />} />
-      <Route path={ROUTES.landingV2} element={<LandingV2 />} />
+      <Route path={ROUTES.home} element={<LandingV2 />} />
+      <Route path="/v1" element={<LandingLegacy />} />
       <Route path={ROUTES.pricing} element={<Pricing />} />
       <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
       <Route path={ROUTES.resetPassword} element={<ResetPassword />} />
