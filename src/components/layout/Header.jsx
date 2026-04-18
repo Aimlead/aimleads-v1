@@ -124,7 +124,7 @@ export default function Header({ user, onSignOut, onOpenPalette }) {
   const { t } = useTranslation();
 
   return (
-    <header className="fixed top-0 left-0 md:left-64 right-0 h-16 border-b border-slate-200 z-40" style={{ background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)' }}>
+    <header className="fixed top-0 left-0 md:left-64 right-0 h-16 border-b border-slate-200/60 z-40" style={{ background: 'rgba(249,250,253,0.92)', backdropFilter: 'blur(16px) saturate(1.4)', WebkitBackdropFilter: 'blur(16px) saturate(1.4)', boxShadow: '0 1px 0 rgba(15,26,46,0.06), 0 4px 16px -8px rgba(15,26,46,0.08)' }}>
       <div className="h-full px-4 md:px-6 flex items-center justify-between gap-3">
 
         <div className="flex items-center gap-2">
@@ -148,7 +148,7 @@ export default function Header({ user, onSignOut, onOpenPalette }) {
               <UserCog className="w-4 h-4" />
             </Button>
           </Link>
-          <Button variant="outline" size="sm" onClick={onSignOut} className="text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-xl text-xs h-8 hidden sm:inline-flex">
+          <Button variant="outline" size="sm" onClick={onSignOut} className="text-slate-500 border-slate-200/80 hover:border-brand-sky/40 hover:text-brand-sky hover:bg-brand-sky/5 rounded-xl text-xs h-8 hidden sm:inline-flex transition-all">
             {t('nav.signOut')}
           </Button>
         </div>

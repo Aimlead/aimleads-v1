@@ -40,9 +40,12 @@ export default function Sidebar({ mobile = false, onNavigate, onOpenPalette, onS
     <aside
       className={cn(
         'flex flex-col z-50 transition-all',
-        'bg-brand-navy border-r border-white/[0.06]',
+        'border-r border-white/[0.06]',
         mobile ? 'h-full w-full' : 'hidden md:flex fixed left-0 top-0 h-screen w-64'
       )}
+      style={{
+        background: 'linear-gradient(180deg, #0b1428 0%, #001840 60%, #001229 100%)',
+      }}
     >
       {/* Brand */}
       <div className="h-16 flex items-center px-5 border-b border-white/[0.06]">
@@ -53,7 +56,8 @@ export default function Sidebar({ mobile = false, onNavigate, onOpenPalette, onS
       <div className="px-3 pt-4 pb-2">
         <button
           onClick={onOpenPalette}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/[0.05] hover:bg-white/10 border border-slate-200 text-white/40 text-sm transition-all duration-150 group"
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-white/40 text-sm transition-all duration-150 group"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
@@ -81,11 +85,15 @@ export default function Sidebar({ mobile = false, onNavigate, onOpenPalette, onS
                       to={item.href}
                       onClick={onNavigate}
                       className={cn(
-                        'group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
+                        'group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
                         active
-                          ? 'bg-white/10 text-white shadow-sm'
+                          ? 'text-white'
                           : 'text-white/55 hover:bg-white/[0.05] hover:text-white/90'
                       )}
+                      style={active ? {
+                        background: 'linear-gradient(135deg, rgba(58,141,255,0.18) 0%, rgba(58,141,255,0.06) 100%)',
+                        boxShadow: '0 0 0 1px rgba(58,141,255,0.25), 0 4px 16px -4px rgba(58,141,255,0.3)',
+                      } : undefined}
                     >
                       {/* Active indicator bar */}
                       <AnimatePresence>

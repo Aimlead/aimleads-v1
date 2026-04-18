@@ -4,7 +4,7 @@ import { cva } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -14,6 +14,8 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        gradient: "text-white border-0 shadow-[0_8px_24px_-8px_rgba(58,141,255,0.6),inset_0_1px_0_rgba(255,255,255,0.2)] hover:shadow-[0_12px_32px_-8px_rgba(58,141,255,0.8),inset_0_1px_0_rgba(255,255,255,0.3)] hover:-translate-y-px active:translate-y-0 [background:linear-gradient(135deg,#3a8dff_0%,#1f6fe3_100%)]",
+        glass: "bg-white/[0.06] border border-white/[0.12] text-white backdrop-blur-md hover:bg-white/[0.1] hover:border-white/20",
       },
       size: {
         default: "h-10 px-4 py-2",
