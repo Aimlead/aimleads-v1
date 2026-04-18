@@ -13,23 +13,26 @@ const plans = [
     slug: 'starter',
     price: 49,
     icon: Zap,
-    iconBg: 'bg-blue-100',
-    iconColor: 'text-blue-600',
+    iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600',
+    iconGlow: 'shadow-[0_6px_20px_-6px_rgba(37,99,235,0.5)]',
+    iconColor: 'text-white',
   },
   {
     slug: 'team',
     price: 149,
     icon: Users,
-    iconBg: 'bg-brand-sky/10',
-    iconColor: 'text-brand-sky',
+    iconBg: 'bg-gradient-to-br from-brand-sky to-brand-sky-2',
+    iconGlow: 'shadow-[0_8px_24px_-6px_rgba(58,141,255,0.6)]',
+    iconColor: 'text-white',
     popular: true,
   },
   {
     slug: 'scale',
     price: 399,
     icon: Building2,
-    iconBg: 'bg-amber-100',
-    iconColor: 'text-amber-600',
+    iconBg: 'bg-gradient-to-br from-amber-500 to-orange-500',
+    iconGlow: 'shadow-[0_6px_20px_-6px_rgba(245,158,11,0.5)]',
+    iconColor: 'text-white',
   },
 ];
 
@@ -91,19 +94,20 @@ export default function Pricing() {
             return (
               <Card
                 key={plan.slug}
-                className={`relative shadow-sm ${
-                  plan.popular ? 'border-2 border-brand-sky shadow-md shadow-brand-sky/10' : 'border border-slate-200'
+                variant="elevated"
+                className={`relative ${
+                  plan.popular ? 'border-2 border-brand-sky/40 shadow-[0_16px_48px_-12px_rgba(58,141,255,0.3)] hover:shadow-[0_24px_56px_-12px_rgba(58,141,255,0.4)]' : ''
                 }`}
               >
                 {plan.popular && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-brand-sky text-white text-xs font-semibold px-3 py-1 rounded-full">
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-brand-sky to-brand-sky-2 text-white text-xs font-semibold px-3.5 py-1 rounded-full shadow-[0_4px_16px_-4px_rgba(58,141,255,0.6)]">
                     {t('pricing.popular')}
                   </div>
                 )}
 
                 <CardHeader>
-                  <div className={`w-12 h-12 rounded-xl ${plan.iconBg} flex items-center justify-center mb-3`}>
-                    <Icon className={`w-6 h-6 ${plan.iconColor}`} />
+                  <div className={`w-12 h-12 rounded-xl ${plan.iconBg} ${plan.iconGlow} ring-1 ring-white/30 flex items-center justify-center mb-3`}>
+                    <Icon className={`w-6 h-6 ${plan.iconColor} drop-shadow`} />
                   </div>
 
                   <CardTitle className="text-xl">{t(`pricing.plans.${plan.slug}.name`)}</CardTitle>
@@ -125,8 +129,8 @@ export default function Pricing() {
                   </ul>
 
                   <Button
-                    className={`w-full ${plan.popular ? 'bg-gradient-to-r from-brand-sky to-brand-sky-2 hover:from-brand-sky-2 hover:to-brand-navy-2' : ''}`}
-                    variant={plan.popular ? 'default' : 'outline'}
+                    className="w-full"
+                    variant={plan.popular ? 'gradient' : 'outline'}
                     onClick={() => openSelectedPlan(plan)}
                   >
                     {isAuthenticated ? t('pricing.openWorkspace') : t('pricing.startPlan', {

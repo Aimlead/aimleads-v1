@@ -32,10 +32,10 @@ const LIST_KEYS = {
 const STORAGE_KEY = 'aimleads:selected-source-list';
 
 const STAT_STYLE = {
-  total: { icon: Users, bg: 'bg-violet-500' },
-  qualified: { icon: TrendingUp, bg: 'bg-emerald-500' },
-  avg: { icon: Target, bg: 'bg-amber-500' },
-  toAnalyze: { icon: Sparkles, bg: 'bg-sky-500' },
+  total: { icon: Users, bg: 'bg-gradient-to-br from-violet-500 to-violet-600', glow: 'shadow-[0_6px_20px_-6px_rgba(139,92,246,0.5)]', tint: 'from-violet-50/60' },
+  qualified: { icon: TrendingUp, bg: 'bg-gradient-to-br from-emerald-500 to-emerald-600', glow: 'shadow-[0_6px_20px_-6px_rgba(16,185,129,0.5)]', tint: 'from-emerald-50/60' },
+  avg: { icon: Target, bg: 'bg-gradient-to-br from-amber-500 to-orange-500', glow: 'shadow-[0_6px_20px_-6px_rgba(245,158,11,0.5)]', tint: 'from-amber-50/60' },
+  toAnalyze: { icon: Sparkles, bg: 'bg-gradient-to-br from-sky-500 to-blue-600', glow: 'shadow-[0_6px_20px_-6px_rgba(58,141,255,0.55)]', tint: 'from-sky-50/60' },
 };
 
 const BILLING_ACTION_LABELS = {
@@ -623,14 +623,15 @@ export default function Dashboard() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25, delay: index * 0.05 }}
-                  className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm"
+                  whileHover={{ y: -2 }}
+                  className={`relative overflow-hidden bg-gradient-to-br ${style.tint} to-white rounded-xl border border-slate-200/70 p-4 shadow-[0_1px_3px_rgba(15,26,46,0.05)] hover:shadow-[0_8px_24px_-8px_rgba(15,26,46,0.15)] hover:border-slate-300/60 transition-all duration-200`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-lg ${style.bg} flex items-center justify-center shrink-0`}>
-                      <Icon className="w-4 h-4 text-white" />
+                    <div className={`w-10 h-10 rounded-xl ${style.bg} ${style.glow} flex items-center justify-center shrink-0 ring-1 ring-white/30`}>
+                      <Icon className="w-4 h-4 text-white drop-shadow" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xl font-bold text-slate-900 leading-tight">{stat.value}</p>
+                      <p className="text-xl font-bold text-slate-900 leading-tight tracking-tight">{stat.value}</p>
                       <p className="text-xs text-slate-500 truncate">{stat.label}</p>
                     </div>
                   </div>
