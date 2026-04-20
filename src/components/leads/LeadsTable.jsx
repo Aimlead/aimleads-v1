@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Database, ExternalLink, Loader2, Search, Sparkles, Trash2, Upload, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Database, ExternalLink, Loader2, Mail, Search, Sparkles, Trash2, Upload, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SkeletonRow } from '@/components/ui/skeleton';
 import { ROUTES } from '@/constants/routes';
@@ -448,10 +448,17 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
         <Users className="w-7 h-7 text-brand-sky" />
       </div>
       <div>
-        <p className="text-base font-semibold text-slate-700 mb-1">{tt('leads.noLeads', 'No leads yet')}</p>
-        <p className="text-sm text-slate-400 max-w-xs">{tt('leads.noLeadsSubtitle', 'Import a CSV to get started. AimLeads will score every lead against your ICP automatically.')}</p>
+        <p className="text-base font-semibold text-slate-700 mb-1">{tt('leads.noLeads', 'Aucun lead pour l\'instant')}</p>
+        <p className="text-sm text-slate-400 max-w-xs">{tt('leads.noLeadsSubtitle', 'Recherchez une entreprise avec l\'IA, importez un CSV, ou configurez votre ICP pour commencer.')}</p>
       </div>
       <div className="flex flex-wrap gap-2 justify-center">
+        <button
+          onClick={() => document.getElementById('research-lead-trigger')?.click()}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-brand-sky text-white text-sm font-medium hover:opacity-90 transition-opacity"
+        >
+          <Sparkles className="w-4 h-4" />
+          Recherche IA
+        </button>
         <button
           onClick={() => document.getElementById('import-csv-trigger')?.click()}
           className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-sky text-white text-sm font-medium hover:bg-brand-sky-2 transition-colors"
@@ -463,7 +470,7 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
           onClick={() => navigate(ROUTES.icp)}
           className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors"
         >
-          {tt('dashboard.activation.icp.configureAction', 'Configure ICP')} →
+          {tt('dashboard.activation.icp.configureAction', 'Configurer ICP')} →
         </button>
       </div>
     </div>
@@ -567,6 +574,18 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
                       {analyzingIds.has(lead.id)
                         ? tt('leads.analyzingAction', 'Analyzing...')
                         : tt('leads.analyzeAction', 'Analyze')}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      title="Générer une séquence outreach"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        navigate(`${ROUTES.outreach}?leadId=${lead.id}`);
+                      }}
+                      className="text-sky-500 hover:text-sky-700 hover:bg-sky-50 px-2 h-7"
+                    >
+                      <Mail className="w-3 h-3" />
                     </Button>
                     <Button
                       size="sm"
@@ -731,6 +750,18 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
                             {analyzingIds.has(lead.id)
                               ? tt('leads.analyzingAction', 'Analyzing...')
                               : tt('leads.analyzeAction', 'Analyze')}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            title="Générer séquence outreach"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              navigate(`${ROUTES.outreach}?leadId=${lead.id}`);
+                            }}
+                            className="text-sky-500 hover:text-sky-700 hover:bg-sky-50 px-2"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
                           </Button>
                           <Button
                             size="sm"

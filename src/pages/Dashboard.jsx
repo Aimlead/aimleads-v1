@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import ActivationChecklist from '@/components/ActivationChecklist';
 import LeadSlideOver from '@/components/leads/LeadSlideOver';
 import ImportCSVDialog from '@/components/leads/ImportCSVDialog';
+import ResearchLeadDialog from '@/components/leads/ResearchLeadDialog';
 import LeadsTable from '@/components/leads/LeadsTable';
 import EmptyState from '@/components/ui/EmptyState';
 import { SkeletonCard } from '@/components/ui/skeleton';
@@ -86,6 +87,7 @@ export default function Dashboard() {
   const [selectedLead, setSelectedLead] = useState(null);
   const [slideOverOpen, setSlideOverOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [researchDialogOpen, setResearchDialogOpen] = useState(false);
   const [selectedSourceList, setSelectedSourceList] = useState(() => {
     if (typeof window === 'undefined') return LIST_KEYS.ALL;
     return window.localStorage.getItem(STORAGE_KEY) || LIST_KEYS.ALL;
@@ -576,6 +578,16 @@ export default function Dashboard() {
             {t('common.export')}
           </Button>
           <Button
+            id="research-lead-trigger"
+            onClick={() => setResearchDialogOpen(true)}
+            size="sm"
+            variant="outline"
+            className="gap-1.5 h-8 text-xs border-sky-200 text-sky-700 hover:bg-sky-50"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Recherche IA
+          </Button>
+          <Button
             id="import-csv-trigger"
             onClick={() => setImportDialogOpen(true)}
             size="sm"
@@ -586,6 +598,28 @@ export default function Dashboard() {
           </Button>
         </div>
       </div>
+
+      {/* ── No-ICP warning ─────────────────────────────────────────────── */}
+      {!activeIcp && !isLoading && (
+        <div className="mb-4 flex items-start gap-3 px-4 py-3 rounded-xl border border-amber-200 bg-amber-50">
+          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-800">
+              {t('dashboard.noIcpWarning.title', 'No ICP profile configured')}
+            </p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              {t('dashboard.noIcpWarning.body', 'AI scoring and lead qualification require an active ICP. Set one up to start scoring your leads automatically.')}
+            </p>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => navigate(ROUTES.icp)}
+            className="shrink-0 h-7 text-xs bg-amber-500 hover:bg-amber-600 text-white border-0"
+          >
+            {t('dashboard.noIcpWarning.cta', 'Configure ICP')}
+          </Button>
+        </div>
+      )}
 
       {/* ── Context bar: ICP + List selectors ──────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-3 mb-5 p-3 bg-white rounded-xl border border-slate-200 shadow-sm">
@@ -1260,6 +1294,18 @@ export default function Dashboard() {
         }}
         onFocusImportedLeads={focusImportedLeads}
         onAnalyzeImportedLeads={handleAnalyzeImportedLeads}
+      />
+
+      <ResearchLeadDialog
+        open={researchDialogOpen}
+        onClose={() => setResearchDialogOpen(false)}
+        onLeadCreated={(lead) => {
+          setResearchDialogOpen(false);
+          if (lead) {
+            setSelectedLead(lead);
+            setSlideOverOpen(true);
+          }
+        }}
       />
     </>
   );

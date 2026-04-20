@@ -808,15 +808,27 @@ export default function LeadDetail() {
                 <CardContent className="space-y-3">
                   <div className="flex items-end gap-3 flex-wrap">
                     <div className="flex-1 min-w-36">
-                      <label className="text-xs font-medium text-slate-600 mb-1.5 block">{t('outreach.sequence.toneLabel', { defaultValue: 'Tone' })}</label>
+                      <label className="text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-brand-sky inline-block" />
+                        {t('outreach.sequence.toneLabel', { defaultValue: 'Sequence tone' })}
+                      </label>
                       <Select value={sequenceTone} onValueChange={setSequenceTone}>
-                        <SelectTrigger className="h-9 text-sm">
+                        <SelectTrigger className="h-9 text-sm border-slate-300 focus:ring-brand-sky">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {['consultative', 'direct', 'friendly', 'premium', 'challenger'].map((tone) => (
-                            <SelectItem key={tone} value={tone}>
-                              {t(`outreach.sequence.tones.${tone}`, { defaultValue: tone })}
+                          {[
+                            { key: 'consultative', emoji: '🤝' },
+                            { key: 'direct', emoji: '⚡' },
+                            { key: 'friendly', emoji: '😊' },
+                            { key: 'premium', emoji: '💎' },
+                            { key: 'challenger', emoji: '🎯' },
+                          ].map(({ key, emoji }) => (
+                            <SelectItem key={key} value={key}>
+                              <span className="flex items-center gap-2">
+                                <span>{emoji}</span>
+                                <span>{t(`outreach.sequence.tones.${key}`, { defaultValue: key })}</span>
+                              </span>
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -836,9 +848,11 @@ export default function LeadDetail() {
                     </Button>
                   </div>
                   {/* Tone help text */}
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
-                    {t(`outreach.sequence.toneHelp.${sequenceTone}`, { defaultValue: '' })}
-                  </p>
+                  {t(`outreach.sequence.toneHelp.${sequenceTone}`, { defaultValue: '' }) && (
+                    <p className="text-xs text-slate-500 leading-relaxed bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                      {t(`outreach.sequence.toneHelp.${sequenceTone}`, { defaultValue: '' })}
+                    </p>
+                  )}
                   {/* Sequence job progress */}
                   {sequenceActiveJobId && sequenceJob && !['completed', 'failed'].includes(sequenceJob.status) && (
                     <div className="pt-1">

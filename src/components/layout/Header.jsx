@@ -120,11 +120,11 @@ function CreditBadge() {
   );
 }
 
-export default function Header({ user, onSignOut, onOpenPalette }) {
+export default function Header({ user, onSignOut, onOpenPalette, bannerOffset = 0 }) {
   const { t } = useTranslation();
 
   return (
-    <header className="fixed top-0 left-0 md:left-64 right-0 h-16 border-b border-slate-200/60 z-40" style={{ background: 'rgba(249,250,253,0.92)', backdropFilter: 'blur(16px) saturate(1.4)', WebkitBackdropFilter: 'blur(16px) saturate(1.4)', boxShadow: '0 1px 0 rgba(15,26,46,0.06), 0 4px 16px -8px rgba(15,26,46,0.08)' }}>
+    <header className="fixed left-0 md:left-64 right-0 h-16 border-b border-slate-200/60 z-40" style={{ top: bannerOffset, background: 'rgba(249,250,253,0.92)', backdropFilter: 'blur(16px) saturate(1.4)', WebkitBackdropFilter: 'blur(16px) saturate(1.4)', boxShadow: '0 1px 0 rgba(15,26,46,0.06), 0 4px 16px -8px rgba(15,26,46,0.08)' }}>
       <div className="h-full px-4 md:px-6 flex items-center justify-between gap-3">
 
         <div className="flex items-center gap-2">

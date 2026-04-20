@@ -23,7 +23,7 @@ export const sidebarNavigation = [
   { name: 'Help', labelKey: 'nav.help', href: ROUTES.help, icon: LifeBuoy, group: 'config' },
 ];
 
-export default function Sidebar({ mobile = false, onNavigate, onOpenPalette, onSignOut }) {
+export default function Sidebar({ mobile = false, onNavigate, onOpenPalette, onSignOut, bannerOffset = 0 }) {
   const { t } = useTranslation();
   const location = useLocation();
 
@@ -41,10 +41,12 @@ export default function Sidebar({ mobile = false, onNavigate, onOpenPalette, onS
       className={cn(
         'flex flex-col z-50 transition-all',
         'border-r border-white/[0.06]',
-        mobile ? 'h-full w-full' : 'hidden md:flex fixed left-0 top-0 h-screen w-64'
+        mobile ? 'h-full w-full' : 'hidden md:flex fixed left-0 w-64'
       )}
       style={{
         background: 'linear-gradient(180deg, #0b1428 0%, #001840 60%, #001229 100%)',
+        top: mobile ? 0 : bannerOffset,
+        height: mobile ? '100%' : `calc(100vh - ${bannerOffset}px)`,
       }}
     >
       {/* Brand */}

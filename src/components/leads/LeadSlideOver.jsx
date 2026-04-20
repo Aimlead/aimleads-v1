@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Check, ChevronDown, ChevronUp, Copy, Database, ExternalLink, Globe, Loader2, Linkedin, Mail, Phone, Sparkles, Target } from 'lucide-react';
+import { AlertTriangle, Check, ChevronDown, ChevronUp, Copy, Database, ExternalLink, Globe, Loader2, Linkedin, Mail, Phone, Sparkles, Target } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -524,6 +524,29 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
             secondaryAction={secondaryHeroAction}
           />
         </div>
+
+        {finalScore === null && !isJobActive && (
+          <div className="mb-4 flex items-start gap-3 px-4 py-3 rounded-xl border border-sky-200 bg-sky-50">
+            <AlertTriangle className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-sky-800">
+                {t('leads.noScoreYet', { defaultValue: 'Not yet scored' })}
+              </p>
+              <p className="text-xs text-sky-700 mt-0.5">
+                {t('leads.noScoreYetBody', { defaultValue: 'Click Analyze to run AI scoring and get an ICP fit score for this lead.' })}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleSaveAndAnalyze}
+              disabled={savingAndAnalyzing}
+              className="shrink-0 h-7 text-xs bg-sky-500 hover:bg-sky-600 text-white border-0 gap-1.5"
+            >
+              {savingAndAnalyzing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+              {t('leads.analyzeNow', { defaultValue: 'Analyze now' })}
+            </Button>
+          </div>
+        )}
 
         <div className="mb-4 rounded-xl border border-slate-200 p-4 space-y-4 bg-slate-50/40">
           {currentJob ? (
