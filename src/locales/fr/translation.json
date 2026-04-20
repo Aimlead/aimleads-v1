@@ -169,6 +169,7 @@
     "orContinueWith": "ou continuer avec",
     "continueWithGoogle": "Continuer avec Google",
     "continueWithGithub": "Continuer avec GitHub",
+    "continueWithMicrosoft": "Continuer avec Microsoft",
     "signupTitle": "Créer un compte",
     "welcomeBack": "Content de vous revoir",
     "loginSubtitle": "Connectez-vous à votre espace AimLeads.",
@@ -820,7 +821,8 @@
     },
     "scoreIcpBtn": "Score ICP",
     "scoreIcpBtnLoading": "Calcul…",
-    "scoreIcpCost": "1 crédit",
+    "scoreIcpCost": "Gratuit",
+    "scoreIcpDeterministicHint": "Score déterministe — aucun crédit IA consommé.",
     "scoreIcpSuccess": "Score ICP calculé pour {{company}}",
     "scoreIcpFailed": "Échec du score ICP pour {{company}}",
     "analyseSignalsBtn": "Analyser signaux",
@@ -828,7 +830,9 @@
     "analyseSignalsCost": "3 crédits",
     "discoverWebBtn": "Découvrir web",
     "discoverWebBtnLoading": "Scan…",
-    "discoverWebCost": "3 crédits",
+    "discoverWebCost": "10 crédits",
+    "leadActionsTitle": "Actions sur ce lead",
+    "leadActionsSubtitle": "Score ICP déterministe gratuit. Analyses IA et découverte web consomment des crédits.",
     "icpSummary": "Résumé ICP",
     "signalGroups": {
       "pre_call": "Pré-appel",
@@ -1484,7 +1488,26 @@
       "noLeadOption": "Aucun lead disponible",
       "writing": "Claude rédige votre séquence…",
       "subjectLabel": "Sujet",
-      "creditCost": "3 crédits"
+      "creditCost": "3 crédits",
+      "toneLabel": "Ton",
+      "tonePlaceholder": "Choisir un ton",
+      "tones": {
+        "consultative": "Consultatif",
+        "direct": "Direct",
+        "friendly": "Convivial",
+        "premium": "Premium / Exécutif",
+        "challenger": "Challenger"
+      },
+      "toneHelp": {
+        "consultative": "Pair curieux qui pose des questions pertinentes.",
+        "direct": "Court, valeur d'abord, zéro blabla.",
+        "friendly": "Chaleureux, humain, basse pression.",
+        "premium": "Confiant et soigné, adapté au C-level.",
+        "challenger": "Met en lumière une insight ou un risque non-évident."
+      },
+      "languageLabel": "Langue",
+      "languageAuto": "Auto ({{lang}})",
+      "fromLeadPage": "Générer une séquence 3 touches sur-mesure pour ce lead. Claude rédige l'email J1, la relance J5 et le LinkedIn J10."
     },
     "actions": {
       "newTemplate": "Nouveau template",
@@ -1620,6 +1643,16 @@
     "primaryCtaAuthenticated": "Ouvrir billing",
     "secondaryCta": "Demander une revue de plan",
     "backHome": "Retour à l’accueil",
+    "freeTrial": {
+      "title": "Essai gratuit inclus — aucune carte bancaire requise",
+      "subtitle": "Chaque compte démarre avec un essai gratuit pour valider votre pipeline avant de vous engager.",
+      "cta": "Démarrer gratuitement →",
+      "perks": {
+        "credits50": "50 crédits inclus",
+        "crm1": "1 intégration CRM",
+        "noCard": "Sans carte bancaire"
+      }
+    },
     "steps": {
       "one": "1. Créez le workspace et choisissez la capacité qui colle à votre équipe.",
       "two": "2. Importez vos leads, activez l’ICP puis scorez un premier batch en quelques minutes.",

@@ -9,7 +9,7 @@ import { extractSignalsFromFindings } from '../services/externalSignalExtractor.
 import { discoverInternetSignals } from '../services/internetSignalDiscoveryService.js';
 import { writeAuditLog } from '../lib/auditLog.js';
 import { createUserRateLimit } from '../lib/rateLimit.js';
-import { generateOutreachSequence, sequenceGeneratorAvailable } from '../services/sequenceService.js';
+import { generateOutreachSequence, sequenceGeneratorAvailable, SEQUENCE_TONES } from '../services/sequenceService.js';
 import { findEmailForLead } from '../services/hunterService.js';
 import { fetchCompanyNewsFindings } from '../services/newsService.js';
 import { researchCompanyOnWeb } from '../services/claudeWebResearchService.js';
@@ -359,6 +359,17 @@ const runDiscoverSignalsOperation = async ({
   };
 };
 
+const resolveSequenceOptions = (req) => {
+  const rawTone = typeof req.body?.tone === 'string' ? req.body.tone.trim().toLowerCase() : '';
+  const tone = SEQUENCE_TONES.includes(rawTone) ? rawTone : 'consultative';
+
+  const rawLocale = typeof req.body?.locale === 'string'
+    ? req.body.locale
+    : req.headers['accept-language'] || '';
+  const locale = String(rawLocale).toLowerCase().startsWith('fr') ? 'fr' : 'en';
+  return { tone, locale };
+};
+
 const runSequenceOperation = async ({ req, lead }) => {
   if (!sequenceGeneratorAvailable) {
     const error = new Error('Sequence generation is not available (no LLM key configured).');
@@ -382,6 +393,8 @@ const runSequenceOperation = async ({ req, lead }) => {
     icebreaker_email: lead.icebreaker_email,
   };
 
+  const sequenceOptions = resolveSequenceOptions(req);
+
   const result = await runAiOperation({
     user: req.user,
     leadId: lead.id,
@@ -393,8 +406,10 @@ const runSequenceOperation = async ({ req, lead }) => {
       company_name: lead.company_name || null,
       icp_profile_id: icpProfile.id || null,
       final_score: lead.final_score ?? null,
+      tone: sequenceOptions.tone,
+      locale: sequenceOptions.locale,
     },
-    execute: () => generateOutreachSequence(lead, icpProfile, analysisContext),
+    execute: () => generateOutreachSequence(lead, icpProfile, analysisContext, sequenceOptions),
   });
 
   if (!result) {
@@ -605,7 +620,58 @@ router.post('/:leadId/external-signals', externalSignalsLimiter, validateBody(sc
   });
 });
 
-// ─── Score ICP — deterministic scoring + Haiku summary (1 credit) ────────────
+// ─── Score ICP — 100% deterministic, no LLM, no credit ───────────────────────
+// Returns a locale-aware human summary built from the deterministic breakdown.
+const buildDeterministicIcpSummary = ({ analysis, icpProfile, lead, locale }) => {
+  const isFr = String(locale || '').toLowerCase().startsWith('fr');
+  const score = Number(analysis.icp_score ?? 0);
+  const category = String(analysis.category || '').toLowerCase();
+  const tips = [];
+  const breakdown = analysis?.score_details && typeof analysis.score_details === 'object' ? analysis.score_details : {};
+
+  Object.entries(breakdown).forEach(([key, entry]) => {
+    if (!entry || typeof entry !== 'object') return;
+    const points = Number(entry.points ?? 0);
+    if (points >= 0) return;
+    const labelFr = {
+      industry_match: "Aligner l'industrie cible",
+      role_match: "Cibler les bons rôles décideurs",
+      size_match: "Ajuster la taille d'entreprise visée",
+      geo_match: "Aligner la zone géographique",
+      structure_match: "Préciser la structure cliente",
+    }[key];
+    const labelEn = {
+      industry_match: 'Align target industry',
+      role_match: 'Target the right decision-maker roles',
+      size_match: 'Adjust target company size',
+      geo_match: 'Align target geography',
+      structure_match: 'Refine target customer structure',
+    }[key];
+    tips.push(isFr ? labelFr || `Améliorer ${key}` : labelEn || `Improve ${key}`);
+  });
+
+  if (tips.length === 0) {
+    if (isFr) {
+      tips.push('Profil aligné, prioriser la prospection rapide.');
+      tips.push('Documenter les signaux d\'intention pour confirmer le timing.');
+      tips.push('Lancer un outreach personnalisé sur le décideur identifié.');
+    } else {
+      tips.push('Profile is aligned — prioritise quick outreach.');
+      tips.push('Document intent signals to confirm timing.');
+      tips.push('Launch personalised outreach to the identified decision-maker.');
+    }
+  }
+
+  const headline = isFr
+    ? `Score ICP déterministe : ${score}/100 (${category || 'non classé'}). Calculé sur la grille active "${icpProfile?.name || 'ICP'}" sans appel IA.`
+    : `Deterministic ICP score: ${score}/100 (${category || 'unrated'}). Computed from the active "${icpProfile?.name || 'ICP'}" rubric, no AI call.`;
+
+  return {
+    summary: headline,
+    improvement_tips: tips.slice(0, 3),
+  };
+};
+
 router.post('/:leadId/score-icp', scoreIcpLimiter, requireCredits('score_icp'), async (req, res) => {
   const lead = await dataStore.getLeadById(req.user, req.params.leadId);
   if (!lead) return res.status(404).json({ message: 'Lead not found' });
@@ -616,18 +682,17 @@ router.post('/:leadId/score-icp', scoreIcpLimiter, requireCredits('score_icp'), 
   // Deterministic scoring only (no LLM in analyzeLead)
   const analysis = await analyzeLead({ lead, icpProfile: activeIcp, skipLlm: true });
 
-  // Lightweight Haiku call for a 2-sentence summary + 3 improvement tips
-  const icpSummaryResult = await getIcpSummary(lead, activeIcp, analysis.icp_score, analysis.category);
+  const locale = String(req.headers['accept-language'] || req.query.locale || 'fr').toLowerCase();
+  const deterministicSummary = buildDeterministicIcpSummary({ analysis, icpProfile: activeIcp, lead, locale });
 
-  // Persist ICP score fields + summary to lead
   const scorePayload = toLeadAnalysisUpdatePayload(analysis);
-  const icpSummary = icpSummaryResult.summary
-    ? `${icpSummaryResult.summary}${icpSummaryResult.improvement_tips?.length ? `\n\nPistes d'amélioration:\n${icpSummaryResult.improvement_tips.map((t, i) => `${i + 1}. ${t}`).join('\n')}` : ''}`
+  const icpSummaryText = deterministicSummary.summary
+    ? `${deterministicSummary.summary}${deterministicSummary.improvement_tips?.length ? `\n\n${locale.startsWith('fr') ? "Pistes d'amélioration" : 'Improvement tips'}:\n${deterministicSummary.improvement_tips.map((t, i) => `${i + 1}. ${t}`).join('\n')}` : ''}`
     : null;
 
   const updatedLead = await dataStore.updateLead(req.user, lead.id, {
     ...scorePayload,
-    ...(icpSummary ? { icp_summary: icpSummary } : {}),
+    ...(icpSummaryText ? { icp_summary: icpSummaryText } : {}),
   });
 
   return res.json({
@@ -637,8 +702,9 @@ router.post('/:leadId/score-icp', scoreIcpLimiter, requireCredits('score_icp'), 
       icp_category: analysis.category,
       icp_priority: analysis.priority,
       recommended_action: analysis.recommended_action,
-      summary: icpSummaryResult.summary,
-      improvement_tips: icpSummaryResult.improvement_tips,
+      summary: deterministicSummary.summary,
+      improvement_tips: deterministicSummary.improvement_tips,
+      deterministic: true,
     },
   });
 });

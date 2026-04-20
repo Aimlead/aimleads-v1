@@ -30,6 +30,21 @@ You write highly personalized, concise, and non-generic outreach messages that r
 Never use clichés like "I hope this finds you well" or "I wanted to reach out".
 Always use the generate_sequence tool to return your structured output.`;
 
+const TONE_GUIDELINES = {
+  consultative: 'Consultative: ask insightful questions, position yourself as a strategic peer who is curious about their priorities. Light on pitch, heavy on diagnostic.',
+  direct: 'Direct: get to the point fast, lead with concrete value, short sentences, zero filler. Suited for executives who skim.',
+  friendly: 'Friendly & warm: human, casual but respectful, build rapport with a personal observation, low-pressure ask.',
+  premium: 'Premium / executive: confident, polished, references industry context and credibility signals, suited for C-level or enterprise.',
+  challenger: 'Challenger: respectfully challenge the status quo, surface a non-obvious insight or risk, contrast their likely current approach with a better outcome.',
+};
+
+const ALLOWED_TONES = new Set(Object.keys(TONE_GUIDELINES));
+
+const LANGUAGE_INSTRUCTIONS = {
+  fr: 'Write the entire sequence in French (fluent, native, no anglicisms unless industry-standard). Use "vous" by default.',
+  en: 'Write the entire sequence in English.',
+};
+
 // ─── Tool definition ───────────────────────────────────────────────────────────
 
 const GENERATE_SEQUENCE_TOOL = {
@@ -95,8 +110,10 @@ const GENERATE_SEQUENCE_TOOL = {
 
 const sanitize = (v) => String(v ?? 'Unknown').replace(/[`"\\]/g, ' ').trim().slice(0, 300);
 
-const buildPrompt = (lead, icpProfile, analysisContext) => {
+const buildPrompt = (lead, icpProfile, analysisContext, options = {}) => {
   const icpName = sanitize(icpProfile?.name ?? 'Active ICP');
+  const tone = ALLOWED_TONES.has(options.tone) ? options.tone : 'consultative';
+  const locale = options.locale === 'fr' ? 'fr' : 'en';
 
   const signals = [
     ...(analysisContext?.buying_signals ?? []),
@@ -124,6 +141,12 @@ const buildPrompt = (lead, icpProfile, analysisContext) => {
 - ICP profile: "${icpName}"
 ${icpProfile?.description ? `- ICP description: ${sanitize(icpProfile.description)}` : ''}
 
+## TONE
+${TONE_GUIDELINES[tone]}
+
+## LANGUAGE
+${LANGUAGE_INSTRUCTIONS[locale]}
+
 Write a 3-touch sequence: Day 1 cold email, Day 5 follow-up email, Day 10 LinkedIn.
 Be specific, reference the company context, no generic copy.`;
 };
@@ -138,7 +161,7 @@ Be specific, reference the company context, no generic copy.`;
  * @param {Object} [analysisContext] - Optional: existing analysis result for the lead
  * @returns {Promise<Object|null>}
  */
-export async function generateOutreachSequence(lead, icpProfile, analysisContext = {}) {
+export async function generateOutreachSequence(lead, icpProfile, analysisContext = {}, options = {}) {
   if (!hasAnthropic) {
     logger.warn('sequence_generator_no_llm', { reason: 'ANTHROPIC_API_KEY not set' });
     return null;
@@ -148,7 +171,7 @@ export async function generateOutreachSequence(lead, icpProfile, analysisContext
   const timeoutId = setTimeout(() => controller.abort(new Error('Sequence generator timeout')), LLM_TIMEOUT_MS);
 
   try {
-    const prompt = buildPrompt(lead, icpProfile, analysisContext);
+    const prompt = buildPrompt(lead, icpProfile, analysisContext, options);
 
     const message = await anthropicClient.messages.create(
       {
@@ -186,6 +209,8 @@ export async function generateOutreachSequence(lead, icpProfile, analysisContext
       ...toolUse.input,
       generated_at: new Date().toISOString(),
       lead_id: lead.id,
+      tone: ALLOWED_TONES.has(options.tone) ? options.tone : 'consultative',
+      locale: options.locale === 'fr' ? 'fr' : 'en',
       _usage: usage ? { ...usage, model: ANTHROPIC_MODEL } : null,
     };
   } catch (error) {
@@ -197,3 +222,5 @@ export async function generateOutreachSequence(lead, icpProfile, analysisContext
 }
 
 export const sequenceGeneratorAvailable = hasAnthropic;
+
+export const SEQUENCE_TONES = Object.freeze([...ALLOWED_TONES]);

@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
+import { motion, useSpring, useTransform, useMotionValue } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Brain, CheckCircle2, Clock3, CreditCard, Database, Download, Loader2, MessageSquare, RefreshCcw, Sparkles, Target, TrendingUp, Upload, Users, XCircle } from 'lucide-react';
+import { BarChart, Bar, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import ActivationChecklist from '@/components/ActivationChecklist';
@@ -390,6 +391,20 @@ export default function Dashboard() {
     const score = getLeadScore(lead);
     return lead.status === LEAD_STATUS.QUALIFIED || (score !== null && score >= 65);
   }).length;
+  const scoreDistribution = useMemo(() => {
+    const buckets = [
+      { label: '0-24', range: [0, 24], color: '#f87171' },
+      { label: '25-49', range: [25, 49], color: '#fb923c' },
+      { label: '50-64', range: [50, 64], color: '#facc15' },
+      { label: '65-79', range: [65, 79], color: '#34d399' },
+      { label: '80-100', range: [80, 100], color: '#38bdf8' },
+    ];
+    return buckets.map((b) => ({
+      ...b,
+      count: scoredLeads.filter((s) => s >= b.range[0] && s <= b.range[1]).length,
+    }));
+  }, [scoredLeads]);
+
   const roiInsightModel = useMemo(() => buildDashboardInsightModel({
     visibleLeads,
     activeIcp,
@@ -830,6 +845,60 @@ export default function Dashboard() {
         </div>
       )}
 
+      {!isLoading && scoredLeads.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+          className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+        >
+          <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t('dashboard.scoreDistribution.eyebrow', { defaultValue: 'Score distribution' })}</p>
+              <h2 className="mt-1 text-base font-semibold tracking-tight text-slate-950">{t('dashboard.scoreDistribution.title', { defaultValue: 'Pipeline health' })}</h2>
+              <p className="mt-0.5 text-sm text-slate-500">{t('dashboard.scoreDistribution.subtitle', { defaultValue: 'How your {{count}} scored leads are distributed across buckets.', count: scoredLeads.length })}</p>
+            </div>
+            <div className="flex items-center gap-4 text-xs text-slate-500">
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#38bdf8] inline-block" />{t('dashboard.scoreDistribution.excellent', { defaultValue: 'Excellent (80+)' })}</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#34d399] inline-block" />{t('dashboard.scoreDistribution.strong', { defaultValue: 'Strong (65-79)' })}</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#f87171] inline-block" />{t('dashboard.scoreDistribution.weak', { defaultValue: 'Weak (<50)' })}</span>
+            </div>
+          </div>
+          <div className="h-32">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={scoreDistribution} barSize={40} margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
+                <Tooltip
+                  cursor={{ fill: 'rgba(148,163,184,0.08)' }}
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null;
+                    const d = payload[0].payload;
+                    return (
+                      <div className="bg-white border border-slate-200 rounded-lg px-3 py-2 shadow-lg text-xs">
+                        <p className="font-semibold text-slate-800">{d.label}</p>
+                        <p className="text-slate-500">{d.count} {t('dashboard.scoreDistribution.leadsLabel', { defaultValue: 'leads' })}</p>
+                      </div>
+                    );
+                  }}
+                />
+                <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                  {scoreDistribution.map((entry) => (
+                    <Cell key={entry.label} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-3 grid grid-cols-5 gap-1 text-center">
+            {scoreDistribution.map((b) => (
+              <div key={b.label} className="text-xs">
+                <span className="font-semibold text-slate-800">{b.count}</span>
+                <span className="block text-[10px] text-slate-400">{b.label}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
       {!isLoading && (
         <div className="mb-5 grid gap-3 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -892,24 +961,36 @@ export default function Dashboard() {
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
                   {t('dashboard.attention.funnelTitle')}
                 </p>
-                <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                  <div className="rounded-xl border border-slate-200 px-3 py-2">
-                    <p className="text-[11px] uppercase tracking-[0.14em] text-slate-400">{t('dashboard.attention.funnel.imported')}</p>
-                    <p className="mt-1 font-semibold text-slate-950">{roiInsightModel.funnel.imported}</p>
-                  </div>
-                  <div className="rounded-xl border border-slate-200 px-3 py-2">
-                    <p className="text-[11px] uppercase tracking-[0.14em] text-slate-400">{t('dashboard.attention.funnel.analyzed')}</p>
-                    <p className="mt-1 font-semibold text-slate-950">{roiInsightModel.funnel.analyzed}</p>
-                  </div>
-                  <div className="rounded-xl border border-slate-200 px-3 py-2">
-                    <p className="text-[11px] uppercase tracking-[0.14em] text-slate-400">{t('dashboard.attention.funnel.actionReady')}</p>
-                    <p className="mt-1 font-semibold text-slate-950">{roiInsightModel.funnel.actionReady}</p>
-                  </div>
-                  <div className="rounded-xl border border-slate-200 px-3 py-2">
-                    <p className="text-[11px] uppercase tracking-[0.14em] text-slate-400">{t('dashboard.attention.funnel.qualified')}</p>
-                    <p className="mt-1 font-semibold text-slate-950">{roiInsightModel.funnel.qualified}</p>
-                  </div>
-                </div>
+                {(() => {
+                  const f = roiInsightModel.funnel;
+                  const max = f.imported || 1;
+                  const steps = [
+                    { label: t('dashboard.attention.funnel.imported'), value: f.imported, color: 'bg-slate-300' },
+                    { label: t('dashboard.attention.funnel.analyzed'), value: f.analyzed, color: 'bg-brand-sky' },
+                    { label: t('dashboard.attention.funnel.actionReady'), value: f.actionReady, color: 'bg-emerald-400' },
+                    { label: t('dashboard.attention.funnel.qualified'), value: f.qualified, color: 'bg-violet-400' },
+                  ];
+                  return (
+                    <div className="mt-3 space-y-2.5">
+                      {steps.map((step) => (
+                        <div key={step.label}>
+                          <div className="flex items-center justify-between text-[11px] mb-1">
+                            <span className="uppercase tracking-[0.12em] text-slate-400">{step.label}</span>
+                            <span className="font-semibold text-slate-800">{step.value}</span>
+                          </div>
+                          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <motion.div
+                              className={`h-full rounded-full ${step.color}`}
+                              initial={{ width: 0 }}
+                              animate={{ width: `${Math.round((step.value / max) * 100)}%` }}
+                              transition={{ duration: 0.6, ease: 'easeOut' }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="rounded-2xl border border-white/70 bg-white/80 px-4 py-3">

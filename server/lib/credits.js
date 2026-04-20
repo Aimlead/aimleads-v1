@@ -20,7 +20,8 @@ import { recordCreditConsumptionMetric, recordLlmTokensUsedMetric } from './metr
 // ─────────────────────────────────────────────────────────────────
 export const CREDIT_COSTS = {
   analyze: 1,
-  score_icp: 1,
+  // score_icp is deterministic only — no LLM call, no credit charged
+  score_icp: 0,
   reanalyze_llm: 3,
   discover_signals: 10,
   sequence: 3,
