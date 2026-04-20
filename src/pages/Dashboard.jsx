@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import ActivationChecklist from '@/components/ActivationChecklist';
 import LeadSlideOver from '@/components/leads/LeadSlideOver';
 import ImportCSVDialog from '@/components/leads/ImportCSVDialog';
+import ResearchLeadDialog from '@/components/leads/ResearchLeadDialog';
 import LeadsTable from '@/components/leads/LeadsTable';
 import EmptyState from '@/components/ui/EmptyState';
 import { SkeletonCard } from '@/components/ui/skeleton';
@@ -87,6 +88,7 @@ export default function Dashboard() {
   const [selectedLead, setSelectedLead] = useState(null);
   const [slideOverOpen, setSlideOverOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [researchDialogOpen, setResearchDialogOpen] = useState(false);
   const [selectedSourceList, setSelectedSourceList] = useState(() => {
     if (typeof window === 'undefined') return LIST_KEYS.ALL;
     return window.localStorage.getItem(STORAGE_KEY) || LIST_KEYS.ALL;
@@ -536,6 +538,15 @@ export default function Dashboard() {
           >
             <Download className="w-3.5 h-3.5" />
             {t('common.export')}
+          </Button>
+          <Button
+            onClick={() => setResearchDialogOpen(true)}
+            size="sm"
+            variant="outline"
+            className="gap-1.5 h-8 text-xs border-sky-200 text-sky-700 hover:bg-sky-50"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            Recherche IA
           </Button>
           <Button
             id="import-csv-trigger"
@@ -1233,6 +1244,18 @@ export default function Dashboard() {
         }}
         onFocusImportedLeads={focusImportedLeads}
         onAnalyzeImportedLeads={handleAnalyzeImportedLeads}
+      />
+
+      <ResearchLeadDialog
+        open={researchDialogOpen}
+        onClose={() => setResearchDialogOpen(false)}
+        onLeadCreated={(lead) => {
+          setResearchDialogOpen(false);
+          if (lead) {
+            setSelectedLead(lead);
+            setSlideOverOpen(true);
+          }
+        }}
       />
     </>
   );

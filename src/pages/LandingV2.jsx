@@ -67,15 +67,18 @@ export default function LandingV2() {
           </p>
 
           <div className="lv2-hero-ctas">
-            <button type="button" className="lv2-btn lv2-btn-primary lv2-btn-lg" onClick={openBooking}>
-              <span>Audit offert — Démarrer</span>
-              {ArrowIcon}
-            </button>
-            <Link to={ROUTES.login} className="lv2-btn lv2-btn-ghost lv2-btn-lg">
-              <span>Se connecter</span>
+            <Link to={`${ROUTES.login}?signup=1`} className="lv2-btn lv2-btn-primary lv2-btn-lg">
+              <span>Essai gratuit — Commencer</span>
               {ArrowIcon}
             </Link>
+            <button type="button" className="lv2-btn lv2-btn-ghost lv2-btn-lg" onClick={openBooking}>
+              <span>Démo guidée</span>
+              {ArrowIcon}
+            </button>
           </div>
+          <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.55)', marginTop: '0.75rem' }}>
+            Bêta ouverte · Aucune CB requise
+          </p>
         </div>
 
         <div className="lv2-hero-scroll" aria-hidden="true">

@@ -332,6 +332,7 @@ const apiClient = {
     reanalyze: (id, payload = {}) => apiRequest(`/leads/${id}/reanalyze`, { method: 'POST', body: payload }),
     discoverSignals: (id, payload = {}) => apiRequest(`/leads/${id}/discover-signals`, { method: 'POST', body: payload }),
     generateSequence: (id, payload = {}) => apiRequest(`/leads/${id}/sequence`, { method: 'POST', body: payload }),
+    research: (payload) => apiRequest('/leads/research', { method: 'POST', body: payload }),
   },
   icp: {
     list: () => apiRequest('/icp'),
@@ -639,6 +640,15 @@ export const dataClient = {
       return runWithMode({
         operationName: 'leads.generateSequence',
         apiCall: () => apiClient.leads.generateSequence(id, payload),
+        fallbackCall: mockUnsupported,
+        passAuthErrors: true,
+      });
+    },
+
+    async research(payload) {
+      return runWithMode({
+        operationName: 'leads.research',
+        apiCall: () => apiClient.leads.research(payload),
         fallbackCall: mockUnsupported,
         passAuthErrors: true,
       });

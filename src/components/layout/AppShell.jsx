@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { X } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import MobileBottomNav from '@/components/layout/MobileBottomNav';
@@ -9,6 +10,34 @@ import CommandPalette from '@/components/CommandPalette';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { useAuth } from '@/lib/AuthContext';
 import { ROUTES } from '@/constants/routes';
+
+const BETA_BANNER_KEY = 'aimleads:beta-banner-dismissed';
+
+function BetaBanner() {
+  const [visible, setVisible] = useState(() => {
+    try { return !window.localStorage.getItem(BETA_BANNER_KEY); } catch { return true; }
+  });
+
+  const dismiss = () => {
+    try { window.localStorage.setItem(BETA_BANNER_KEY, '1'); } catch { /* */ }
+    setVisible(false);
+  };
+
+  if (!visible) return null;
+
+  return (
+    <div className="fixed top-0 inset-x-0 z-[150] bg-gradient-to-r from-violet-600 via-brand-sky to-sky-500 text-white text-xs font-medium px-4 py-1.5 flex items-center justify-center gap-3 shadow-sm">
+      <span className="inline-flex items-center gap-1.5">
+        <span className="bg-white/20 rounded px-1.5 py-0.5 font-bold text-[10px] tracking-wide">BÊTA</span>
+        AimLeads est en bêta — vos retours nous aident à améliorer le produit.
+        <a href="mailto:beta@aimlead.io" className="underline underline-offset-2 hover:opacity-80">Écrire à l&apos;équipe</a>
+      </span>
+      <button onClick={dismiss} className="ml-2 opacity-70 hover:opacity-100 transition-opacity" aria-label="Fermer">
+        <X className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
 
 
 export default function AppShell({ children }) {
@@ -49,6 +78,7 @@ export default function AppShell({ children }) {
 
   return (
     <div className="min-h-screen" style={{ background: 'hsl(var(--background))' }}>
+      <BetaBanner />
       {/* Skip to main */}
       <a
         href="#main-content"

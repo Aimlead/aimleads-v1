@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Check, ChevronRight, Copy, Edit3, Linkedin, Loader2, Mail, Phone,
@@ -383,12 +384,13 @@ function SequenceResult({ sequence }) {
 
 export default function Outreach() {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
   const [templates, setTemplates] = useState(loadTemplates);
   const [selected, setSelected] = useState(null);
   const [editing, setEditing] = useState(null);
   const [isNew, setIsNew] = useState(false);
   const [channelFilter, setChannelFilter] = useState('all');
-  const [selectedLeadId, setSelectedLeadId] = useState('');
+  const [selectedLeadId, setSelectedLeadId] = useState(() => searchParams.get('leadId') || '');
   const [sequence, setSequence] = useState(null);
   const [activeJobId, setActiveJobId] = useState('');
   const [handledJobId, setHandledJobId] = useState('');

@@ -353,6 +353,14 @@ const featureFlagUpdateSchema = z.object({
   enabled: z.boolean(),
 });
 
+const leadResearchSchema = z.object({
+  company_name: z.string().trim().min(1).max(500),
+  website_url: urlString,
+  industry: optionalString,
+  country: optionalString,
+  auto_analyze: z.boolean().optional().default(false),
+});
+
 const toValidationError = (error) => {
   const issues = error.issues?.map((issue) => ({
     path: issue.path.join('.'),
@@ -396,4 +404,5 @@ export const schemas = {
   crmSyncBulkSchema,
   crmTestSchema,
   featureFlagUpdateSchema,
+  leadResearchSchema,
 };

@@ -27,6 +27,7 @@ export const CREDIT_COSTS = {
   sequence: 3,
   icp_generate: 3,
   analytics_insights: 2,
+  research_lead: 5,
   // token_log: 0 — internal usage tracking only, never charged
 };
 

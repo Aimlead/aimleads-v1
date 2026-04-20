@@ -979,4 +979,84 @@ router.post('/:leadId/sequence', sequenceLimiter, requireCredits('sequence'), as
   return res.json({ data: result });
 });
 
+// ─── AI: Research a company on the web and create a lead ──────────────────────
+
+const researchLimiter = createUserRateLimit({
+  namespace: 'research_lead_user',
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  message: 'Too many web research requests, please wait.',
+});
+
+router.post('/research', researchLimiter, requireCredits('research_lead'), validateBody(schemas.leadResearchSchema), async (req, res) => {
+  const { company_name, website_url, industry, country, auto_analyze } = req.validatedBody;
+
+  addBreadcrumb({
+    category: 'ai',
+    message: 'ai.research_lead.requested',
+    data: { user_id: req.user?.id, workspace_id: req.user?.workspace_id, company_name },
+  });
+
+  // 1. Research on web via Claude
+  const stub = { company_name, website_url: website_url || '', industry: industry || '', country: country || '' };
+  const { findings, signals } = await researchCompanyOnWeb(stub);
+
+  // 2. Extract a contact email hint from Hunter if website available
+  let contact_email = '';
+  try {
+    if (website_url) {
+      const hunterResult = await findEmailForLead({ ...stub, website_url });
+      contact_email = hunterResult?.email || '';
+    }
+  } catch { /* non-blocking */ }
+
+  // 3. Create the lead with enriched internet signals
+  const lead = await dataStore.createLead(req.user, {
+    company_name,
+    website_url: website_url || '',
+    industry: industry || '',
+    country: country || '',
+    contact_email,
+    status: 'To Analyze',
+    follow_up_status: 'To Contact',
+    internet_signals: signals,
+    notes: findings.length
+      ? findings.slice(0, 3).map((f) => `[${f.title}] ${f.snippet}`).join('\n\n')
+      : '',
+  });
+
+  writeAuditLog({
+    user: req.user,
+    action: 'create',
+    resourceType: 'lead',
+    resourceId: lead.id,
+    changes: { company_name: lead.company_name, source: 'web_research' },
+  });
+
+  // 4. Optional: auto-analyze immediately
+  let analysis = null;
+  if (auto_analyze) {
+    try {
+      const icpProfile = await dataStore.getActiveIcpProfile(req.user);
+      if (icpProfile) {
+        analysis = await analyzeLead({ lead, icpProfile });
+        const updatePayload = toLeadAnalysisUpdatePayload(analysis);
+        await dataStore.updateLead(req.user, lead.id, updatePayload);
+        Object.assign(lead, updatePayload);
+      }
+    } catch (err) {
+      logger.warn('research_auto_analyze_failed', { lead_id: lead.id, error: err?.message });
+    }
+  }
+
+  return res.status(201).json({
+    data: {
+      lead: normalizeLeadForResponse(lead),
+      findings,
+      signals,
+      analysis_ran: Boolean(analysis),
+    },
+  });
+});
+
 export default router;

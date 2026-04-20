@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Database, ExternalLink, Loader2, Search, Sparkles, Trash2, Upload, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Database, ExternalLink, Loader2, Mail, Search, Sparkles, Trash2, Upload, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SkeletonRow } from '@/components/ui/skeleton';
 import { ROUTES } from '@/constants/routes';
@@ -563,6 +563,18 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
                     <Button
                       size="sm"
                       variant="ghost"
+                      title="Générer une séquence outreach"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        navigate(`${ROUTES.outreach}?leadId=${lead.id}`);
+                      }}
+                      className="text-sky-500 hover:text-sky-700 hover:bg-sky-50 px-2 h-7"
+                    >
+                      <Mail className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
                       aria-label={`Delete ${lead.company_name}`}
                       disabled={deletingIds.has(lead.id)}
                       onClick={(event) => { event.stopPropagation(); setDeleteConfirm({ type: 'single', lead }); }}
@@ -723,6 +735,18 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
                             {analyzingIds.has(lead.id)
                               ? tt('leads.analyzingAction', 'Analyzing...')
                               : tt('leads.analyzeAction', 'Analyze')}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            title="Générer séquence outreach"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              navigate(`${ROUTES.outreach}?leadId=${lead.id}`);
+                            }}
+                            className="text-sky-500 hover:text-sky-700 hover:bg-sky-50 px-2"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
                           </Button>
                           <Button
                             size="sm"
