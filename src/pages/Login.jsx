@@ -57,13 +57,14 @@ export default function Login() {
     };
   }, [supportsSso]);
   const ssoLinks = useMemo(() => {
-    if (!supportsSso) return { google: '', github: '' };
+    if (!supportsSso) return { google: '', github: '', microsoft: '' };
     return {
       google: resolveSsoLink('google'),
       github: resolveSsoLink('github'),
+      microsoft: resolveSsoLink('azure'),
     };
   }, [resolveSsoLink, supportsSso]);
-  const canRenderSso = Boolean(ssoLinks.google || ssoLinks.github);
+  const canRenderSso = Boolean(ssoLinks.google || ssoLinks.github || ssoLinks.microsoft);
 
   useEffect(() => {
     if (!invitedEmail) return;
@@ -245,7 +246,7 @@ export default function Login() {
                 <span className="auth-v2-divider-label">{t('auth.orContinueWith')}</span>
                 <span className="auth-v2-divider-line" />
               </div>
-              <div className={`auth-v2-sso-grid ${ssoLinks.google && ssoLinks.github ? 'auth-v2-sso-grid--2' : ''}`}>
+              <div className={`auth-v2-sso-grid ${[ssoLinks.google, ssoLinks.github, ssoLinks.microsoft].filter(Boolean).length >= 2 ? 'auth-v2-sso-grid--2' : ''}`}>
                 {ssoLinks.google && (
                   <a href={ssoLinks.google} className="auth-v2-sso-btn">
                     <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
@@ -255,6 +256,17 @@ export default function Login() {
                       <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                     </svg>
                     {t('auth.continueWithGoogle')}
+                  </a>
+                )}
+                {ssoLinks.microsoft && (
+                  <a href={ssoLinks.microsoft} className="auth-v2-sso-btn">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M11.4 11.4H2V2h9.4v9.4z" fill="#F25022" />
+                      <path d="M22 11.4h-9.4V2H22v9.4z" fill="#7FBA00" />
+                      <path d="M11.4 22H2v-9.4h9.4V22z" fill="#00A4EF" />
+                      <path d="M22 22h-9.4v-9.4H22V22z" fill="#FFB900" />
+                    </svg>
+                    {t('auth.continueWithMicrosoft', { defaultValue: 'Continuer avec Microsoft' })}
                   </a>
                 )}
                 {ssoLinks.github && (

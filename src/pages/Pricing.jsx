@@ -1,12 +1,15 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Building2, Check, Users, Zap } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Building2, Check, Gift, Users, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/lib/AuthContext';
 import { dataClient } from '@/services/dataClient';
+
+const FREE_PERKS = ['credits50', 'crm1', 'noCard'];
 
 const plans = [
   {
@@ -86,6 +89,46 @@ export default function Pricing() {
           <h1 className="text-4xl font-bold text-slate-900 mb-4">{t('pricing.title')}</h1>
           <p className="text-lg text-slate-500">{t('pricing.subtitle')}</p>
         </div>
+
+        {/* Free trial banner */}
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="mb-8 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-sky-50 px-5 py-4 shadow-sm"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-[0_4px_12px_-4px_rgba(52,211,153,0.5)] shrink-0">
+                <Gift className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-900">{t('pricing.freeTrial.title', { defaultValue: 'Free trial included — no credit card required' })}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{t('pricing.freeTrial.subtitle', { defaultValue: 'Every account starts with a free trial so you can validate your pipeline before committing.' })}</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 sm:ml-auto">
+              {FREE_PERKS.map((perk) => (
+                <span key={perk} className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-white border border-emerald-200 text-emerald-700">
+                  <Check className="w-3 h-3" />
+                  {t(`pricing.freeTrial.perks.${perk}`, {
+                    defaultValue: perk === 'credits50' ? '50 credits' : perk === 'crm1' ? '1 CRM integration' : 'No credit card',
+                  })}
+                </span>
+              ))}
+            </div>
+            <Button
+              size="sm"
+              className="sm:shrink-0 bg-emerald-500 hover:bg-emerald-600 text-white border-0"
+              onClick={() => {
+                const params = new URLSearchParams({ mode: 'signup', plan: 'free' });
+                navigate(isAuthenticated ? ROUTES.dashboard : `${ROUTES.login}?${params.toString()}`);
+              }}
+            >
+              {isAuthenticated ? t('pricing.openWorkspace') : t('pricing.freeTrial.cta', { defaultValue: 'Start free →' })}
+            </Button>
+          </div>
+        </motion.div>
 
         <div className="grid md:grid-cols-3 gap-6 mb-10">
           {plans.map((plan) => {

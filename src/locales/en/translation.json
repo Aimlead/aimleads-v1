@@ -127,6 +127,7 @@
     "orContinueWith": "or continue with",
     "continueWithGoogle": "Continue with Google",
     "continueWithGithub": "Continue with GitHub",
+    "continueWithMicrosoft": "Continue with Microsoft",
     "backToHome": "Back to home",
     "authFailed": "Authentication failed",
     "captchaHint": "Supabase Bot Protection (CAPTCHA) is enabled. In local development, disable it in Supabase Auth > Settings or add a real captcha flow."
@@ -755,7 +756,8 @@
     },
     "scoreIcpBtn": "Score ICP",
     "scoreIcpBtnLoading": "Scoring…",
-    "scoreIcpCost": "1 credit",
+    "scoreIcpCost": "Free",
+    "scoreIcpDeterministicHint": "Deterministic score — no AI credit consumed.",
     "scoreIcpSuccess": "ICP score computed for {{company}}",
     "scoreIcpFailed": "ICP score failed for {{company}}",
     "analyseSignalsBtn": "Analyse signals",
@@ -763,7 +765,9 @@
     "analyseSignalsCost": "3 credits",
     "discoverWebBtn": "Discover web",
     "discoverWebBtnLoading": "Scanning…",
-    "discoverWebCost": "3 credits",
+    "discoverWebCost": "10 credits",
+    "leadActionsTitle": "Lead actions",
+    "leadActionsSubtitle": "Deterministic ICP scoring is free. AI analysis and web discovery consume credits.",
     "icpSummary": "ICP Summary",
     "signalGroups": {
       "pre_call": "Pre-call",
@@ -947,6 +951,16 @@
     "primaryCtaAuthenticated": "Open billing",
     "secondaryCta": "Request a plan review",
     "backHome": "Back to home",
+    "freeTrial": {
+      "title": "Free trial included — no credit card required",
+      "subtitle": "Every account starts with a free trial so you can validate your pipeline before committing.",
+      "cta": "Start free →",
+      "perks": {
+        "credits50": "50 credits included",
+        "crm1": "1 CRM integration",
+        "noCard": "No credit card"
+      }
+    },
     "steps": {
       "one": "1. Create the workspace and choose the capacity that matches your team.",
       "two": "2. Import leads, activate your ICP, then score your first batch in minutes.",
@@ -1198,7 +1212,26 @@
       "noLeadOption": "No leads available",
       "writing": "Claude is drafting your sequence…",
       "subjectLabel": "Subject",
-      "creditCost": "3 credits"
+      "creditCost": "3 credits",
+      "toneLabel": "Tone",
+      "tonePlaceholder": "Pick a tone",
+      "tones": {
+        "consultative": "Consultative",
+        "direct": "Direct",
+        "friendly": "Friendly",
+        "premium": "Premium / Executive",
+        "challenger": "Challenger"
+      },
+      "toneHelp": {
+        "consultative": "Curious peer who asks insightful questions.",
+        "direct": "Short, value-first, no filler.",
+        "friendly": "Warm, human, low pressure.",
+        "premium": "Confident and polished, fit for C-level.",
+        "challenger": "Surfaces a non-obvious insight or risk."
+      },
+      "languageLabel": "Language",
+      "languageAuto": "Auto ({{lang}})",
+      "fromLeadPage": "Generate a personalized 3-touch sequence for this lead. Claude writes the day-1 email, day-5 follow-up, and day-10 LinkedIn."
     },
     "actions": {
       "newTemplate": "New template",

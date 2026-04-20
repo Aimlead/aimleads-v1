@@ -4,7 +4,8 @@ const PLAN_ENTITLEMENTS = {
     plan_name: 'Free',
     credits_included: 50,
     seats_included: 3,
-    crm_integrations: 0,
+    // 1 CRM slot is unlocked during free trial so users can validate the loop end-to-end.
+    crm_integrations: 1,
     includes_api_access: false,
     includes_priority_support: false,
   },

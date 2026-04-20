@@ -24,6 +24,7 @@ import { FOLLOW_UP_STATUS_LIST } from '@/constants/leads';
 import { getLeadScores } from '@/lib/leadPresentation';
 import { dataClient } from '@/services/dataClient';
 import AnalysisHero from './AnalysisHero';
+import LeadActionsPanel from './LeadActionsPanel';
 import SignalBadge from './SignalBadge';
 import StatusBadge from './StatusBadge';
 
@@ -604,56 +605,18 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
             ) : null}
           </div>
 
-          {/* Action buttons — 3 levels: cheap → medium → expensive */}
+          {/* Action buttons — deterministic ICP (free) + AI actions (credit-cost) */}
           <div className="space-y-2">
-            <div className="grid grid-cols-3 gap-2">
-              {/* 1. Score ICP — deterministic + Haiku (1 crédit) */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleScoreIcp}
-                disabled={scoringIcp || isJobActive}
-                className="flex-col h-auto py-2 gap-0.5 text-center"
-                title={t('leads.scoreIcpCost')}
-              >
-                {scoringIcp ? <Loader2 className="w-4 h-4 animate-spin" /> : <Target className="w-4 h-4 text-brand-sky" />}
-                <span className="text-[11px] font-medium leading-tight">
-                  {scoringIcp ? t('leads.scoreIcpBtnLoading') : t('leads.scoreIcpBtn')}
-                </span>
-                <span className="text-[9px] text-slate-400">{t('leads.scoreIcpCost')}</span>
-              </Button>
-
-              {/* 2. Analyser signaux — full Haiku/Sonnet analysis (3 crédits) */}
-              <Button
-                size="sm"
-                onClick={handleSaveAndAnalyze}
-                disabled={savingAndAnalyzing || isJobActive}
-                className="flex-col h-auto py-2 gap-0.5 text-center"
-                title={t('leads.analyseSignalsCost')}
-              >
-                {savingAndAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                <span className="text-[11px] font-medium leading-tight">
-                  {savingAndAnalyzing ? t('leads.analyseSignalsBtnLoading') : t('leads.analyseSignalsBtn')}
-                </span>
-                <span className="text-[9px] opacity-60">{t('leads.analyseSignalsCost')}</span>
-              </Button>
-
-              {/* 3. Découvrir web — internet signals (3 crédits) */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDiscoverWeb}
-                disabled={discoveringWeb || isJobActive}
-                className="flex-col h-auto py-2 gap-0.5 text-center"
-                title={t('leads.discoverWebCost')}
-              >
-                {discoveringWeb ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4 text-emerald-600" />}
-                <span className="text-[11px] font-medium leading-tight">
-                  {discoveringWeb ? t('leads.discoverWebBtnLoading') : t('leads.discoverWebBtn')}
-                </span>
-                <span className="text-[9px] text-slate-400">{t('leads.discoverWebCost')}</span>
-              </Button>
-            </div>
+            <LeadActionsPanel
+              variant="compact"
+              onScoreIcp={handleScoreIcp}
+              onAnalyse={handleSaveAndAnalyze}
+              onDiscover={handleDiscoverWeb}
+              scoring={scoringIcp}
+              analysing={savingAndAnalyzing}
+              discovering={discoveringWeb}
+              disabled={isJobActive}
+            />
             <Button variant="ghost" size="sm" onClick={handleSave} disabled={saving || isJobActive} className="w-full text-xs text-slate-500">
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
               {isDirty ? t('leads.saveChangesCta') : t('leads.saveDraft')}

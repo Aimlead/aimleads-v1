@@ -433,7 +433,9 @@ router.delete('/me', requireAuth, async (req, res) => {
 
 // ─── SSO — OAuth initiation & session exchange ────────────────────────────────
 
-const ALLOWED_SSO_PROVIDERS = new Set(['google', 'github']);
+// Allowed Supabase OAuth providers — keep in sync with the Login UI buttons.
+// `azure` is the Supabase identifier for Microsoft Entra / Azure AD / personal MS accounts.
+const ALLOWED_SSO_PROVIDERS = new Set(['google', 'github', 'azure']);
 
 // Redirect user to Supabase OAuth authorize URL
 router.get('/sso/init', (req, res) => {

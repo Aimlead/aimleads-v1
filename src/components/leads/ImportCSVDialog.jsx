@@ -12,8 +12,36 @@ import { ACTIVATION_ANALYZE_BATCH_SIZE } from '@/constants/activation';
 // ─── Parsers ──────────────────────────────────────────────────────────────────
 
 /**
- * RFC-4180 compliant CSV parser — handles quoted fields with commas + newlines.
+ * Header normalization shared across CSV + XLSX parsers.
+ * - Strips accents, trims whitespace, lowercases, collapses spaces, removes punctuation.
+ * - This lets us match "Société", "Raison Sociale", "COMPANY-NAME", " Company  Name " all to the same key.
  */
+const normalizeHeaderKey = (value) =>
+  String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+    .replace(/[._\-/]+/g, ' ')
+    .replace(/\s+/g, ' ');
+
+/**
+ * RFC-4180 compliant CSV parser — handles quoted fields with commas + newlines.
+ * Also accepts ;-separated files (common for FR/EU exports).
+ */
+const detectDelimiter = (sample) => {
+  const head = sample.split(/\r?\n/, 1)[0] || '';
+  const counts = { ',': 0, ';': 0, '\t': 0 };
+  let inQuotes = false;
+  for (const c of head) {
+    if (c === '"') inQuotes = !inQuotes;
+    else if (!inQuotes && counts[c] !== undefined) counts[c] += 1;
+  }
+  if (counts['\t'] > counts[','] && counts['\t'] >= counts[';']) return '\t';
+  if (counts[';'] > counts[',']) return ';';
+  return ',';
+};
+
 const parseCsv = (text) => {
   const lines = [];
   let current = '';
@@ -46,6 +74,8 @@ const parseCsv = (text) => {
   const nonEmpty = lines.filter((l) => l.trim());
   if (nonEmpty.length < 2) return [];
 
+  const delimiter = detectDelimiter(nonEmpty[0]);
+
   const splitRow = (line) => {
     const fields = [];
     let field = '';
@@ -56,7 +86,7 @@ const parseCsv = (text) => {
       if (c === '"') {
         if (quoted && n === '"') { field += '"'; i++; }
         else { quoted = !quoted; }
-      } else if (c === ',' && !quoted) {
+      } else if (c === delimiter && !quoted) {
         fields.push(field);
         field = '';
       } else {
@@ -67,27 +97,28 @@ const parseCsv = (text) => {
     return fields;
   };
 
-  const headers = splitRow(nonEmpty[0]).map((h) => h.trim().toLowerCase().replace(/"/g, ''));
+  const headers = splitRow(nonEmpty[0]).map((h) => normalizeHeaderKey(h.replace(/"/g, '')));
 
+  // NOTE: filtering by company_name happens AFTER normalizeRow() so we don't drop
+  // rows whose company column uses an alias header like "société" or "raison sociale".
   return nonEmpty
     .slice(1)
     .map((line) => {
       const values = splitRow(line);
       return headers.reduce((row, header, idx) => ({ ...row, [header]: (values[idx] || '').trim() }), {});
-    })
-    .filter((row) => row.company_name || row['company name'] || row.name);
+    });
 };
 
 /**
  * Parse XLSX files in the browser.
- * Returns rows normalized with lowercase header keys.
+ * Returns rows normalized with lowercase header keys (no accents, no punctuation).
  */
 const parseXlsx = async (file) => {
   const { default: readXlsxFile } = await import('read-excel-file/browser');
   const rows = await readXlsxFile(file);
   if (rows.length < 2) return [];
 
-  const headers = rows[0].map((header) => String(header ?? '').trim().toLowerCase());
+  const headers = rows[0].map((header) => normalizeHeaderKey(header));
 
   return rows
     .slice(1)
@@ -96,43 +127,83 @@ const parseXlsx = async (file) => {
         normalized[header] = String(row[idx] ?? '').trim();
         return normalized;
       }, {})
-    )
-    .filter((row) => row.company_name || row['company name'] || row.name);
+    );
 };
 
 // ─── Column mapping ────────────────────────────────────────────────────────────
 
+// Each canonical lead field maps to many possible header aliases.
+// Headers are pre-normalized via normalizeHeaderKey (lowercased, accents stripped,
+// punctuation collapsed) before this map is consulted, so all aliases are written
+// in that same normalized form.
 const COLUMN_MAP = {
-  'company name': 'company_name',
-  name: 'company_name',
-  nom: 'company_name',
-  entreprise: 'company_name',
-  website: 'website_url',
-  site: 'website_url',
-  url: 'website_url',
-  secteur: 'industry',
-  sector: 'industry',
-  taille: 'company_size',
-  size: 'company_size',
-  employees: 'company_size',
-  pays: 'country',
-  'contact name': 'contact_name',
-  contact: 'contact_name',
-  'nom contact': 'contact_name',
-  role: 'contact_role',
-  poste: 'contact_role',
-  title: 'contact_role',
-  email: 'contact_email',
-  mail: 'contact_email',
-  notes: 'notes',
-  source: 'source_list',
+  company_name: [
+    'company name', 'company', 'name', 'nom', 'entreprise', 'societe', 'raison sociale',
+    'business', 'business name', 'organization', 'organisation', 'account', 'account name',
+    'firma', 'compania', 'compagnie', 'prospect', 'firm',
+  ],
+  website_url: [
+    'website', 'website url', 'site', 'site web', 'site internet', 'url', 'web',
+    'domain', 'domaine', 'homepage', 'lien',
+  ],
+  industry: [
+    'industry', 'industrie', 'secteur', 'sector', 'secteur d activite', 'activite',
+    'vertical', 'category', 'categorie',
+  ],
+  company_size: [
+    'company size', 'taille', 'size', 'employees', 'employes', 'effectif', 'effectifs',
+    'headcount', 'nb employes', 'nombre employes',
+  ],
+  country: [
+    'country', 'pays', 'nation', 'location', 'pays siege',
+  ],
+  contact_name: [
+    'contact name', 'contact', 'nom contact', 'full name', 'nom complet',
+    'lead', 'lead name', 'first name last name', 'prenom nom', 'decideur',
+  ],
+  contact_role: [
+    'role', 'poste', 'title', 'job title', 'position', 'fonction', 'titre',
+  ],
+  contact_email: [
+    'email', 'mail', 'e mail', 'email address', 'adresse email', 'adresse mail',
+    'courriel', 'work email',
+  ],
+  contact_phone: [
+    'phone', 'telephone', 'tel', 'mobile', 'portable', 'gsm', 'phone number',
+  ],
+  linkedin_url: [
+    'linkedin', 'linkedin url', 'linkedin profile', 'profil linkedin',
+  ],
+  notes: [
+    'notes', 'note', 'comment', 'commentaire', 'remarques', 'remarks',
+  ],
+  source_list: [
+    'source', 'source list', 'liste', 'campagne', 'campaign', 'origine', 'origin',
+  ],
 };
 
+// Reverse lookup: alias → canonical, computed once.
+const ALIAS_TO_CANONICAL = (() => {
+  const out = {};
+  for (const [canonical, aliases] of Object.entries(COLUMN_MAP)) {
+    out[canonical] = canonical;
+    for (const alias of aliases) out[alias] = canonical;
+  }
+  return out;
+})();
+
 const normalizeRow = (row) => {
-  const result = { ...row };
-  for (const [alias, canonical] of Object.entries(COLUMN_MAP)) {
-    if (row[alias] !== undefined && result[canonical] === undefined) {
-      result[canonical] = row[alias];
+  const result = {};
+  for (const [rawKey, value] of Object.entries(row)) {
+    const canonical = ALIAS_TO_CANONICAL[rawKey];
+    if (canonical) {
+      // First non-empty wins, in case the same canonical is fed by multiple alias columns.
+      if (result[canonical] === undefined || result[canonical] === '') {
+        result[canonical] = value;
+      }
+    } else {
+      // Preserve unknown columns so power users can map them later.
+      result[rawKey] = value;
     }
   }
   return result;
