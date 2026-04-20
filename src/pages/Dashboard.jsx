@@ -561,6 +561,28 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* ── No-ICP warning ─────────────────────────────────────────────── */}
+      {!activeIcp && !isLoading && (
+        <div className="mb-4 flex items-start gap-3 px-4 py-3 rounded-xl border border-amber-200 bg-amber-50">
+          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-800">
+              {t('dashboard.noIcpWarning.title', 'No ICP profile configured')}
+            </p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              {t('dashboard.noIcpWarning.body', 'AI scoring and lead qualification require an active ICP. Set one up to start scoring your leads automatically.')}
+            </p>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => navigate(ROUTES.icp)}
+            className="shrink-0 h-7 text-xs bg-amber-500 hover:bg-amber-600 text-white border-0"
+          >
+            {t('dashboard.noIcpWarning.cta', 'Configure ICP')}
+          </Button>
+        </div>
+      )}
+
       {/* ── Context bar: ICP + List selectors ──────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-3 mb-5 p-3 bg-white rounded-xl border border-slate-200 shadow-sm">
         <div className="flex-1 flex items-center gap-2 min-w-0">

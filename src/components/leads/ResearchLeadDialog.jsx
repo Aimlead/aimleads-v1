@@ -23,6 +23,7 @@ export default function ResearchLeadDialog({ open, onClose, onLeadCreated }) {
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [progressIdx, setProgressIdx] = useState(0);
   const [findings, setFindings] = useState([]);
+  const [analysisRan, setAnalysisRan] = useState(null);
 
   const researchMutation = useMutation({
     mutationFn: async ({ company_name, website_url }) => {
@@ -46,8 +47,9 @@ export default function ResearchLeadDialog({ open, onClose, onLeadCreated }) {
       }
     },
     onSuccess: (result) => {
-      const { lead, findings: found } = result?.data || result || {};
+      const { lead, findings: found, analysis_ran } = result?.data || result || {};
       if (found?.length) setFindings(found);
+      setAnalysisRan(Boolean(analysis_ran));
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       toast.success(`Lead créé : ${lead?.company_name || companyName}`);
       if (onLeadCreated) onLeadCreated(lead);
@@ -75,6 +77,7 @@ export default function ResearchLeadDialog({ open, onClose, onLeadCreated }) {
     setWebsiteUrl('');
     setFindings([]);
     setProgressIdx(0);
+    setAnalysisRan(null);
     researchMutation.reset();
     onClose();
   };
@@ -135,22 +138,38 @@ export default function ResearchLeadDialog({ open, onClose, onLeadCreated }) {
               </motion.div>
             )}
 
-            {researchMutation.isSuccess && findings.length > 0 && (
+            {researchMutation.isSuccess && (
               <motion.div
                 key="findings"
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-2"
               >
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                  Signaux détectés
-                </p>
-                {findings.slice(0, 3).map((f, i) => (
-                  <div key={i} className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">
-                    <p className="text-xs font-semibold text-emerald-800">{f.title}</p>
-                    <p className="text-xs text-emerald-700 mt-0.5 line-clamp-2">{f.snippet}</p>
+                {analysisRan === true && (
+                  <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <p className="text-xs font-semibold text-emerald-700">Score IA calculé — lead prêt à qualifier</p>
                   </div>
-                ))}
+                )}
+                {analysisRan === false && (
+                  <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    <X className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <p className="text-xs font-semibold text-amber-700">Aucun profil ICP actif — configurez l&apos;ICP pour scorer ce lead</p>
+                  </div>
+                )}
+                {findings.length > 0 && (
+                  <>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                      Signaux détectés
+                    </p>
+                    {findings.slice(0, 3).map((f, i) => (
+                      <div key={i} className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">
+                        <p className="text-xs font-semibold text-emerald-800">{f.title}</p>
+                        <p className="text-xs text-emerald-700 mt-0.5 line-clamp-2">{f.snippet}</p>
+                      </div>
+                    ))}
+                  </>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

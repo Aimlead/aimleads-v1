@@ -351,6 +351,31 @@ export default function ICP() {
         )}
       </div>
 
+      {/* ── First-run prompt ────────────────────────────── */}
+      {!activeProfile && !isLoading && (
+        <div className="mb-8 rounded-2xl border-2 border-dashed border-brand-sky/30 bg-brand-sky/5 p-6 text-center">
+          <div className="flex justify-center mb-3">
+            <div className="w-12 h-12 rounded-2xl bg-brand-sky/15 flex items-center justify-center">
+              <Sparkles className="w-6 h-6 text-brand-sky" />
+            </div>
+          </div>
+          <h2 className="text-lg font-bold text-slate-800 mb-1">{t('icp.firstRun.title', 'Create your first ICP profile')}</h2>
+          <p className="text-sm text-slate-500 mb-4 max-w-sm mx-auto">
+            {t('icp.firstRun.body', 'Describe your ideal customer and Claude will generate a complete scoring profile in seconds.')}
+          </p>
+          <Button
+            onClick={() => setGenOpen(true)}
+            className="gap-2 bg-gradient-to-r from-brand-sky to-brand-sky-2"
+          >
+            <Sparkles className="w-4 h-4" />
+            {t('icp.actions.generateWithAi', 'Generate with AI')}
+          </Button>
+          <p className="text-xs text-slate-400 mt-3">
+            {t('icp.firstRun.hint', 'Or fill the form below manually if you prefer.')}
+          </p>
+        </div>
+      )}
+
       {/* ── AI Generate Dialog ──────────────────────────── */}
       <Dialog open={genOpen} onOpenChange={(open) => {
         setGenOpen(open);
