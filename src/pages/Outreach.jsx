@@ -505,7 +505,7 @@ export default function Outreach() {
         </div>
       </div>
 
-      <Tabs defaultValue="templates">
+      <Tabs defaultValue={selectedLeadId ? 'sequences' : 'templates'}>
         <TabsList className="bg-slate-100">
           <TabsTrigger value="templates" className="gap-2">
             <BookOpen className="w-4 h-4" />

@@ -67,7 +67,7 @@ export default function LandingV2() {
           </p>
 
           <div className="lv2-hero-ctas">
-            <Link to={`${ROUTES.login}?signup=1`} className="lv2-btn lv2-btn-primary lv2-btn-lg">
+            <Link to={`${ROUTES.login}?mode=signup`} className="lv2-btn lv2-btn-primary lv2-btn-lg">
               <span>Essai gratuit — Commencer</span>
               {ArrowIcon}
             </Link>

@@ -540,6 +540,7 @@ export default function Dashboard() {
             {t('common.export')}
           </Button>
           <Button
+            id="research-lead-trigger"
             onClick={() => setResearchDialogOpen(true)}
             size="sm"
             variant="outline"

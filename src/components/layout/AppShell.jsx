@@ -12,11 +12,16 @@ import { useAuth } from '@/lib/AuthContext';
 import { ROUTES } from '@/constants/routes';
 
 const BETA_BANNER_KEY = 'aimleads:beta-banner-dismissed';
+const BANNER_H = 32; // px — matches py-1.5 text-xs strip
 
-function BetaBanner() {
+function BetaBanner({ onVisibilityChange }) {
   const [visible, setVisible] = useState(() => {
     try { return !window.localStorage.getItem(BETA_BANNER_KEY); } catch { return true; }
   });
+
+  useEffect(() => {
+    onVisibilityChange(visible);
+  }, [visible, onVisibilityChange]);
 
   const dismiss = () => {
     try { window.localStorage.setItem(BETA_BANNER_KEY, '1'); } catch { /* */ }
@@ -26,7 +31,10 @@ function BetaBanner() {
   if (!visible) return null;
 
   return (
-    <div className="fixed top-0 inset-x-0 z-[150] bg-gradient-to-r from-violet-600 via-brand-sky to-sky-500 text-white text-xs font-medium px-4 py-1.5 flex items-center justify-center gap-3 shadow-sm">
+    <div
+      className="fixed inset-x-0 z-[150] bg-gradient-to-r from-violet-600 via-brand-sky to-sky-500 text-white text-xs font-medium px-4 flex items-center justify-center gap-3 shadow-sm"
+      style={{ top: 0, height: BANNER_H }}
+    >
       <span className="inline-flex items-center gap-1.5">
         <span className="bg-white/20 rounded px-1.5 py-0.5 font-bold text-[10px] tracking-wide">BÊTA</span>
         AimLeads est en bêta — vos retours nous aident à améliorer le produit.
@@ -39,9 +47,11 @@ function BetaBanner() {
   );
 }
 
-
 export default function AppShell({ children }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [bannerVisible, setBannerVisible] = useState(() => {
+    try { return !window.localStorage.getItem(BETA_BANNER_KEY); } catch { return true; }
+  });
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -76,9 +86,12 @@ export default function AppShell({ children }) {
     return () => window.removeEventListener('aimleads:insufficient-credits', handler);
   }, []);
 
+  const bannerOffset = bannerVisible ? BANNER_H : 0;
+
   return (
     <div className="min-h-screen" style={{ background: 'hsl(var(--background))' }}>
-      <BetaBanner />
+      <BetaBanner onVisibilityChange={setBannerVisible} />
+
       {/* Skip to main */}
       <a
         href="#main-content"
@@ -87,19 +100,24 @@ export default function AppShell({ children }) {
         Skip to main content
       </a>
 
-      {/* Desktop sidebar */}
-      <Sidebar onOpenPalette={openPalette} onSignOut={handleSignOut} />
+      {/* Desktop sidebar — pushed below banner */}
+      <Sidebar onOpenPalette={openPalette} onSignOut={handleSignOut} bannerOffset={bannerOffset} />
 
       <Header
         user={user}
         onSignOut={handleSignOut}
         onOpenPalette={openPalette}
+        bannerOffset={bannerOffset}
       />
 
       <CommandPalette open={paletteOpen} onClose={closePalette} />
 
-      {/* pb-24 on mobile leaves room above bottom nav (56px bar + safe area) */}
-      <main id="main-content" className="pt-20 px-4 md:px-6 md:ml-64 pb-24 md:pb-8">
+      {/* pt accounts for header (64px) + banner */}
+      <main
+        id="main-content"
+        className="px-4 md:px-6 md:ml-64 pb-24 md:pb-8"
+        style={{ paddingTop: 64 + bannerOffset + 16 }}
+      >
         <ErrorBoundary>
           <motion.div
             key={location.pathname}
