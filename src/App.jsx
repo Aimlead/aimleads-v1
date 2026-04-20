@@ -11,12 +11,12 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { queryClientInstance } from '@/lib/query-client';
 
 // Eagerly loaded (critical path)
-import Dashboard from '@/pages/Dashboard';
 import LandingV2 from '@/pages/LandingV2';
 import Login from '@/pages/Login';
-import LeadDetail from '@/pages/LeadDetail';
 
 // Lazily loaded (code-split bundles)
+const Dashboard = lazy(() => import('@/pages/Dashboard'));
+const LeadDetail = lazy(() => import('@/pages/LeadDetail'));
 const LandingLegacy = lazy(() => import('@/pages/Landing'));
 const AccountSettings = lazy(() => import('@/pages/AccountSettings'));
 const Analytics = lazy(() => import('@/pages/Analytics'));
