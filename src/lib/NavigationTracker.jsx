@@ -12,7 +12,7 @@ export default function NavigationTracker() {
 
     lastTrackedPathRef.current = path;
 
-    dataClient.public.trackEvent({
+    const send = () => dataClient.public.trackEvent({
       event: 'page_view',
       path,
       source: 'navigation_tracker',
@@ -21,6 +21,12 @@ export default function NavigationTracker() {
         referrer: typeof document !== 'undefined' ? document.referrer : '',
       },
     }).catch(() => {});
+
+    if (typeof requestIdleCallback !== 'undefined') {
+      requestIdleCallback(send, { timeout: 2000 });
+    } else {
+      setTimeout(send, 0);
+    }
   }, [location.pathname, location.search]);
 
   return null;

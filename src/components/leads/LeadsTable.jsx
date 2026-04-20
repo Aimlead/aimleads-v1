@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -61,6 +61,8 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
   const { t } = useTranslation();
   const tt = (key, defaultValue, options = {}) => t(key, { defaultValue, ...options });
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const searchDebounceRef = useRef(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [followUpFilter, setFollowUpFilter] = useState('all');
   const [industryFilter, setIndustryFilter] = useState('');
@@ -84,21 +86,23 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
     return [...set].sort();
   }, [leads]);
 
-  const filtered = leads.filter((lead) => {
-    const searchValue = search.toLowerCase();
-    const matchesSearch =
-      !search ||
-      lead.company_name?.toLowerCase().includes(searchValue) ||
-      lead.contact_name?.toLowerCase().includes(searchValue);
+  const filtered = useMemo(() => {
+    const searchValue = debouncedSearch.toLowerCase();
+    return leads.filter((lead) => {
+      const matchesSearch =
+        !debouncedSearch ||
+        lead.company_name?.toLowerCase().includes(searchValue) ||
+        lead.contact_name?.toLowerCase().includes(searchValue);
 
-    const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
-    const matchesFollowUp = followUpFilter === 'all' || lead.follow_up_status === followUpFilter;
-    const matchesIndustry = !industryFilter || String(lead.industry || '').toLowerCase().includes(industryFilter.toLowerCase());
-    const matchesCountry = !countryFilter || lead.country === countryFilter;
-    const matchesScore = !minScoreFilter || (lead.final_score ?? lead.icp_score ?? 0) >= Number(minScoreFilter);
+      const matchesStatus = statusFilter === 'all' || lead.status === statusFilter;
+      const matchesFollowUp = followUpFilter === 'all' || lead.follow_up_status === followUpFilter;
+      const matchesIndustry = !industryFilter || String(lead.industry || '').toLowerCase().includes(industryFilter.toLowerCase());
+      const matchesCountry = !countryFilter || lead.country === countryFilter;
+      const matchesScore = !minScoreFilter || (lead.final_score ?? lead.icp_score ?? 0) >= Number(minScoreFilter);
 
-    return matchesSearch && matchesStatus && matchesFollowUp && matchesIndustry && matchesCountry && matchesScore;
-  });
+      return matchesSearch && matchesStatus && matchesFollowUp && matchesIndustry && matchesCountry && matchesScore;
+    });
+  }, [leads, debouncedSearch, statusFilter, followUpFilter, industryFilter, countryFilter, minScoreFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -128,7 +132,7 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
     queryFn: () => dataClient.jobs.getStatus(activeAnalyzeJob.jobId),
     enabled: Boolean(activeAnalyzeJob?.jobId),
     staleTime: 0,
-    refetchInterval: activeAnalyzeJob?.jobId ? 1500 : false,
+    refetchInterval: activeAnalyzeJob?.jobId ? 2500 : false,
   });
 
   useEffect(() => {
@@ -162,8 +166,12 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
     onLeadUpdated?.();
   }, [activeAnalyzeJob, analyzeJobStatus, handledAnalyzeJobId, onLeadUpdated, tt]);
 
-  // Reset to page 1 whenever filters change
-  const handleSearchChange = (v) => { setSearch(v); setPage(1); };
+  const handleSearchChange = useCallback((v) => {
+    setSearch(v);
+    setPage(1);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => setDebouncedSearch(v), 300);
+  }, []);
   const handleStatusChange = (v) => { setStatusFilter(v); setPage(1); };
   const handleFollowUpChange = (v) => { setFollowUpFilter(v); setPage(1); };
   const handleIndustryChange = (v) => { setIndustryFilter(v); setPage(1); };

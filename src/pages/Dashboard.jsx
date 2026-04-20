@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { motion, useSpring, useTransform, useMotionValue } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Brain, CheckCircle2, Clock3, CreditCard, Database, Download, Loader2, MessageSquare, RefreshCcw, Sparkles, Target, TrendingUp, Upload, Users, XCircle } from 'lucide-react';
 import { BarChart, Bar, Cell, Tooltip, ResponsiveContainer } from 'recharts';
@@ -358,23 +357,80 @@ export default function Dashboard() {
     }
   };
 
-  const getLeadScore = (lead) => {
+  const getLeadScore = useMemo(() => (lead) => {
     const finalScore = toNumericScore(lead?.final_score);
     if (finalScore !== null) return finalScore;
     return toNumericScore(lead?.icp_score);
-  };
+  }, []);
+
+  const visibleStats = useMemo(() => {
+    let qualified = 0;
+    let toAnalyze = 0;
+    let aiEnriched = 0;
+    let actionReady = 0;
+    const scored = [];
+
+    for (const lead of visibleLeads) {
+      const score = getLeadScore(lead);
+      if (score !== null) scored.push(score);
+      if (lead.status === LEAD_STATUS.QUALIFIED) {
+        qualified += 1;
+        actionReady += 1;
+      } else if (score !== null && score >= 65) {
+        actionReady += 1;
+      }
+      if (lead.status === LEAD_STATUS.TO_ANALYZE) toAnalyze += 1;
+      if (lead.llm_enriched) aiEnriched += 1;
+    }
+
+    const avgScore = scored.length > 0
+      ? Math.round(scored.reduce((acc, s) => acc + s, 0) / scored.length)
+      : 0;
+
+    const buckets = [
+      { label: '0-24', range: [0, 24], color: '#f87171', count: 0 },
+      { label: '25-49', range: [25, 49], color: '#fb923c', count: 0 },
+      { label: '50-64', range: [50, 64], color: '#facc15', count: 0 },
+      { label: '65-79', range: [65, 79], color: '#34d399', count: 0 },
+      { label: '80-100', range: [80, 100], color: '#38bdf8', count: 0 },
+    ];
+    for (const s of scored) {
+      for (const b of buckets) {
+        if (s >= b.range[0] && s <= b.range[1]) { b.count += 1; break; }
+      }
+    }
+
+    return {
+      totalLeads: visibleLeads.length,
+      qualified,
+      toAnalyze,
+      aiEnriched,
+      actionReady,
+      avgScore,
+      analyzedVisible: scored.length,
+      scoredLeads: scored,
+      scoreDistribution: buckets,
+      qualificationRate: scored.length > 0 ? Math.round((qualified / scored.length) * 100) : 0,
+    };
+  }, [visibleLeads, getLeadScore]);
+
+  const {
+    totalLeads,
+    qualified: qualifiedLeads,
+    toAnalyze,
+    aiEnriched,
+    actionReady: actionReadyLeads,
+    avgScore,
+    analyzedVisible,
+    scoredLeads,
+    scoreDistribution,
+    qualificationRate,
+  } = visibleStats;
+
   const hasAnalyzedLead = activationState.hasAnalyzedLead;
-  const scoredLeads = visibleLeads.map((lead) => getLeadScore(lead)).filter((score) => score !== null);
-  const totalLeads = visibleLeads.length;
-  const qualifiedLeads = visibleLeads.filter((lead) => lead.status === LEAD_STATUS.QUALIFIED).length;
-  const toAnalyze = visibleLeads.filter((lead) => lead.status === LEAD_STATUS.TO_ANALYZE).length;
-  const avgScore =
-    scoredLeads.length > 0 ? Math.round(scoredLeads.reduce((acc, score) => acc + score, 0) / scoredLeads.length) : 0;
-  const aiEnriched = visibleLeads.filter((l) => l.llm_enriched).length;
   const selectedListLabel = selectedSourceList === LIST_KEYS.ALL
     ? t('dashboard.lists.all')
     : sourceListOptions.find((option) => option.key === selectedSourceList)?.label || sourceListLabel(selectedSourceList, t);
-  const analyzedVisible = visibleLeads.filter((lead) => getLeadScore(lead) !== null).length;
   const showActivationChecklist = !activationState.hasActiveIcp || totalLeads < 10;
   const creditsBalance = creditsData?.balance ?? null;
   const creditRunwayDays = creditsData?.usage?.projected_runway_days ?? null;
@@ -386,24 +442,6 @@ export default function Dashboard() {
   const crmSlotsIncluded = creditsData?.usage?.crm_slots_included ?? entitlements?.crm_integrations ?? 0;
   const crmSlotsUsed = creditsData?.usage?.crm_slots_used ?? 0;
   const topAction = creditsData?.top_actions?.[0] || null;
-  const qualificationRate = analyzedVisible > 0 ? Math.round((qualifiedLeads / analyzedVisible) * 100) : 0;
-  const actionReadyLeads = visibleLeads.filter((lead) => {
-    const score = getLeadScore(lead);
-    return lead.status === LEAD_STATUS.QUALIFIED || (score !== null && score >= 65);
-  }).length;
-  const scoreDistribution = useMemo(() => {
-    const buckets = [
-      { label: '0-24', range: [0, 24], color: '#f87171' },
-      { label: '25-49', range: [25, 49], color: '#fb923c' },
-      { label: '50-64', range: [50, 64], color: '#facc15' },
-      { label: '65-79', range: [65, 79], color: '#34d399' },
-      { label: '80-100', range: [80, 100], color: '#38bdf8' },
-    ];
-    return buckets.map((b) => ({
-      ...b,
-      count: scoredLeads.filter((s) => s >= b.range[0] && s <= b.range[1]).length,
-    }));
-  }, [scoredLeads]);
 
   const roiInsightModel = useMemo(() => buildDashboardInsightModel({
     visibleLeads,
@@ -629,17 +667,13 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         {isLoading
           ? Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
-          : stats.map((stat, index) => {
+          : stats.map((stat) => {
               const style = STAT_STYLE[stat.key];
               const Icon = style.icon;
               return (
-                <motion.div
+                <div
                   key={stat.key}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.25, delay: index * 0.05 }}
-                  whileHover={{ y: -2 }}
-                  className={`relative overflow-hidden bg-gradient-to-br ${style.tint} to-white rounded-xl border border-slate-200/70 p-4 shadow-[0_1px_3px_rgba(15,26,46,0.05)] hover:shadow-[0_8px_24px_-8px_rgba(15,26,46,0.15)] hover:border-slate-300/60 transition-all duration-200`}
+                  className={`relative overflow-hidden bg-gradient-to-br ${style.tint} to-white rounded-xl border border-slate-200/70 p-4 shadow-[0_1px_3px_rgba(15,26,46,0.05)] hover:shadow-[0_8px_24px_-8px_rgba(15,26,46,0.15)] hover:-translate-y-0.5 hover:border-slate-300/60 transition-all duration-150`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-xl ${style.bg} ${style.glow} flex items-center justify-center shrink-0 ring-1 ring-white/30`}>
@@ -650,7 +684,7 @@ export default function Dashboard() {
                       <p className="text-xs text-slate-500 truncate">{stat.label}</p>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               );
             })}
       </div>
@@ -846,12 +880,7 @@ export default function Dashboard() {
       )}
 
       {!isLoading && scoredLeads.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
-          className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-        >
+        <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t('dashboard.scoreDistribution.eyebrow', { defaultValue: 'Score distribution' })}</p>
@@ -896,7 +925,7 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
-        </motion.div>
+        </div>
       )}
 
       {!isLoading && (
@@ -979,11 +1008,9 @@ export default function Dashboard() {
                             <span className="font-semibold text-slate-800">{step.value}</span>
                           </div>
                           <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <motion.div
-                              className={`h-full rounded-full ${step.color}`}
-                              initial={{ width: 0 }}
-                              animate={{ width: `${Math.round((step.value / max) * 100)}%` }}
-                              transition={{ duration: 0.6, ease: 'easeOut' }}
+                            <div
+                              className={`h-full rounded-full ${step.color} transition-[width] duration-500 ease-out`}
+                              style={{ width: `${Math.round((step.value / max) * 100)}%` }}
                             />
                           </div>
                         </div>

@@ -129,17 +129,21 @@ describe('LeadsTable', () => {
     await renderTable();
     const searchInput = screen.getByPlaceholderText(SEARCH_PLACEHOLDER);
     await userEvent.type(searchInput, 'Alpha');
-    // Both mobile and desktop views render the match, so at least one must exist
+    // Wait for 300ms debounce to flush
+    await waitFor(() => {
+      expect(screen.queryByText('Beta Inc')).not.toBeInTheDocument();
+    }, { timeout: 1000 });
     expect(screen.getAllByText('Alpha Corp').length).toBeGreaterThan(0);
-    expect(screen.queryByText('Beta Inc')).not.toBeInTheDocument();
   });
 
   it('shows "No leads found" when search has no match', async () => {
     await renderTable();
     const searchInput = screen.getByPlaceholderText(SEARCH_PLACEHOLDER);
     await userEvent.type(searchInput, 'zzz-no-match');
-    // Both mobile and desktop render the empty state
-    expect(screen.getAllByText(EMPTY_TEXT).length).toBeGreaterThan(0);
+    // Wait for 300ms debounce to flush
+    await waitFor(() => {
+      expect(screen.getAllByText(EMPTY_TEXT).length).toBeGreaterThan(0);
+    }, { timeout: 1000 });
   });
 
   it('calls onSelectLead when clicking a row', async () => {
