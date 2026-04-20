@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Check, ChevronRight, Copy, Edit3, Linkedin, Loader2, Mail, Phone,
   Plus, RefreshCw, Save, Sparkles, Tag, Trash2, X,
@@ -81,14 +80,10 @@ function TemplateCard({ template, onEdit, onDelete, isSelected, onClick }) {
   };
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.97 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.97 }}
+    <div
       onClick={onClick}
       className={cn(
-        'group relative bg-white rounded-2xl border p-4 cursor-pointer transition-all duration-200',
+        'group relative bg-white rounded-2xl border p-4 cursor-pointer transition-all duration-150',
         isSelected
           ? 'border-brand-sky/20 shadow-sm ring-1 ring-brand-sky/20'
           : 'border-slate-100 hover:border-slate-200 hover:shadow-sm'
@@ -138,20 +133,22 @@ function TemplateCard({ template, onEdit, onDelete, isSelected, onClick }) {
           <Trash2 className="w-3 h-3" />
         </button>
       </div>
-    </motion.div>
+    </div>
   );
 }
+
+const PREVIEW_VARS = { contact_name: 'Sophie Martin', company_name: 'Acme Corp', industry: 'SaaS / B2B', sender_name: 'You' };
+const PREVIEW_RE = /\{\{(\w+)\}\}/g;
 
 function TemplatePreview({ template }) {
   const { t } = useTranslation();
   const meta = CHANNEL_ICONS[template.channel] || CHANNEL_ICONS.email;
   const Icon = meta.icon;
 
-  const rendered = template.content
-    .replace(/{{contact_name}}/g, 'Sophie Martin')
-    .replace(/{{company_name}}/g, 'Acme Corp')
-    .replace(/{{industry}}/g, 'SaaS / B2B')
-    .replace(/{{sender_name}}/g, 'You');
+  const rendered = useMemo(
+    () => template.content.replace(PREVIEW_RE, (_, key) => PREVIEW_VARS[key] ?? `{{${key}}}`),
+    [template.content]
+  );
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 p-5 h-full">
@@ -191,12 +188,7 @@ function TemplateEditor({ template, onSave, onCancel }) {
   const uniqueVars = [...new Set(variables)];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 20 }}
-      className="bg-white rounded-2xl border border-slate-100 p-5 space-y-4"
-    >
+    <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-slate-800">{template ? t('outreach.editor.editTitle') : t('outreach.editor.newTitle')}</h3>
         <button onClick={onCancel} className="text-slate-400 hover:text-slate-600">
@@ -278,7 +270,7 @@ function TemplateEditor({ template, onSave, onCancel }) {
           {t('common.cancel')}
         </Button>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -349,11 +341,7 @@ function TouchCard({ touch }) {
 
 function SequenceResult({ sequence }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-4 mt-6"
-    >
+    <div className="space-y-4 mt-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Header */}
       <div className="bg-gradient-to-r from-brand-sky/5 to-transparent rounded-2xl border border-brand-sky/10 p-4">
         <p className="text-base font-semibold text-slate-800">{sequence.sequence_name}</p>
@@ -375,7 +363,7 @@ function SequenceResult({ sequence }) {
           <TouchCard key={i} touch={touch} />
         ))}
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -413,7 +401,7 @@ export default function Outreach() {
     queryFn: () => dataClient.jobs.getStatus(activeJobId),
     enabled: Boolean(activeJobId),
     staleTime: 0,
-    refetchInterval: activeJobId ? 1500 : false,
+    refetchInterval: activeJobId ? 2500 : false,
   });
 
   const sequenceMutation = useMutation({
@@ -559,7 +547,7 @@ export default function Outreach() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {/* Left: cards */}
             <div className="space-y-3">
-              <AnimatePresence mode="popLayout">
+              <div>
                 {isNew && (
                   <TemplateEditor key="new" template={null} onSave={handleSave} onCancel={() => setIsNew(false)} />
                 )}
@@ -576,7 +564,7 @@ export default function Outreach() {
                     onDelete={handleDelete}
                   />
                 ))}
-              </AnimatePresence>
+              </div>
 
               {filtered.length === 0 && !isNew && !editing && (
                 <div className="text-center py-12">
