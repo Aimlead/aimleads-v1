@@ -48,7 +48,7 @@ const TARGET_ICP_PROFILE = {
         'Government Administration',
         'Administration publique',
         'Hopital',
-        'Hpital',
+        'Hôpital',
       ],
       scores: { parfait: 15, partiel: 6, aucun: 0, exclu: -100 },
     },
