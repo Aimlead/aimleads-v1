@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart3, Kanban, LayoutDashboard, LogOut, MoreHorizontal,
-  ScrollText, Settings, Target, UserCog, Users,
+  Rows3, ScrollText, Settings, Target, UserCog, Users,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,7 @@ const PRIMARY_TABS = [
 ];
 
 const MORE_ITEMS = [
+  { name: 'Listes',      href: ROUTES.lists,          icon: Rows3 },
   { name: 'Team',        href: ROUTES.team,           icon: Users },
   { name: 'Settings',    href: ROUTES.settings,       icon: Settings },
   { name: 'Audit Log',   href: ROUTES.auditLog,       icon: ScrollText },
