@@ -94,6 +94,7 @@ export default function Dashboard() {
   });
   const [isSwitchingIcp, setIsSwitchingIcp] = useState(false);
   const [isReanalyzing, setIsReanalyzing] = useState(false);
+  const [showAdvancedBlocks, setShowAdvancedBlocks] = useState(false);
 
   const { data: leads = [], isLoading, isError: leadsError, refetch: refetchLeads } = useQuery({
     queryKey: ['leads'],
@@ -622,15 +623,15 @@ export default function Dashboard() {
       )}
 
       {/* ── Context bar: ICP + List selectors ──────────────────────────── */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-5 p-3 bg-white rounded-xl border border-slate-200 shadow-sm">
-        <div className="flex-1 flex items-center gap-2 min-w-0">
-          <span className="text-xs font-semibold text-slate-400 uppercase shrink-0">{t('dashboard.selectors.icp')}</span>
+      <div className="mb-5 grid gap-3 lg:grid-cols-2">
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">{t('dashboard.selectors.icp')}</p>
           <Select
             value={activeIcp?.id || ''}
             onValueChange={handleSwitchIcp}
             disabled={isSwitchingIcp || icpProfiles.length === 0}
           >
-            <SelectTrigger className="h-8 text-sm">
+            <SelectTrigger className="h-9 text-sm">
               <SelectValue placeholder={t('dashboard.placeholders.selectActiveIcp')} />
             </SelectTrigger>
             <SelectContent>
@@ -642,11 +643,10 @@ export default function Dashboard() {
             </SelectContent>
           </Select>
         </div>
-        <div className="w-px bg-slate-200 hidden sm:block" />
-        <div className="flex-1 flex items-center gap-2 min-w-0">
-          <span className="text-xs font-semibold text-slate-400 uppercase shrink-0">{t('dashboard.selectors.list')}</span>
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">{t('dashboard.selectors.list')}</p>
           <Select value={selectedSourceList} onValueChange={setSelectedSourceList}>
-            <SelectTrigger className="h-8 text-sm">
+            <SelectTrigger className="h-9 text-sm">
               <SelectValue placeholder={t('dashboard.placeholders.selectLeadList')} />
             </SelectTrigger>
             <SelectContent>
@@ -723,7 +723,17 @@ export default function Dashboard() {
             })}
       </div>
 
-      {!isLoading && (
+      <div className="mb-5 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <div>
+          <p className="text-sm font-semibold text-slate-900">Dashboard focus mode</p>
+          <p className="text-xs text-slate-500">Affiche/masque les blocs avancés pour garder la zone leads plus lisible.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setShowAdvancedBlocks((value) => !value)}>
+          {showAdvancedBlocks ? 'Masquer l’avancé' : 'Afficher l’avancé'}
+        </Button>
+      </div>
+
+      {showAdvancedBlocks && !isLoading && (
         <div className="mb-5 grid gap-3 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -804,7 +814,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {!isLoading && (
+      {showAdvancedBlocks && !isLoading && (
         <div className="mb-5 grid gap-3 xl:grid-cols-[1fr_1fr]">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -913,7 +923,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {!isLoading && scoredLeads.length > 0 && (
+      {showAdvancedBlocks && !isLoading && scoredLeads.length > 0 && (
         <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
             <div>
@@ -962,7 +972,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {!isLoading && (
+      {showAdvancedBlocks && !isLoading && (
         <div className="mb-5 grid gap-3 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">

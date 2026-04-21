@@ -542,7 +542,11 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
               <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Queue</p>
                 <div className="flex items-center gap-2">
-                  <Checkbox checked={allSelected} onCheckedChange={toggleSelectAll} />
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label={tt('leads.selectAllAriaLabel', 'Select all leads')}
+                  />
                   <span className="text-xs text-slate-400">{tt('leads.selectAllAriaLabel', 'Select all leads')}</span>
                 </div>
               </div>
@@ -557,7 +561,7 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
                     <div
                       key={lead.id}
                       className={`px-4 py-3 flex flex-col gap-3 lg:flex-row lg:items-center hover:bg-slate-50/80 transition-colors ${selectedIds.has(lead.id) ? 'bg-brand-sky/5' : ''}`}
-                      onClick={() => onOpenLeadPage?.(lead)}
+                      onClick={() => onSelectLead?.(lead)}
                     >
                       <div className="flex items-center gap-3 min-w-0 lg:w-[35%]">
                         <span className={`w-2.5 h-2.5 rounded-full ${tier.color} ring-4 ring-slate-100`} />
@@ -580,13 +584,13 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
                           {isAnalyzing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
                           {isAnalyzing ? tt('leads.analyzingAction', 'Analyzing...') : tt('leads.analyzeAction', 'Analyze')}
                         </Button>
-                        <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => onSelectLead?.(lead)}>
+                        <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => onSelectLead?.(lead)} aria-label={tt('leads.quickViewAria', 'Quick view')}>
                           <Phone className="w-3.5 h-3.5" />
                         </Button>
                         <Button size="sm" variant="ghost" className="h-7 px-2 text-sky-500 hover:text-sky-700 hover:bg-sky-50" onClick={() => navigate(`${ROUTES.outreach}?leadId=${lead.id}`)}>
                           <Mail className="w-3.5 h-3.5" />
                         </Button>
-                        <Button size="sm" variant="ghost" className="h-7 px-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50" onClick={() => setDeleteConfirm({ type: 'single', lead })} disabled={deletingIds.has(lead.id)}>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50" onClick={() => setDeleteConfirm({ type: 'single', lead })} disabled={deletingIds.has(lead.id)} aria-label={`Delete ${lead.company_name}`}>
                           {deletingIds.has(lead.id) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                         </Button>
                         <span className="text-[11px] text-slate-400">{tt('leads.companySizeEmployees', '{{size}} emp.', { size: formatCompanySize(lead.company_size, tt('leads.notAvailable', 'n/a')) })}</span>
