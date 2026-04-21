@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Database, ExternalLink, Loader2, Mail, Search, Sparkles, Trash2, Upload, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Database, Loader2, Mail, Phone, Search, Sparkles, Trash2, Upload, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SkeletonRow } from '@/components/ui/skeleton';
 import { ROUTES } from '@/constants/routes';
@@ -20,7 +20,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import FollowUpBadge from '@/components/leads/FollowUpBadge';
 import FollowUpFilter from '@/components/leads/FollowUpFilter';
 import AnalysisLevelBadge from '@/components/leads/AnalysisLevelBadge';
@@ -44,11 +43,10 @@ const sourceListLabel = (value, emptyLabel) => {
 
 const toMetric = (value) => (Number.isFinite(Number(value)) ? Number(value) : null);
 
-const toWebsiteHref = (value) => {
-  const text = String(value || '').trim();
-  if (!text) return null;
-  if (text.startsWith('http://') || text.startsWith('https://')) return text;
-  return `https://${text}`;
+const getScoreTier = (score) => {
+  if (score >= 80) return { key: 'hot', badge: 'HOT', color: 'bg-rose-500', soft: 'bg-rose-50 text-rose-700 border-rose-200' };
+  if (score >= 65) return { key: 'warm', badge: 'WARM', color: 'bg-amber-500', soft: 'bg-amber-50 text-amber-700 border-amber-200' };
+  return { key: 'cool', badge: 'COOL', color: 'bg-slate-400', soft: 'bg-slate-100 text-slate-600 border-slate-200' };
 };
 
 /**
@@ -487,302 +485,122 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
     <>
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
       {filtersBar}
-
-      {/* ── Mobile card list (< md) ─────────────────────────────────────── */}
-      <div className="md:hidden">
+      <div className="p-4 sm:p-5 bg-gradient-to-b from-white to-slate-50/40">
         {isLoading ? (
-          <div className="divide-y divide-slate-100">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="p-4 animate-pulse space-y-2">
-                <div className="h-4 bg-slate-100 rounded w-2/3" />
-                <div className="h-3 bg-slate-100 rounded w-1/3" />
-                <div className="h-3 bg-slate-100 rounded w-1/2" />
-              </div>
-            ))}
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => <SkeletonRow key={i} />)}
           </div>
         ) : filtered.length === 0 && leads.length === 0 ? (
           emptyAllLeads
         ) : filtered.length === 0 ? (
           emptyFiltered
         ) : (
-          <div className="divide-y divide-slate-100">
-            {paginated.map((lead) => {
-              const icpScore = toMetric(lead.icp_score);
-              const aiScore = toMetric(lead.ai_score);
-              const finalScore = toMetric(lead.final_score) ?? icpScore;
-              return (
-                <div
-                  key={lead.id}
-                  className="p-4 cursor-pointer active:bg-slate-50 transition-colors"
-                  onClick={() => onSelectLead(lead)}
-                >
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                      <Checkbox
-                        checked={selectedIds.has(lead.id)}
-                        onCheckedChange={(e) => { if (typeof e === 'object') e.stopPropagation?.(); toggleSelectOne(lead.id); }}
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label={`Select ${lead.company_name}`}
-                        className="mt-0.5 flex-shrink-0"
-                      />
-                      <div className="min-w-0">
-                        <p className="font-semibold text-slate-900 truncate">{lead.company_name}</p>
-                        {lead.contact_name && (
-                          <p className="text-xs text-slate-500 truncate">{lead.contact_name}{lead.contact_role ? ` · ${lead.contact_role}` : ''}</p>
-                        )}
-                        <div className="mt-1">
-                          <AnalysisLevelBadge lead={lead} t={t} />
-                        </div>
-                      </div>
-                    </div>
-                    <ScorePill score={finalScore} />
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 mb-2 ml-7">
-                    <StatusBadge status={lead.status || LEAD_STATUS.TO_ANALYZE} />
-                    <FollowUpBadge status={lead.follow_up_status || 'To Contact'} />
-                    {lead.industry && (
-                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px]">{lead.industry}</span>
-                    )}
-                    {lead.country && (
-                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px]">{lead.country}</span>
-                    )}
-                  </div>
-                  {(icpScore !== null || aiScore !== null) && (
-                    <p className="text-[11px] text-slate-400 ml-7 mb-2">ICP {icpScore ?? '-'} · AI {aiScore ?? '-'}</p>
-                  )}
-                  <div className="flex items-center gap-2 ml-7" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => onOpenLeadPage?.(lead)}
-                      className="text-xs h-7 px-2"
-                    >
-                      {tt('leads.detailAction', 'Detail')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={analyzingIds.has(lead.id) || lead.status === LEAD_STATUS.PROCESSING}
-                      onClick={(event) => handleAnalyze(event, lead)}
-                      className="gap-1 text-xs h-7 px-2"
-                    >
-                      {analyzingIds.has(lead.id) || lead.status === LEAD_STATUS.PROCESSING ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <Sparkles className="w-3 h-3" />
-                      )}
-                      {analyzingIds.has(lead.id)
-                        ? tt('leads.analyzingAction', 'Analyzing...')
-                        : tt('leads.analyzeAction', 'Analyze')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      title="Générer une séquence outreach"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        navigate(`${ROUTES.outreach}?leadId=${lead.id}`);
-                      }}
-                      className="text-sky-500 hover:text-sky-700 hover:bg-sky-50 px-2 h-7"
-                    >
-                      <Mail className="w-3 h-3" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      aria-label={`Delete ${lead.company_name}`}
-                      disabled={deletingIds.has(lead.id)}
-                      onClick={(event) => { event.stopPropagation(); setDeleteConfirm({ type: 'single', lead }); }}
-                      className="text-rose-400 hover:text-rose-600 hover:bg-rose-50 px-2 h-7 ml-auto"
-                    >
-                      {deletingIds.has(lead.id) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-        {paginationBar}
-      </div>
-
-      {/* ── Desktop table (≥ md) ────────────────────────────────────────── */}
-      <div className="hidden md:block">
-        <div className="overflow-x-auto">
-          <Table className="min-w-[1080px]">
-            <TableHeader>
-              <TableRow className="bg-slate-50/50">
-                <TableHead className="w-8 px-3">
-                  <Checkbox
-                    checked={allSelected}
-                    onCheckedChange={toggleSelectAll}
-                    aria-label={tt('leads.selectAllAriaLabel', 'Select all leads')}
-                  />
-                </TableHead>
-                <TableHead className="w-[28%]">{t('common.company', 'Company')}</TableHead>
-                <TableHead className="w-[22%]">{t('common.contact', 'Contact')}</TableHead>
-                <TableHead className="w-[10%]">{t('common.status', 'Status')}</TableHead>
-                <TableHead className="w-[14%]">{tt('leads.followUpColumn', 'Follow-up')}</TableHead>
-                <TableHead className="w-[12%] text-center">{tt('leads.scoresColumn', 'Scores')}</TableHead>
-                <TableHead className="w-[10%] text-right">{tt('leads.actionColumn', 'Action')}</TableHead>
-              </TableRow>
-            </TableHeader>
-
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)
-              ) : filtered.length === 0 && leads.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7}>{emptyAllLeads}</TableCell>
-                </TableRow>
-              ) : filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7}>{emptyFiltered}</TableCell>
-                </TableRow>
-              ) : (
-                paginated.map((lead) => {
+          <>
+            <div className="mb-5">
+              <div className="flex items-center gap-2 mb-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Priority</p>
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-500">{Math.min(3, paginated.length)}</span>
+              </div>
+              <div className="grid gap-3 lg:grid-cols-3">
+                {paginated.slice(0, 3).map((lead) => {
                   const icpScore = toMetric(lead.icp_score);
                   const aiScore = toMetric(lead.ai_score);
-                  const finalScore = toMetric(lead.final_score) ?? icpScore;
-
+                  const finalScore = toMetric(lead.final_score) ?? icpScore ?? 0;
+                  const tier = getScoreTier(finalScore);
                   return (
-                    <TableRow
+                    <div
                       key={lead.id}
-                      className={`cursor-pointer hover:bg-slate-50/70 transition-colors ${selectedIds.has(lead.id) ? 'bg-brand-sky/5/40' : ''}`}
-                      onClick={() => onSelectLead(lead)}
+                      onClick={() => onOpenLeadPage?.(lead)}
+                      className="group cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
                     >
-                      <TableCell className="px-3" onClick={(e) => { e.stopPropagation(); toggleSelectOne(lead.id); }}>
-                        <Checkbox
-                          checked={selectedIds.has(lead.id)}
-                          onCheckedChange={() => toggleSelectOne(lead.id)}
-                          aria-label={`Select ${lead.company_name}`}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium text-slate-900">{lead.company_name}</p>
-                          {lead.website_url && (
-                            <a
-                              href={toWebsiteHref(lead.website_url)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(event) => event.stopPropagation()}
-                              className="text-xs text-slate-400 hover:text-brand-sky flex items-center gap-1 transition-colors"
-                            >
-                              {lead.website_url}
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          )}
-                          <div className="flex flex-wrap gap-1.5 mt-2">
-                            <AnalysisLevelBadge lead={lead} t={t} />
-                            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px]">
-                              {lead.industry || tt('leads.noIndustry', 'No industry')}
-                            </span>
-                            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px]">
-                              {lead.country || tt('leads.noCountry', 'No country')}
-                            </span>
-                            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px]">
-                              {tt('leads.companySizeEmployees', '{{size}} emp.', {
-                                size: formatCompanySize(lead.company_size, tt('leads.notAvailable', 'n/a')),
-                              })}
-                            </span>
-                            <span className="px-2 py-0.5 rounded-md bg-brand-sky/5 text-brand-sky text-[11px]">
-                              {sourceListLabel(lead.source_list, tt('leads.unlisted', 'Unlisted'))}
-                            </span>
-                          </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-900 truncate">{lead.contact_name || lead.company_name}</p>
+                          <p className="text-xs text-slate-500 truncate">{lead.contact_role || tt('common.company', 'Company')} · {lead.company_name}</p>
                         </div>
-                      </TableCell>
-
-                      <TableCell>
-                        <div>
-                          <p className="text-sm text-slate-700">{lead.contact_name || '-'}</p>
-                          <p className="text-xs text-slate-400">{lead.contact_role || ''}</p>
-                          {lead.contact_email ? <p className="text-xs text-slate-400 mt-0.5">{lead.contact_email}</p> : null}
-                        </div>
-                      </TableCell>
-
-                      <TableCell>
-                        <StatusBadge status={lead.status || LEAD_STATUS.TO_ANALYZE} />
-                      </TableCell>
-
-                      <TableCell>
-                        <FollowUpBadge status={lead.follow_up_status || 'To Contact'} />
-                      </TableCell>
-
-                      <TableCell className="text-center">
-                        <div className="flex flex-col items-center gap-1">
-                          <ScorePill score={finalScore} />
-                          <AnalysisLevelBadge lead={lead} t={t} />
-                          <p className="text-[11px] text-slate-500">ICP {icpScore ?? '-'} | AI {aiScore ?? '-'}</p>
-                          {lead.final_recommended_action ? (
-                            <p className="text-[11px] text-emerald-700 max-w-[170px] truncate" title={lead.final_recommended_action}>
-                              {lead.final_recommended_action}
-                            </p>
-                          ) : null}
-                        </div>
-                      </TableCell>
-
-                      <TableCell className="text-right">
-                        <div className="inline-flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              onOpenLeadPage?.(lead);
-                            }}
-                            className="text-xs"
-                          >
-                            {tt('leads.detailAction', 'Detail')}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={analyzingIds.has(lead.id) || lead.status === LEAD_STATUS.PROCESSING}
-                            onClick={(event) => handleAnalyze(event, lead)}
-                            className="gap-1.5 text-xs"
-                          >
-                            {analyzingIds.has(lead.id) || lead.status === LEAD_STATUS.PROCESSING ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            ) : (
-                              <Sparkles className="w-3.5 h-3.5" />
-                            )}
-                            {analyzingIds.has(lead.id)
-                              ? tt('leads.analyzingAction', 'Analyzing...')
-                              : tt('leads.analyzeAction', 'Analyze')}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            title="Générer séquence outreach"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              navigate(`${ROUTES.outreach}?leadId=${lead.id}`);
-                            }}
-                            className="text-sky-500 hover:text-sky-700 hover:bg-sky-50 px-2"
-                          >
-                            <Mail className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            aria-label={`Delete ${lead.company_name}`}
-                            disabled={deletingIds.has(lead.id)}
-                            onClick={(event) => { event.stopPropagation(); setDeleteConfirm({ type: 'single', lead }); }}
-                            className="text-rose-400 hover:text-rose-600 hover:bg-rose-50 px-2"
-                          >
-                            {deletingIds.has(lead.id) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${tier.soft}`}>{tier.badge}</span>
+                      </div>
+                      <div className="mt-3 flex items-end gap-2">
+                        <span className="text-4xl font-semibold tracking-tight text-slate-900">{finalScore}</span>
+                        <span className="text-xs text-slate-400 pb-1">/100</span>
+                        <span className="ml-auto"><ScorePill score={finalScore} /></span>
+                      </div>
+                      <div className="mt-3 text-xs text-slate-500">ICP {icpScore ?? '-'} · AI {aiScore ?? '-'}</div>
+                      <div className="mt-3 flex items-center justify-between text-xs">
+                        <span className="text-slate-500 truncate">{lead.final_recommended_action || tt('leads.primaryActionFallback', 'Review this lead')}</span>
+                        <Button size="sm" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); onOpenLeadPage?.(lead); }}>
+                          {tt('leads.detailAction', 'Detail')}
+                        </Button>
+                      </div>
+                    </div>
                   );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        {paginationBar}
+                })}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+              <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Queue</p>
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={allSelected} onCheckedChange={toggleSelectAll} />
+                  <span className="text-xs text-slate-400">{tt('leads.selectAllAriaLabel', 'Select all leads')}</span>
+                </div>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {paginated.map((lead) => {
+                  const icpScore = toMetric(lead.icp_score);
+                  const aiScore = toMetric(lead.ai_score);
+                  const finalScore = toMetric(lead.final_score) ?? icpScore ?? 0;
+                  const tier = getScoreTier(finalScore);
+                  const isAnalyzing = analyzingIds.has(lead.id) || lead.status === LEAD_STATUS.PROCESSING;
+                  return (
+                    <div
+                      key={lead.id}
+                      className={`px-4 py-3 flex flex-col gap-3 lg:flex-row lg:items-center hover:bg-slate-50/80 transition-colors ${selectedIds.has(lead.id) ? 'bg-brand-sky/5' : ''}`}
+                      onClick={() => onOpenLeadPage?.(lead)}
+                    >
+                      <div className="flex items-center gap-3 min-w-0 lg:w-[35%]">
+                        <span className={`w-2.5 h-2.5 rounded-full ${tier.color} ring-4 ring-slate-100`} />
+                        <span className="text-xl font-semibold text-slate-900 tabular-nums">{finalScore}</span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-900 truncate">{lead.company_name}</p>
+                          <p className="text-xs text-slate-500 truncate">{lead.contact_name || '-'}{lead.contact_role ? ` · ${lead.contact_role}` : ''}</p>
+                        </div>
+                      </div>
+                      <div className="text-sm text-slate-600 lg:flex-1">
+                        <span className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 mr-2">{lead.status || LEAD_STATUS.TO_ANALYZE}</span>
+                        <span className="line-clamp-2">{lead.final_recommended_action || lead.analysis_summary || tt('leads.primaryActionFallback', 'Review this lead')}</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 lg:ml-auto" onClick={(event) => event.stopPropagation()}>
+                        <Checkbox checked={selectedIds.has(lead.id)} onCheckedChange={() => toggleSelectOne(lead.id)} />
+                        <StatusBadge status={lead.status || LEAD_STATUS.TO_ANALYZE} />
+                        <FollowUpBadge status={lead.follow_up_status || 'To Contact'} />
+                        <AnalysisLevelBadge lead={lead} t={t} />
+                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={(event) => handleAnalyze(event, lead)} disabled={isAnalyzing}>
+                          {isAnalyzing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                          {isAnalyzing ? tt('leads.analyzingAction', 'Analyzing...') : tt('leads.analyzeAction', 'Analyze')}
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => onSelectLead?.(lead)}>
+                          <Phone className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-sky-500 hover:text-sky-700 hover:bg-sky-50" onClick={() => navigate(`${ROUTES.outreach}?leadId=${lead.id}`)}>
+                          <Mail className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50" onClick={() => setDeleteConfirm({ type: 'single', lead })} disabled={deletingIds.has(lead.id)}>
+                          {deletingIds.has(lead.id) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                        </Button>
+                        <span className="text-[11px] text-slate-400">{tt('leads.companySizeEmployees', '{{size}} emp.', { size: formatCompanySize(lead.company_size, tt('leads.notAvailable', 'n/a')) })}</span>
+                        <span className="text-[11px] text-slate-400">{sourceListLabel(lead.source_list, tt('leads.unlisted', 'Unlisted'))}</span>
+                        <span className="text-[11px] text-slate-400">ICP {icpScore ?? '-'} · AI {aiScore ?? '-'}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {paginationBar}
+          </>
+        )}
       </div>
     </div>
 
