@@ -709,7 +709,34 @@
     "categoryLabel": "Catégorie",
     "aiSuggestion": "Suggestion IA",
     "icpSections": "Sections ICP",
-    "finalScoreFormula": "Score final = ICP déterministe + signaux internet (web research, news, email)",
+    "finalScoreFormula": "Score final = ICP déterministe + signaux d'intention (manuels + internet)",
+    "signalScore": "Score signal",
+    "signalIntent": "Intention + internet",
+    "icpDeterministic": "Adéquation déterministe",
+    "icpBreakdownTitle": "Détail ICP par critère",
+    "whyPrioritized": "Pourquoi cette priorité ?",
+    "icpDim": {
+      "industry": "Industrie",
+      "role": "Rôle du contact",
+      "clientType": "Type de client",
+      "structure": "Structure de l'entreprise",
+      "geography": "Géographie"
+    },
+    "match": {
+      "perfect": "Adéquation parfaite",
+      "partial": "Adéquation partielle",
+      "none": "Aucune adéquation",
+      "excluded": "Exclu par l'ICP",
+      "notEvaluated": "Non évalué"
+    },
+    "why": {
+      "excluded": "Ce lead est exclu car il correspond à une règle d'exclusion stricte de votre ICP actif (industrie ou rôle).",
+      "noAnalysis": "Lancez une analyse pour calculer le score de priorisation de ce lead.",
+      "excellent": "Forte adéquation ICP (ICP {{icp}}/100) renforcée par les signaux d'intention (ajustement {{boost}}). Action recommandée : {{action}}.",
+      "strong": "Bonne adéquation ICP (ICP {{icp}}/100), priorité {{category}}. Ajustement signaux : {{boost}}. Action suggérée : {{action}}.",
+      "medium": "Adéquation ICP partielle (ICP {{icp}}/100). Utile pour le nurturing, pas pour une prise de contact immédiate. Action : {{action}}.",
+      "low": "Faible adéquation ICP (ICP {{icp}}/100). Le lead ne correspond pas à votre ICP actif et n'est pas priorisé."
+    },
     "leadSnapshot": "Snapshot du lead",
     "clientType": "Type de client",
     "lastAnalyzedLabel": "Dernière analyse",

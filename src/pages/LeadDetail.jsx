@@ -14,6 +14,7 @@ import { FOLLOW_UP_STATUS_LIST } from '@/constants/leads';
 import { ROUTES } from '@/constants/routes';
 import AnalysisHero from '@/components/leads/AnalysisHero';
 import LeadActionsPanel from '@/components/leads/LeadActionsPanel';
+import ScoreBreakdown from '@/components/leads/ScoreBreakdown';
 import { dataClient } from '@/services/dataClient';
 import SignalBadge from '@/components/leads/SignalBadge';
 import { getLeadScores } from '@/lib/leadPresentation';
@@ -453,9 +454,6 @@ export default function LeadDetail() {
   const scoreDetails = getScoreDetails(lead);
   const finalScore = baseScores.finalScore ?? getNumericScoreDetail(scoreDetails, 'final_score') ?? icpScore;
   const aiBoost = icpScore !== null && finalScore !== null ? finalScore - icpScore : null;
-  const scoreDetailEntries = Object.entries(scoreDetails).filter(([, entry]) =>
-    entry && typeof entry === 'object' && !Array.isArray(entry) && toMetric(entry.points) !== null
-  );
   const displaySignals = getDisplaySignals(lead);
 
   const signalGroups = {
@@ -586,48 +584,15 @@ export default function LeadDetail() {
       <div className="grid lg:grid-cols-3 gap-6">
         {/* LEFT COLUMN */}
         <div className="lg:col-span-1 space-y-4">
-          {/* Score Card */}
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-sm">{t('leads.scoreBreakdownTitle', { defaultValue: 'Score breakdown' })}</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { label: t('leads.icpScore'), value: icpScore },
-                  { label: t('leads.aiScore'), value: aiScore, sub: lead.ai_confidence ? `${lead.ai_confidence}% ${t('leads.confidenceShort')}` : null },
-                  {
-                    label: t('leads.aiBoost'),
-                    value: aiBoost === null ? null : aiBoost > 0 ? `+${aiBoost}` : aiBoost,
-                    color: aiBoost > 0 ? 'text-emerald-700' : aiBoost < 0 ? 'text-rose-700' : 'text-slate-900',
-                  },
-                  { label: t('leads.aiAdjustment'), value: lead.llm_score_adjustment != null ? (lead.llm_score_adjustment > 0 ? `+${lead.llm_score_adjustment}` : lead.llm_score_adjustment) : '—', color: lead.llm_score_adjustment > 0 ? 'text-brand-sky' : lead.llm_score_adjustment < 0 ? 'text-rose-700' : 'text-slate-500' },
-                ].map((item) => (
-                  <div key={item.label} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                    <p className="text-[10px] uppercase tracking-wide text-slate-500">{item.label}</p>
-                    <p className={`text-base font-semibold ${item.color || 'text-slate-900'}`}>
-                      {item.value ?? 'n/a'}
-                    </p>
-                    {item.sub && <p className="text-[10px] text-slate-400">{item.sub}</p>}
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-3 text-xs text-slate-600 space-y-1">
-                <p>{t('leads.categoryLabel')}: <span className="text-slate-800 font-medium">{lead.final_category || lead.icp_category || 'N/A'}</span></p>
-                <p>{t('leads.suggestedAction')}: <span className="text-emerald-700 font-medium">{lead.final_recommended_action || 'N/A'}</span></p>
-                {lead.suggested_action && (
-                  <p className="text-brand-sky font-medium">{t('leads.aiSuggestion')}: {lead.suggested_action}</p>
-                )}
-                {scoreDetailEntries.length > 0 && (
-                  <p className="text-[11px] text-slate-500">
-                    {t('leads.icpSections')}: {scoreDetailEntries.map(([key, entry]) => `${key} ${entry?.points > 0 ? '+' : ''}${entry?.points ?? 0}`).join(' · ')}
-                  </p>
-                )}
-                <p className="text-[11px] text-slate-400">{t('leads.finalScoreFormula')}</p>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Score breakdown — explicit per-criterion view, aligned with docs/scoring-logic.md */}
+          <ScoreBreakdown
+            lead={lead}
+            finalScore={finalScore}
+            icpScore={icpScore}
+            aiScore={aiScore}
+            aiBoost={aiBoost}
+            scoreDetails={scoreDetails}
+          />
 
           {/* Snapshot */}
           <Card className="shadow-sm">
