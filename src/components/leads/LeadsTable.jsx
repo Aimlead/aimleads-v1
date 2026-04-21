@@ -580,9 +580,6 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
                         <StatusBadge status={lead.status || LEAD_STATUS.TO_ANALYZE} />
                         <FollowUpBadge status={lead.follow_up_status || 'To Contact'} />
                         <AnalysisLevelBadge lead={lead} t={t} />
-                        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => onOpenLeadPage?.(lead)}>
-                          {tt('leads.detailAction', 'Detail')}
-                        </Button>
                         <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={(event) => handleAnalyze(event, lead)} disabled={isAnalyzing}>
                           {isAnalyzing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
                           {isAnalyzing ? tt('leads.analyzingAction', 'Analyzing...') : tt('leads.analyzeAction', 'Analyze')}

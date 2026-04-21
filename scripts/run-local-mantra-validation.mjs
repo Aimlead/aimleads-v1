@@ -18,7 +18,7 @@ const DEMO_PASSWORD = process.env.LOCAL_DEMO_PASSWORD || 'demo1234';
 
 const TARGET_ICP_NAME = 'ICP DSI RSSI - Liste securite IT';
 
-const MANTRA_ICP = {
+const TARGET_ICP_PROFILE = {
   name: TARGET_ICP_NAME,
   description:
     'Validation profile for DSI/RSSI: 50-5000 users, tech decision-makers, all sectors except excluded industries.',
@@ -281,8 +281,8 @@ async function stopApi(child) {
 }
 
 function buildIcpPayload(existingId) {
-  if (!existingId) return { ...MANTRA_ICP };
-  return { ...MANTRA_ICP, id: existingId };
+  if (!existingId) return { ...TARGET_ICP_PROFILE };
+  return { ...TARGET_ICP_PROFILE, id: existingId };
 }
 
 async function authenticate() {
