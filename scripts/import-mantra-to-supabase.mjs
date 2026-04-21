@@ -12,7 +12,7 @@ const ROOT = path.resolve(__dirname, '..');
 const LOCAL_DB_PATH = path.resolve(ROOT, 'server/data/db.json');
 
 const SOURCE_TAG = 'given_to_sales_onboarding_2024_09_11';
-const MANTRA_ICP_NAME = 'Mantra ICP - Local Validation';
+const TARGET_ICP_NAME = 'ICP DSI RSSI - Liste securite IT';
 
 const parseArgs = (argv) => {
   const args = {};
@@ -70,11 +70,11 @@ const buildClientConfig = (env = process.env) => {
   };
 };
 
-const loadLocalMantra = async () => {
+const loadLocalTargetList = async () => {
   const raw = JSON.parse(await fs.readFile(LOCAL_DB_PATH, 'utf8'));
-  const icp = (raw.icpProfiles || []).find((profile) => normalizeText(profile?.name) === normalizeText(MANTRA_ICP_NAME));
+  const icp = (raw.icpProfiles || []).find((profile) => normalizeText(profile?.name) === normalizeText(TARGET_ICP_NAME));
   if (!icp) {
-    throw new Error(`Could not find "${MANTRA_ICP_NAME}" in local db.json.`);
+    throw new Error(`Could not find "${TARGET_ICP_NAME}" in local db.json.`);
   }
 
   const leads = (raw.leads || []).filter((lead) => normalizeText(lead?.source_list) === normalizeText(SOURCE_TAG));
@@ -143,7 +143,7 @@ const sanitizeLeadForLiveSchema = (lead, workspaceId, icpProfileId) => ({
   final_recommended_action: lead.final_recommended_action || null,
   internet_signals: toInternetSignals(lead),
   auto_signal_metadata: {
-    imported_from: 'local_db_mantra',
+    imported_from: 'local_db_security_it',
     original_local_lead_id: lead.id,
     original_icp_score: lead.icp_score ?? null,
     original_icp_raw_score: lead.icp_raw_score ?? null,
@@ -310,7 +310,7 @@ const run = async () => {
   }
 
   const client = new Client(buildClientConfig(process.env));
-  const { icp, leads } = await loadLocalMantra();
+  const { icp, leads } = await loadLocalTargetList();
 
   await client.connect();
   try {
@@ -347,7 +347,7 @@ const run = async () => {
       source_tag: SOURCE_TAG,
       target_emails: emails,
       imported_from: LOCAL_DB_PATH,
-      mantra_leads: leads.length,
+      security_it_leads: leads.length,
       results,
     }, null, 2));
   } finally {

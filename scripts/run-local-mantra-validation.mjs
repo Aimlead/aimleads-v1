@@ -16,12 +16,12 @@ const SOURCE_TAG = 'given_to_sales_onboarding_2024_09_11';
 const DEMO_EMAIL = process.env.LOCAL_DEMO_EMAIL || 'demo@aimleads.local';
 const DEMO_PASSWORD = process.env.LOCAL_DEMO_PASSWORD || 'demo1234';
 
-const TARGET_ICP_NAME = 'Mantra ICP - Local Validation';
+const TARGET_ICP_NAME = 'ICP DSI RSSI - Liste securite IT';
 
-const MANTRA_ICP = {
+const TARGET_ICP_PROFILE = {
   name: TARGET_ICP_NAME,
   description:
-    'Validation profile for Mantra: 50-5000 users, tech decision-makers, all sectors except excluded industries.',
+    'Validation profile for DSI/RSSI: 50-5000 users, tech decision-makers, all sectors except excluded industries.',
   owner_user_id: DEMO_EMAIL,
   weights: {
     industrie: {
@@ -48,7 +48,7 @@ const MANTRA_ICP = {
         'Government Administration',
         'Administration publique',
         'Hopital',
-        'Hôpital',
+        'Hpital',
       ],
       scores: { parfait: 15, partiel: 6, aucun: 0, exclu: -100 },
     },
@@ -281,8 +281,8 @@ async function stopApi(child) {
 }
 
 function buildIcpPayload(existingId) {
-  if (!existingId) return { ...MANTRA_ICP };
-  return { ...MANTRA_ICP, id: existingId };
+  if (!existingId) return { ...TARGET_ICP_PROFILE };
+  return { ...TARGET_ICP_PROFILE, id: existingId };
 }
 
 async function authenticate() {
