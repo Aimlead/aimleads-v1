@@ -6,6 +6,7 @@ export const ROUTES = {
   onboarding: '/onboarding',
   analytics: '/analytics',
   pipeline: '/pipeline',
+  lists: '/lists',
   outreach: '/outreach',
   icp: '/icp',
   settings: '/settings',
