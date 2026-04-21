@@ -176,6 +176,7 @@ function buildAnalysisSummary({
   aiConfidence,
   aiBoost,
   finalScore,
+  saasGrade,
   finalCategory,
   finalRecommendedAction,
   llmReasoning,
@@ -192,6 +193,7 @@ function buildAnalysisSummary({
     `Signal confidence: ${aiConfidence}%\n` +
     `Signal adjustment on ICP: ${aiBoost >= 0 ? '+' : ''}${aiBoost}\n` +
     `Final prioritization score: ${finalScore}/100 (ICP base + signal adjustment)\n` +
+    `SaaS grade: ${saasGrade}\n` +
     `Final category suggestion: ${finalCategory}\n` +
     `Final recommended action: ${finalRecommendedAction}`;
 
@@ -200,6 +202,17 @@ function buildAnalysisSummary({
   }
 
   return base;
+}
+
+function getSaasGrade(score) {
+  const n = Number(score);
+  if (!Number.isFinite(n)) return 'N/A';
+  if (n >= 90) return 'A+';
+  if (n >= 80) return 'A';
+  if (n >= 70) return 'B';
+  if (n >= 60) return 'C';
+  if (n >= 45) return 'D';
+  return 'F';
 }
 
 function scoreLeadDeterministic({ lead, icpProfile }) {
@@ -218,17 +231,17 @@ function scoreLeadDeterministic({ lead, icpProfile }) {
     if (!hasPrimaryOrSecondary) {
       if (lead.industry) {
         rawScore += scores.parfait;
-        details.industrie = { match: 'parfait', points: scores.parfait, mode: 'all_except_excluded' };
+      details.industrie = { match: 'parfait', points: scores.parfait, mode: 'all_except_excluded', evaluated_value: lead.industry, weights: scores };
       }
     } else if (listIncludesExact(primaires, lead.industry)) {
       rawScore += scores.parfait;
-      details.industrie = { match: 'parfait', points: scores.parfait };
+      details.industrie = { match: 'parfait', points: scores.parfait, evaluated_value: lead.industry, weights: scores };
     } else if (listIncludesExact(secondaires, lead.industry)) {
       rawScore += scores.partiel;
-      details.industrie = { match: 'partiel', points: scores.partiel };
+      details.industrie = { match: 'partiel', points: scores.partiel, evaluated_value: lead.industry, weights: scores };
     } else if (lead.industry) {
       rawScore += scores.aucun;
-      details.industrie = { match: 'aucun', points: scores.aucun };
+      details.industrie = { match: 'aucun', points: scores.aucun, evaluated_value: lead.industry, weights: scores };
     }
   }
 
@@ -242,13 +255,13 @@ function scoreLeadDeterministic({ lead, icpProfile }) {
 
     if (listIncludesPartial(exacts, lead.contact_role)) {
       rawScore += scores.parfait;
-      details.roles = { match: 'parfait', points: scores.parfait };
+      details.roles = { match: 'parfait', points: scores.parfait, evaluated_value: lead.contact_role, weights: scores };
     } else if (listIncludesPartial(proches, lead.contact_role)) {
       rawScore += scores.partiel;
-      details.roles = { match: 'partiel', points: scores.partiel };
+      details.roles = { match: 'partiel', points: scores.partiel, evaluated_value: lead.contact_role, weights: scores };
     } else {
       rawScore += scores.aucun;
-      details.roles = { match: 'aucun', points: scores.aucun };
+      details.roles = { match: 'aucun', points: scores.aucun, evaluated_value: lead.contact_role, weights: scores };
     }
   }
 
@@ -258,13 +271,13 @@ function scoreLeadDeterministic({ lead, icpProfile }) {
 
     if (listIncludesExact(primaire, lead.client_type)) {
       rawScore += scores.parfait;
-      details.typeClient = { match: 'parfait', points: scores.parfait };
+      details.typeClient = { match: 'parfait', points: scores.parfait, evaluated_value: lead.client_type, weights: scores };
     } else if (listIncludesExact(secondaire, lead.client_type)) {
       rawScore += scores.partiel;
-      details.typeClient = { match: 'partiel', points: scores.partiel };
+      details.typeClient = { match: 'partiel', points: scores.partiel, evaluated_value: lead.client_type, weights: scores };
     } else {
       rawScore += scores.aucun;
-      details.typeClient = { match: 'aucun', points: scores.aucun };
+      details.typeClient = { match: 'aucun', points: scores.aucun, evaluated_value: lead.client_type, weights: scores };
     }
   }
 
@@ -275,13 +288,13 @@ function scoreLeadDeterministic({ lead, icpProfile }) {
 
     if (Number.isFinite(size) && size >= (primaire?.min ?? 0) && size <= (primaire?.max ?? 999999)) {
       rawScore += scores.parfait;
-      details.structure = { match: 'parfait', points: scores.parfait };
+      details.structure = { match: 'parfait', points: scores.parfait, evaluated_value: lead.company_size, weights: scores };
     } else if (Number.isFinite(size) && size >= (secondaire?.min ?? 0) && size <= (secondaire?.max ?? 999999)) {
       rawScore += scores.partiel;
-      details.structure = { match: 'partiel', points: scores.partiel };
+      details.structure = { match: 'partiel', points: scores.partiel, evaluated_value: lead.company_size, weights: scores };
     } else {
       rawScore += scores.aucun;
-      details.structure = { match: 'aucun', points: scores.aucun };
+      details.structure = { match: 'aucun', points: scores.aucun, evaluated_value: lead.company_size, weights: scores };
     }
   }
 
@@ -291,13 +304,13 @@ function scoreLeadDeterministic({ lead, icpProfile }) {
 
     if (listIncludesExact(primaire, lead.country)) {
       rawScore += scores.parfait;
-      details.geo = { match: 'parfait', points: scores.parfait };
+      details.geo = { match: 'parfait', points: scores.parfait, evaluated_value: lead.country, weights: scores };
     } else if (listIncludesExact(secondaire, lead.country)) {
       rawScore += scores.partiel;
-      details.geo = { match: 'partiel', points: scores.partiel };
+      details.geo = { match: 'partiel', points: scores.partiel, evaluated_value: lead.country, weights: scores };
     } else {
       rawScore += scores.aucun;
-      details.geo = { match: 'aucun', points: scores.aucun };
+      details.geo = { match: 'aucun', points: scores.aucun, evaluated_value: lead.country, weights: scores };
     }
   }
 
@@ -367,6 +380,7 @@ export async function analyzeLead({ lead, icpProfile, skipLlm = false }) {
         },
       },
       final_score: ai.finalScore,
+      saas_grade: getSaasGrade(ai.finalScore),
       final_category: ai.finalCategory,
       final_priority: ai.finalPriority,
       final_recommended_action: ai.finalRecommendedAction,
@@ -389,6 +403,7 @@ export async function analyzeLead({ lead, icpProfile, skipLlm = false }) {
       aiConfidence: ai.aiConfidence,
       aiBoost: ai.aiBoost ?? 0,
       finalScore: ai.finalScore,
+      saasGrade: getSaasGrade(ai.finalScore),
       finalCategory: ai.finalCategory,
       finalRecommendedAction: ai.finalRecommendedAction,
     });
@@ -461,6 +476,7 @@ export async function analyzeLead({ lead, icpProfile, skipLlm = false }) {
       },
     },
     final_score: ai.finalScore,
+    saas_grade: getSaasGrade(ai.finalScore),
     final_category: ai.finalCategory,
     final_priority: ai.finalPriority,
     final_recommended_action: ai.finalRecommendedAction,
@@ -506,6 +522,7 @@ export async function analyzeLead({ lead, icpProfile, skipLlm = false }) {
     };
 
     baseResult.final_score = llmFinalScore;
+    baseResult.saas_grade = getSaasGrade(llmFinalScore);
     baseResult.final_category = llmCategory;
     baseResult.final_recommended_action = llmAction;
     baseResult.final_status = llmStatus;
@@ -530,6 +547,7 @@ export async function analyzeLead({ lead, icpProfile, skipLlm = false }) {
       aiConfidence: ai.aiConfidence,
       aiBoost: ai.aiBoost ?? 0,
       finalScore: llmFinalScore,
+      saasGrade: getSaasGrade(llmFinalScore),
       finalCategory: llmCategory,
       finalRecommendedAction: llmAction,
       llmReasoning: llmResult.fit_reasoning,
@@ -547,6 +565,7 @@ export async function analyzeLead({ lead, icpProfile, skipLlm = false }) {
       aiConfidence: ai.aiConfidence,
       aiBoost: ai.aiBoost ?? 0,
       finalScore: ai.finalScore,
+      saasGrade: getSaasGrade(ai.finalScore),
       finalCategory: ai.finalCategory,
       finalRecommendedAction: ai.finalRecommendedAction,
     });

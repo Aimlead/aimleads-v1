@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CheckCircle2, MinusCircle, ShieldAlert, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,11 +19,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
  */
 
 const ICP_DIMENSIONS = [
-  { key: 'industrie', labelKey: 'leads.icpDim.industry', fallback: 'Industry' },
-  { key: 'roles', labelKey: 'leads.icpDim.role', fallback: 'Role' },
-  { key: 'typeClient', labelKey: 'leads.icpDim.clientType', fallback: 'Client type' },
-  { key: 'structure', labelKey: 'leads.icpDim.structure', fallback: 'Company structure' },
-  { key: 'geo', labelKey: 'leads.icpDim.geography', fallback: 'Geography' },
+  { key: 'industrie', labelKey: 'leads.icpDim.industry', fallback: 'Industry', fr: 'Industrie' },
+  { key: 'roles', labelKey: 'leads.icpDim.role', fallback: 'Role', fr: 'Rôle contact' },
+  { key: 'typeClient', labelKey: 'leads.icpDim.clientType', fallback: 'Client type', fr: 'Type de client' },
+  { key: 'structure', labelKey: 'leads.icpDim.structure', fallback: 'Company structure', fr: 'Structure entreprise' },
+  { key: 'geo', labelKey: 'leads.icpDim.geography', fallback: 'Geography', fr: 'Géographie' },
 ];
 
 const MATCH_META = {
@@ -54,6 +55,17 @@ const MATCH_META = {
     labelKey: 'leads.match.excluded',
     fallback: 'Excluded by ICP',
   },
+};
+
+const getSaasGrade = (score) => {
+  const n = Number(score);
+  if (!Number.isFinite(n)) return 'N/A';
+  if (n >= 90) return 'A+';
+  if (n >= 80) return 'A';
+  if (n >= 70) return 'B';
+  if (n >= 60) return 'C';
+  if (n >= 45) return 'D';
+  return 'F';
 };
 
 const ScoreTile = ({ label, value, sub, tone = 'neutral' }) => {
@@ -148,6 +160,7 @@ const buildWhyExplanation = ({
 
 const ScoreBreakdown = ({ lead, finalScore, icpScore, aiScore, aiBoost, scoreDetails }) => {
   const { t } = useTranslation();
+  const [bilingualMode, setBilingualMode] = useState(false);
 
   const safeDetails = scoreDetails && typeof scoreDetails === 'object' ? scoreDetails : {};
   const finalCategory = lead?.final_category || lead?.category || null;
@@ -167,6 +180,7 @@ const ScoreBreakdown = ({ lead, finalScore, icpScore, aiScore, aiBoost, scoreDet
     finalAction,
     hasExclusion,
   });
+  const saasGrade = lead?.saas_grade || getSaasGrade(finalScore);
 
   return (
     <Card className="shadow-sm">
@@ -177,7 +191,7 @@ const ScoreBreakdown = ({ lead, finalScore, icpScore, aiScore, aiBoost, scoreDet
       </CardHeader>
       <CardContent className="space-y-4 pt-0">
         {/* Top-line scores: Final / ICP / Signal */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <ScoreTile
             label={t('leads.finalScore', { defaultValue: 'Final score' })}
             value={Number.isFinite(finalScore) ? `${finalScore}/100` : null}
@@ -197,6 +211,12 @@ const ScoreBreakdown = ({ lead, finalScore, icpScore, aiScore, aiBoost, scoreDet
                 ? `${aiConfidence}% ${t('leads.confidenceShort', { defaultValue: 'conf.' })}`
                 : t('leads.signalIntent', { defaultValue: 'Intent + internet' })
             }
+          />
+          <ScoreTile
+            label={t('leads.saasGrade', { defaultValue: 'SaaS grade' })}
+            value={saasGrade}
+            sub={t('leads.saasGradeHint', { defaultValue: 'SDR-ready qualification grade' })}
+            tone="brand"
           />
         </div>
 
@@ -220,9 +240,20 @@ const ScoreBreakdown = ({ lead, finalScore, icpScore, aiScore, aiBoost, scoreDet
 
         {/* ICP dimensions breakdown */}
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-2">
-            {t('leads.icpBreakdownTitle', { defaultValue: 'ICP breakdown by criterion' })}
-          </p>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              {t('leads.icpBreakdownTitle', { defaultValue: 'ICP breakdown by criterion' })}
+            </p>
+            <button
+              type="button"
+              onClick={() => setBilingualMode((prev) => !prev)}
+              className="rounded-md border border-slate-200 px-2 py-1 text-[10px] font-medium text-slate-600 hover:bg-slate-50"
+            >
+              {bilingualMode
+                ? t('leads.singleLanguage', { defaultValue: 'Single language' })
+                : t('leads.bilingualView', { defaultValue: 'FR + EN' })}
+            </button>
+          </div>
           <div className="space-y-1.5">
             {ICP_DIMENSIONS.map(({ key, labelKey, fallback }) => {
               const entry = safeDetails?.[key];
@@ -230,6 +261,21 @@ const ScoreBreakdown = ({ lead, finalScore, icpScore, aiScore, aiBoost, scoreDet
               const points = Number.isFinite(Number(entry?.points)) ? Number(entry.points) : null;
               const meta = match ? MATCH_META[match] : null;
               const Icon = meta?.Icon;
+              const evaluatedValue = entry?.evaluated_value ?? '—';
+              const scoreWeights = entry?.weights || null;
+              const localizedLabel = t(labelKey, { defaultValue: fallback });
+              const bilingualLabel = `${fallback} / ${ICP_DIMENSIONS.find((item) => item.key === key)?.fr || fallback}`;
+              const matchLabel = meta ? t(meta.labelKey, { defaultValue: meta.fallback }) : t('leads.match.notEvaluated', { defaultValue: 'Not evaluated' });
+              const bilingualMatch = meta
+                ? `${meta.fallback} / ${
+                  ({
+                    parfait: 'Correspondance parfaite',
+                    partiel: 'Correspondance partielle',
+                    aucun: 'Pas de correspondance',
+                    exclu: 'Exclu par ICP',
+                  })[match] || meta.fallback
+                }`
+                : 'Not evaluated / Non évalué';
 
               return (
                 <div
@@ -245,17 +291,11 @@ const ScoreBreakdown = ({ lead, finalScore, icpScore, aiScore, aiBoost, scoreDet
                       <span className="w-3.5 h-3.5 inline-block" aria-hidden="true" />
                     )}
                     <span className="font-medium text-slate-800 truncate">
-                      {t(labelKey, { defaultValue: fallback })}
+                      {bilingualMode ? bilingualLabel : localizedLabel}
                     </span>
-                    {meta ? (
-                      <span className={`text-[10px] font-medium ${meta.color}`}>
-                        · {t(meta.labelKey, { defaultValue: meta.fallback })}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-slate-400">
-                        · {t('leads.match.notEvaluated', { defaultValue: 'Not evaluated' })}
-                      </span>
-                    )}
+                    <span className={`text-[10px] font-medium ${meta?.color || 'text-slate-400'}`}>
+                      · {bilingualMode ? bilingualMatch : matchLabel}
+                    </span>
                   </div>
                   <span
                     className={`font-semibold tabular-nums ${
@@ -270,6 +310,26 @@ const ScoreBreakdown = ({ lead, finalScore, icpScore, aiScore, aiBoost, scoreDet
                   >
                     {points === null ? '—' : formatSignedNumber(points)}
                   </span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[11px] text-slate-500">
+            {t('leads.weightLegend', { defaultValue: 'Each ICP field shows lead value + per-level weights used by scoring.' })}
+          </p>
+          <div className="mt-2 space-y-1">
+            {ICP_DIMENSIONS.map(({ key, labelKey, fallback }) => {
+              const entry = safeDetails?.[key];
+              if (!entry) return null;
+              const weights = entry?.weights || {};
+              return (
+                <div key={`${key}-weights`} className="rounded-md border border-slate-200 px-2.5 py-1.5 text-[11px] text-slate-600">
+                  <span className="font-medium text-slate-700">{t(labelKey, { defaultValue: fallback })}:</span>{' '}
+                  {t('leads.leadValue', { defaultValue: 'Lead value' })} <span className="font-medium text-slate-800">{String(entry?.evaluated_value ?? '—')}</span>
+                  {' · '}
+                  {t('leads.weightsLabel', { defaultValue: 'Weights' })} P:{formatSignedNumber(weights?.parfait) ?? '—'}
+                  {' / '}S:{formatSignedNumber(weights?.partiel) ?? '—'}
+                  {' / '}N:{formatSignedNumber(weights?.aucun) ?? '—'}
                 </div>
               );
             })}
