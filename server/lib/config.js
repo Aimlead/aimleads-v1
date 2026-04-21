@@ -138,8 +138,8 @@ export const validateRuntimeConfig = () => {
     throw new Error('ENABLE_DEMO_BOOTSTRAP must be disabled in production.');
   }
 
-  if (config.isProduction && !config.corsOrigin && !process.env.VERCEL_URL) {
-    throw new Error('CORS_ORIGIN is required in production (or deploy to Vercel where VERCEL_URL is set automatically)');
+  if (config.isProduction && !config.corsOrigin) {
+    throw new Error('CORS_ORIGIN is required in production.');
   }
 
   if (config.isProduction && isTruthy(process.env.SUPABASE_FALLBACK_TO_LOCAL)) {

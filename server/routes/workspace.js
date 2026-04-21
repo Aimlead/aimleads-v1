@@ -653,7 +653,7 @@ router.get('/integration-status', requireAuth, async (req, res) => {
   const supabasePublishableKey = Boolean(config.supabase.publishableKey);
   const supabaseServiceRoleKey = Boolean(config.supabase.serviceRoleKey);
   const supabaseConfigured = supabaseUrl && supabaseServiceRoleKey;
-  const hasCorsOrigin = Boolean(config.corsOrigin || process.env.VERCEL_URL);
+  const hasCorsOrigin = Boolean(config.corsOrigin);
   const cbStatus = getCircuitBreakerStatus();
 
   // CRM integration status — graceful degradation if DB unavailable

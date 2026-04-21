@@ -185,5 +185,4 @@ Ce check doit echouer tant que `aimlead.io` sert encore un ancien build, ou si l
 
 Legacy uniquement, non utilise pour la prod courante:
 
-- [vercel.json](vercel.json)
 - [.github/workflows/deploy.yml](.github/workflows/deploy.yml)

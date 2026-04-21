@@ -45,7 +45,3 @@
 - Default mode: `VITE_DATA_MODE=api`
 - Fallback mode: local mock (`mockDb`) when API unavailable
 
-## Vercel
-
-- Function entrypoint: `api/index.js`
-- Deploy config: `vercel.json`
