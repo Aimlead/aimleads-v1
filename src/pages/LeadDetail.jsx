@@ -178,10 +178,10 @@ export default function LeadDetail() {
   const { data: lead, isLoading, isError: leadError, refetch: refetchLead } = useQuery({
     queryKey: ['lead', leadId || leadFromState?.id],
     queryFn: async () => {
-      if (leadFromState && (!leadId || leadFromState.id === leadId)) return leadFromState;
       if (!leadId) return null;
       return dataClient.leads.getById(leadId);
     },
+    initialData: leadFromState && (!leadId || leadFromState.id === leadId) ? leadFromState : undefined,
   });
 
   const [notes, setNotes] = useState('');
@@ -326,6 +326,9 @@ export default function LeadDetail() {
       const response = await dataClient.leads.scoreIcp(lead.id);
       if (response?.data) {
         toast.success(t('leads.scoreIcpSuccess', { company: lead.company_name, score: response.data.icp_score, category: response.data.icp_category }));
+        if (response.data.lead) {
+          queryClient.setQueryData(['lead', lead.id], response.data.lead);
+        }
         queryClient.invalidateQueries({ queryKey: ['lead', lead.id] });
         queryClient.invalidateQueries({ queryKey: ['leads'] });
       }
@@ -454,6 +457,7 @@ export default function LeadDetail() {
   const scoreDetails = getScoreDetails(lead);
   const finalScore = baseScores.finalScore ?? getNumericScoreDetail(scoreDetails, 'final_score') ?? icpScore;
   const aiBoost = icpScore !== null && finalScore !== null ? finalScore - icpScore : null;
+  const summaryForHero = lead.icp_summary || lead.analysis_summary;
   const displaySignals = getDisplaySignals(lead);
 
   const signalGroups = {
@@ -548,8 +552,8 @@ export default function LeadDetail() {
                 </span>
               ) : null}
             </div>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              {lead.analysis_summary || t('leads.whyItMatters.default', { defaultValue: 'Review the score, strongest signals, and recommended action before outreach.' })}
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 whitespace-pre-line">
+              {summaryForHero || t('leads.whyItMatters.default', { defaultValue: 'Review the score, strongest signals, and recommended action before outreach.' })}
             </p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 min-w-56">
