@@ -16,7 +16,7 @@ const SOURCE_TAG = 'given_to_sales_onboarding_2024_09_11';
 const DEMO_EMAIL = process.env.LOCAL_DEMO_EMAIL || 'demo@aimleads.local';
 const DEMO_PASSWORD = process.env.LOCAL_DEMO_PASSWORD || 'demo1234';
 
-const TARGET_ICP_NAME = 'ICP DSI RSSI - Liste securite IT';
+const TARGET_ICP_NAME = 'ICP DSI RSSI - Liste sécurité IT';
 
 const TARGET_ICP_PROFILE = {
   name: TARGET_ICP_NAME,

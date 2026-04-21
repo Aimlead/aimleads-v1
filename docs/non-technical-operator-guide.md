@@ -9,7 +9,7 @@ Ce guide te permet de gerer l'app au quotidien sans devoir coder.
   - Ajuster les seuils (`Excellent`, `Strong`, `Medium`).
   - Sauvegarder avec `Save scoring settings`.
 - `Settings > Dev Tools`
-  - `Load Liste securite IT (174)`: recharge la liste de test.
+  - `Load Liste sécurité IT (174)`: recharge la liste de test.
   - `Re-analyze Workspace`: relance l'analyse de tous les leads visibles.
   - `Run Checkup`: diagnostic rapide (provider, schema, stats).
 - `Dashboard`
