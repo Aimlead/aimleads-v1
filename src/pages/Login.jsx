@@ -45,18 +45,23 @@ export default function Login() {
     if (!value) return ROUTES.dashboard;
     return value.startsWith('/') ? value : ROUTES.dashboard;
   }, [searchParams]);
+  const ssoRedirectTarget = useMemo(() => {
+    const value = String(searchParams.get('redirect') || '').trim();
+    if (!value || !value.startsWith('/') || value.startsWith('//') || value === ROUTES.home) return '';
+    return value;
+  }, [searchParams]);
   const supportsSso = useMemo(() => typeof dataClient?.auth?.ssoInit === 'function', []);
   const resolveSsoLink = useMemo(() => {
     if (!supportsSso) return () => '';
     return (provider) => {
       try {
-        const link = dataClient.auth.ssoInit(provider);
+        const link = dataClient.auth.ssoInit(provider, ssoRedirectTarget);
         return typeof link === 'string' ? link : '';
       } catch {
         return '';
       }
     };
-  }, [supportsSso]);
+  }, [ssoRedirectTarget, supportsSso]);
   const ssoLinks = useMemo(() => {
     if (!supportsSso) return { google: '', microsoft: '' };
     return {

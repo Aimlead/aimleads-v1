@@ -27,7 +27,6 @@ export default function AuthCallback() {
   const { t } = useTranslation();
   const [error, setError] = useState('');
   const processed = useRef(false);
-
   useEffect(() => {
     if (processed.current) return;
     processed.current = true;
@@ -53,7 +52,10 @@ export default function AuthCallback() {
       dataClient.auth.ssoCodeExchange({ code })
         .then(async () => {
           if (checkAppState) await checkAppState().catch(() => {});
-          const redirectTarget = searchParams.get('redirect') || ROUTES.dashboard;
+          const redirectParam = searchParams.get('redirect');
+          const redirectTarget = !redirectParam
+            ? ROUTES.dashboard
+            : (redirectParam.startsWith('/') ? redirectParam : ROUTES.dashboard);
           const nextRoute = await resolvePostAuthRoute(redirectTarget);
           navigate(nextRoute, { replace: true });
         })
@@ -86,7 +88,10 @@ export default function AuthCallback() {
     dataClient.auth.ssoSession({ access_token: accessToken, refresh_token: refreshToken })
       .then(async () => {
         if (checkAppState) await checkAppState().catch(() => {});
-        const redirectTarget = searchParams.get('redirect') || ROUTES.dashboard;
+        const redirectParam = searchParams.get('redirect');
+        const redirectTarget = !redirectParam
+          ? ROUTES.dashboard
+          : (redirectParam.startsWith('/') ? redirectParam : ROUTES.dashboard);
         const nextRoute = await resolvePostAuthRoute(redirectTarget);
         navigate(nextRoute, { replace: true });
       })

@@ -37,6 +37,22 @@ const router = express.Router();
 wrapAsyncRoutes(router);
 
 const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
+const resolveAppOrigin = () =>
+  String(process.env.CORS_ORIGIN || 'http://localhost:5173').replace(/\/$/, '');
+const normalizePostAuthRedirect = (value) => {
+  const candidate = String(value || '').trim();
+  if (!candidate || !candidate.startsWith('/') || candidate.startsWith('//') || candidate === '/') {
+    return '';
+  }
+  return candidate;
+};
+const resolveRequestOrigin = (req) => {
+  const headerOrigin = String(req.get('origin') || '').trim();
+  if (/^https?:\/\/[^/\s]+$/i.test(headerOrigin)) {
+    return headerOrigin.replace(/\/$/, '');
+  }
+  return resolveAppOrigin();
+};
 
 const authLimiter = createRateLimit({
   namespace: 'auth',
@@ -303,7 +319,7 @@ router.post('/reset-password', authLimiter, validateBody(schemas.authResetPasswo
     try {
       await sendPasswordResetEmail({
         email,
-        redirectTo: `${String(process.env.CORS_ORIGIN || 'http://localhost:5173').replace(/\/$/, '')}/reset-password`,
+        redirectTo: `${resolveAppOrigin()}/reset-password`,
       });
     } catch (err) {
       // Return success to prevent email enumeration, but log non-user errors
@@ -498,9 +514,12 @@ router.get('/sso/init', (req, res) => {
     data: { provider, provider_label: SSO_PROVIDER_LABELS[provider] || provider },
   });
 
-  const appUrl = String(process.env.CORS_ORIGIN || 'http://localhost:5173').replace(/\/$/, '');
-  const redirectTo = `${appUrl}/auth/callback`;
-  const authorizeUrl = getOAuthSignInUrl(provider, redirectTo);
+  const callbackUrl = new URL('/auth/callback', resolveRequestOrigin(req));
+  const postAuthRedirect = normalizePostAuthRedirect(req.query.redirect);
+  if (postAuthRedirect) {
+    callbackUrl.searchParams.set('redirect', postAuthRedirect);
+  }
+  const authorizeUrl = getOAuthSignInUrl(provider, callbackUrl.toString());
   return res.redirect(authorizeUrl);
 });
 
