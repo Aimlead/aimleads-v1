@@ -533,6 +533,33 @@ export default function LeadDetail() {
 
       </div>
 
+      <div className="mb-5 rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+              {t('leads.heroPrimaryAction', { defaultValue: "AimLead's call" })}
+            </p>
+            <div className="mt-2 flex items-end gap-2">
+              <span className="text-5xl font-semibold tracking-tight text-slate-900 tabular-nums">{finalScore ?? '-'}</span>
+              <span className="pb-2 text-sm text-slate-400">/100</span>
+              {lead.final_category ? (
+                <span className={`mb-2 text-xs font-semibold px-2.5 py-1 rounded-full border ${categoryStyle(lead.final_category)}`}>
+                  {lead.final_category}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+              {lead.analysis_summary || t('leads.whyItMatters.default', { defaultValue: 'Review the score, strongest signals, and recommended action before outreach.' })}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 min-w-56">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{t('leads.nextBestAction', { defaultValue: 'Next best action' })}</p>
+            <p className="mt-1 text-sm font-semibold text-slate-800">{lead.final_recommended_action || t('leads.primaryActionFallback')}</p>
+            <p className="mt-1 text-xs text-slate-500">{t('leads.lastAnalyzedLabel')} · {formatDate(lead.last_analyzed_at, i18n.language) || '—'}</p>
+          </div>
+        </div>
+      </div>
+
       <div className="mb-6">
         <AnalysisHero
           lead={lead}
