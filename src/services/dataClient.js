@@ -313,7 +313,14 @@ const apiClient = {
     updateMe: (payload) => apiRequest('/auth/me', { method: 'PATCH', body: payload }),
     exportMe: () => `${API_BASE_URL}/auth/me/export`,
     deleteMe: () => apiRequest('/auth/me', { method: 'DELETE' }),
-    ssoInit: (provider) => `${API_BASE_URL}/auth/sso/init?provider=${encodeURIComponent(provider)}`,
+    ssoInit: (provider, redirect = '') => {
+      const query = new URLSearchParams({ provider: String(provider || '') });
+      const safeRedirect = String(redirect || '').trim();
+      if (safeRedirect.startsWith('/') && !safeRedirect.startsWith('//') && safeRedirect !== '/') {
+        query.set('redirect', safeRedirect);
+      }
+      return `${API_BASE_URL}/auth/sso/init?${query.toString()}`;
+    },
     ssoSession: (payload) => apiRequest('/auth/sso/session', { method: 'POST', body: payload }),
     ssoCodeExchange: (payload) => apiRequest('/auth/sso/code', { method: 'POST', body: payload }),
   },

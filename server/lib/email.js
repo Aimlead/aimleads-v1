@@ -24,7 +24,7 @@ const getFromAddress = () =>
   String(process.env.RESEND_FROM_ADDRESS || 'AimLeads <noreply@aimlead.io>').trim();
 
 const getAppUrl = () =>
-  String(process.env.CORS_ORIGIN || 'https://app.aimlead.io').replace(/\/$/, '');
+  String(process.env.APP_ORIGIN || process.env.CORS_ORIGIN || 'https://app.aimlead.io').replace(/\/$/, '');
 
 /**
  * Send a transactional email.
