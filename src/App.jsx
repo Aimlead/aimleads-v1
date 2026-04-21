@@ -51,13 +51,6 @@ function FullscreenLoader() {
   );
 }
 
-function AuthScope() {
-  return (
-    <AuthProvider>
-      <Outlet />
-    </AuthProvider>
-  );
-}
 
 function PrivateGuard() {
   const location = useLocation();
@@ -105,31 +98,29 @@ function AppRoutes() {
       <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
       <Route path={ROUTES.resetPassword} element={<ResetPassword />} />
       <Route path={ROUTES.authCallback} element={<AuthCallback />} />
-      <Route element={<AuthScope />}>
-        <Route
-          path={ROUTES.login}
-          element={
-            <PublicOnlyGuard>
-              <Login />
-            </PublicOnlyGuard>
-          }
-        />
-        <Route element={<PrivateGuard />}>
-          <Route path={ROUTES.dashboard} element={<Dashboard />} />
-          <Route path={ROUTES.onboarding} element={<Onboarding />} />
-          <Route path={ROUTES.analytics} element={<Analytics />} />
-          <Route path={ROUTES.pipeline} element={<Pipeline />} />
-          <Route path={ROUTES.icp} element={<ICP />} />
-          <Route path={ROUTES.settings} element={<Settings />} />
-          <Route path={ROUTES.accountSettings} element={<AccountSettings />} />
-          <Route path={ROUTES.team} element={<Team />} />
-          <Route path={ROUTES.leadDetail} element={<LeadDetail />} />
-          <Route path={ROUTES.auditLog} element={<AuditLog />} />
-          <Route path={ROUTES.billing} element={<Billing />} />
-          <Route path={ROUTES.outreach} element={<Outreach />} />
-          <Route path={ROUTES.crmIntegration} element={<CrmIntegration />} />
-          <Route path={ROUTES.help} element={<Help />} />
-        </Route>
+      <Route
+        path={ROUTES.login}
+        element={
+          <PublicOnlyGuard>
+            <Login />
+          </PublicOnlyGuard>
+        }
+      />
+      <Route element={<PrivateGuard />}>
+        <Route path={ROUTES.dashboard} element={<Dashboard />} />
+        <Route path={ROUTES.onboarding} element={<Onboarding />} />
+        <Route path={ROUTES.analytics} element={<Analytics />} />
+        <Route path={ROUTES.pipeline} element={<Pipeline />} />
+        <Route path={ROUTES.icp} element={<ICP />} />
+        <Route path={ROUTES.settings} element={<Settings />} />
+        <Route path={ROUTES.accountSettings} element={<AccountSettings />} />
+        <Route path={ROUTES.team} element={<Team />} />
+        <Route path={ROUTES.leadDetail} element={<LeadDetail />} />
+        <Route path={ROUTES.auditLog} element={<AuditLog />} />
+        <Route path={ROUTES.billing} element={<Billing />} />
+        <Route path={ROUTES.outreach} element={<Outreach />} />
+        <Route path={ROUTES.crmIntegration} element={<CrmIntegration />} />
+        <Route path={ROUTES.help} element={<Help />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
@@ -140,10 +131,12 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <NavigationTracker />
-          <AppRoutes />
-        </Router>
+        <AuthProvider>
+          <Router>
+            <NavigationTracker />
+            <AppRoutes />
+          </Router>
+        </AuthProvider>
         <Toaster />
       </QueryClientProvider>
     </ErrorBoundary>
