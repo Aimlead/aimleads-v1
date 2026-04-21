@@ -622,53 +622,76 @@ router.post('/:leadId/external-signals', externalSignalsLimiter, validateBody(sc
 
 // ─── Score ICP — 100% deterministic, no LLM, no credit ───────────────────────
 // Returns a locale-aware human summary built from the deterministic breakdown.
-const buildDeterministicIcpSummary = ({ analysis, icpProfile, lead, locale }) => {
+const buildDeterministicIcpSummary = ({ analysis, icpProfile, locale }) => {
   const isFr = String(locale || '').toLowerCase().startsWith('fr');
   const score = Number(analysis.icp_score ?? 0);
-  const category = String(analysis.category || '').toLowerCase();
-  const tips = [];
+  const category = String(analysis.category || '').trim() || (isFr ? 'Non classé' : 'Unrated');
+  const action = String(analysis.recommended_action || '').trim() || (isFr ? 'À définir' : 'To define');
   const breakdown = analysis?.score_details && typeof analysis.score_details === 'object' ? analysis.score_details : {};
 
-  Object.entries(breakdown).forEach(([key, entry]) => {
-    if (!entry || typeof entry !== 'object') return;
-    const points = Number(entry.points ?? 0);
-    if (points >= 0) return;
-    const labelFr = {
-      industry_match: "Aligner l'industrie cible",
-      role_match: "Cibler les bons rôles décideurs",
-      size_match: "Ajuster la taille d'entreprise visée",
-      geo_match: "Aligner la zone géographique",
-      structure_match: "Préciser la structure cliente",
-    }[key];
-    const labelEn = {
-      industry_match: 'Align target industry',
-      role_match: 'Target the right decision-maker roles',
-      size_match: 'Adjust target company size',
-      geo_match: 'Align target geography',
-      structure_match: 'Refine target customer structure',
-    }[key];
-    tips.push(isFr ? labelFr || `Améliorer ${key}` : labelEn || `Improve ${key}`);
-  });
+  const sections = [
+    { key: 'industrie', fr: 'Industrie', en: 'Industry' },
+    { key: 'roles', fr: 'Rôle', en: 'Role' },
+    { key: 'typeClient', fr: 'Type client', en: 'Client type' },
+    { key: 'structure', fr: 'Structure', en: 'Structure' },
+    { key: 'geo', fr: 'Géographie', en: 'Geography' },
+  ];
 
-  if (tips.length === 0) {
-    if (isFr) {
-      tips.push('Profil aligné, prioriser la prospection rapide.');
-      tips.push('Documenter les signaux d\'intention pour confirmer le timing.');
-      tips.push('Lancer un outreach personnalisé sur le décideur identifié.');
-    } else {
-      tips.push('Profile is aligned — prioritise quick outreach.');
-      tips.push('Document intent signals to confirm timing.');
-      tips.push('Launch personalised outreach to the identified decision-maker.');
-    }
-  }
+  const negativeSections = sections
+    .map((section) => {
+      const entry = breakdown?.[section.key];
+      const points = Number(entry?.points);
+      if (!Number.isFinite(points) || points >= 0) return null;
+      const value = String(entry?.evaluated_value ?? '').trim() || (isFr ? 'non renseigné' : 'not provided');
+      return {
+        ...section,
+        points,
+        value,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.points - b.points)
+    .slice(0, 3);
 
-  const headline = isFr
-    ? `Score ICP déterministe : ${score}/100 (${category || 'non classé'}). Calculé sur la grille active "${icpProfile?.name || 'ICP'}" sans appel IA.`
-    : `Deterministic ICP score: ${score}/100 (${category || 'unrated'}). Computed from the active "${icpProfile?.name || 'ICP'}" rubric, no AI call.`;
+  const tipsFr = negativeSections.length > 0
+    ? negativeSections.map((section) => `${section.fr} à corriger (${section.value}, ${section.points} pts)`)
+    : [
+        'Le profil est aligné sur les critères ICP clés.',
+        'Passe suivante : enrichir les signaux d’intention pour prioriser.',
+      ];
+
+  const tipsEn = negativeSections.length > 0
+    ? negativeSections.map((section) => `${section.en} to improve (${section.value}, ${section.points} pts)`)
+    : [
+        'The profile is aligned on key ICP criteria.',
+        'Next step: enrich intent signals for prioritization.',
+      ];
+
+  const frBlock = [
+    `Score ICP (déterministe): ${score}/100`,
+    `Catégorie: ${category}`,
+    `Action conseillée: ${action}`,
+    `Profil ICP: ${icpProfile?.name || 'ICP actif'}`,
+    `Points à améliorer:`,
+    ...tipsFr.map((tip, i) => `${i + 1}. ${tip}`),
+  ].join('\n');
+
+  const enBlock = [
+    `ICP score (deterministic): ${score}/100`,
+    `Category: ${category}`,
+    `Recommended action: ${action}`,
+    `ICP profile: ${icpProfile?.name || 'Active ICP'}`,
+    `Improvement focus:`,
+    ...tipsEn.map((tip, i) => `${i + 1}. ${tip}`),
+  ].join('\n');
+
+  const bilingualSummary = `${frBlock}\n\n---\n\n${enBlock}`;
+  const localizedSummary = isFr ? frBlock : enBlock;
 
   return {
-    summary: headline,
-    improvement_tips: tips.slice(0, 3),
+    summary: localizedSummary,
+    summary_bilingual: bilingualSummary,
+    improvement_tips: (isFr ? tipsFr : tipsEn).slice(0, 3),
   };
 };
 
@@ -686,13 +709,11 @@ router.post('/:leadId/score-icp', scoreIcpLimiter, requireCredits('score_icp'), 
   const deterministicSummary = buildDeterministicIcpSummary({ analysis, icpProfile: activeIcp, lead, locale });
 
   const scorePayload = toLeadAnalysisUpdatePayload(analysis);
-  const icpSummaryText = deterministicSummary.summary
-    ? `${deterministicSummary.summary}${deterministicSummary.improvement_tips?.length ? `\n\n${locale.startsWith('fr') ? "Pistes d'amélioration" : 'Improvement tips'}:\n${deterministicSummary.improvement_tips.map((t, i) => `${i + 1}. ${t}`).join('\n')}` : ''}`
-    : null;
+  const icpSummaryText = deterministicSummary.summary_bilingual || deterministicSummary.summary || null;
 
   const updatedLead = await dataStore.updateLead(req.user, lead.id, {
     ...scorePayload,
-    ...(icpSummaryText ? { icp_summary: icpSummaryText } : {}),
+    ...(icpSummaryText ? { icp_summary: icpSummaryText, analysis_summary: deterministicSummary.summary || icpSummaryText } : {}),
   });
 
   return res.json({

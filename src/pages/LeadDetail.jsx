@@ -457,6 +457,7 @@ export default function LeadDetail() {
   const scoreDetails = getScoreDetails(lead);
   const finalScore = baseScores.finalScore ?? getNumericScoreDetail(scoreDetails, 'final_score') ?? icpScore;
   const aiBoost = icpScore !== null && finalScore !== null ? finalScore - icpScore : null;
+  const summaryForHero = lead.icp_summary || lead.analysis_summary;
   const displaySignals = getDisplaySignals(lead);
 
   const signalGroups = {
@@ -551,8 +552,8 @@ export default function LeadDetail() {
                 </span>
               ) : null}
             </div>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              {lead.analysis_summary || t('leads.whyItMatters.default', { defaultValue: 'Review the score, strongest signals, and recommended action before outreach.' })}
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 whitespace-pre-line">
+              {summaryForHero || t('leads.whyItMatters.default', { defaultValue: 'Review the score, strongest signals, and recommended action before outreach.' })}
             </p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 min-w-56">
