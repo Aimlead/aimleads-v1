@@ -4,7 +4,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/lib/AuthContext';
-import { resolvePostAuthRoute } from '@/lib/onboarding';
 import { dataClient } from '@/services/dataClient';
 import '@/styles/auth-v2.css';
 
@@ -27,6 +26,13 @@ export default function AuthCallback() {
   const { t } = useTranslation();
   const [error, setError] = useState('');
   const processed = useRef(false);
+  const resolveCallbackRedirect = () => {
+    const candidate = String(searchParams.get('redirect') || '').trim();
+    if (!candidate || !candidate.startsWith('/') || candidate.startsWith('//') || candidate === ROUTES.home) {
+      return ROUTES.dashboard;
+    }
+    return candidate;
+  };
 
   useEffect(() => {
     if (processed.current) return;
@@ -53,9 +59,7 @@ export default function AuthCallback() {
       dataClient.auth.ssoCodeExchange({ code })
         .then(async () => {
           if (checkAppState) await checkAppState().catch(() => {});
-          const redirectTarget = searchParams.get('redirect') || ROUTES.dashboard;
-          const nextRoute = await resolvePostAuthRoute(redirectTarget);
-          navigate(nextRoute, { replace: true });
+          navigate(resolveCallbackRedirect(), { replace: true });
         })
         .catch((err) => {
           setError(err?.message || t('authCallback.ssoFailed'));
@@ -86,9 +90,7 @@ export default function AuthCallback() {
     dataClient.auth.ssoSession({ access_token: accessToken, refresh_token: refreshToken })
       .then(async () => {
         if (checkAppState) await checkAppState().catch(() => {});
-        const redirectTarget = searchParams.get('redirect') || ROUTES.dashboard;
-        const nextRoute = await resolvePostAuthRoute(redirectTarget);
-        navigate(nextRoute, { replace: true });
+        navigate(resolveCallbackRedirect(), { replace: true });
       })
       .catch((err) => {
         setError(err?.message || t('authCallback.ssoFailed'));

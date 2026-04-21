@@ -255,7 +255,7 @@ router.post('/invites', requireAuth, validateBody(schemas.workspaceInviteCreateS
   });
 
   // Send invite email (fire-and-forget — never block the HTTP response)
-  const appUrl = String(process.env.CORS_ORIGIN || 'https://app.aimlead.io').replace(/\/$/, '');
+  const appUrl = String(process.env.APP_ORIGIN || process.env.CORS_ORIGIN || 'https://app.aimlead.io').replace(/\/$/, '');
   const inviteUrl = `${appUrl}/login?mode=signup&email=${encodeURIComponent(email)}&invite_id=${invite.id}`;
   const workspaceName = req.user?.workspace_name || req.user?.full_name?.split(' ')[0] + "'s workspace" || 'your workspace';
   sendEmail(EmailTemplates.workspaceInvite({
