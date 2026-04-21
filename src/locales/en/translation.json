@@ -644,7 +644,34 @@
     "categoryLabel": "Category",
     "aiSuggestion": "AI suggestion",
     "icpSections": "ICP sections",
-    "finalScoreFormula": "Final score = deterministic ICP + internet signals (web research, news, email)",
+    "finalScoreFormula": "Final score = deterministic ICP + intent signals (manual + internet)",
+    "signalScore": "Signal score",
+    "signalIntent": "Intent + internet",
+    "icpDeterministic": "Deterministic fit",
+    "icpBreakdownTitle": "ICP breakdown by criterion",
+    "whyPrioritized": "Why this priority?",
+    "icpDim": {
+      "industry": "Industry",
+      "role": "Contact role",
+      "clientType": "Client type",
+      "structure": "Company structure",
+      "geography": "Geography"
+    },
+    "match": {
+      "perfect": "Perfect fit",
+      "partial": "Partial fit",
+      "none": "No fit",
+      "excluded": "Excluded by ICP",
+      "notEvaluated": "Not evaluated"
+    },
+    "why": {
+      "excluded": "This lead is excluded because it matches a hard exclusion rule of your active ICP (industry or role).",
+      "noAnalysis": "Run an analysis to compute the prioritization score for this lead.",
+      "excellent": "Strong ICP fit (ICP {{icp}}/100) reinforced by intent signals ({{boost}} adjustment). Recommended action: {{action}}.",
+      "strong": "Solid ICP fit (ICP {{icp}}/100), priority {{category}}. Signal adjustment: {{boost}}. Suggested action: {{action}}.",
+      "medium": "Partial ICP fit (ICP {{icp}}/100). Useful for nurture, not for immediate outreach. Action: {{action}}.",
+      "low": "Low ICP fit (ICP {{icp}}/100). The lead does not match your active ICP and is not prioritized."
+    },
     "leadSnapshot": "Lead snapshot",
     "clientType": "Client type",
     "lastAnalyzedLabel": "Last analyzed",
