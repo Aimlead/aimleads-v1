@@ -73,9 +73,6 @@ export const getTrustedOriginPatterns = (config = getRuntimeConfig()) => {
     .map((item) => item.trim())
     .filter(Boolean);
 
-  if (process.env.VERCEL_URL) {
-    whitelist.push(`https://${process.env.VERCEL_URL}`);
-  }
 
   return [...new Set(whitelist)];
 };

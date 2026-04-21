@@ -47,7 +47,7 @@ export default function Login() {
   }, [searchParams]);
   const ssoRedirectTarget = useMemo(() => {
     const value = String(searchParams.get('redirect') || '').trim();
-    if (!value || !value.startsWith('/') || value.startsWith('//') || value === ROUTES.home) return '';
+    if (!value || !value.startsWith('/') || value.startsWith('//') || value === ROUTES.home) return ROUTES.dashboard;
     return value;
   }, [searchParams]);
   const supportsSso = useMemo(() => typeof dataClient?.auth?.ssoInit === 'function', []);

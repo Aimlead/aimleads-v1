@@ -54,7 +54,6 @@ Ignore these old or suspicious files during production operations:
 
 - `docker-compose.yml.bak`
 - `docker-compose.ymlm`
-- `vercel.json`
 - `.github/workflows/deploy.yml`
 
 ## 4. Build metadata
