@@ -178,10 +178,10 @@ export default function LeadDetail() {
   const { data: lead, isLoading, isError: leadError, refetch: refetchLead } = useQuery({
     queryKey: ['lead', leadId || leadFromState?.id],
     queryFn: async () => {
-      if (leadFromState && (!leadId || leadFromState.id === leadId)) return leadFromState;
       if (!leadId) return null;
       return dataClient.leads.getById(leadId);
     },
+    initialData: leadFromState && (!leadId || leadFromState.id === leadId) ? leadFromState : undefined,
   });
 
   const [notes, setNotes] = useState('');
@@ -326,6 +326,9 @@ export default function LeadDetail() {
       const response = await dataClient.leads.scoreIcp(lead.id);
       if (response?.data) {
         toast.success(t('leads.scoreIcpSuccess', { company: lead.company_name, score: response.data.icp_score, category: response.data.icp_category }));
+        if (response.data.lead) {
+          queryClient.setQueryData(['lead', lead.id], response.data.lead);
+        }
         queryClient.invalidateQueries({ queryKey: ['lead', lead.id] });
         queryClient.invalidateQueries({ queryKey: ['leads'] });
       }
