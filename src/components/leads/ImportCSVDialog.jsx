@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { dataClient } from '@/services/dataClient';
 import { ACTIVATION_ANALYZE_BATCH_SIZE } from '@/constants/activation';
@@ -209,6 +210,46 @@ const normalizeRow = (row) => {
   return result;
 };
 
+const CANONICAL_FIELDS = [
+  { key: 'company_name', label: 'Entreprise', required: true },
+  { key: 'website_url', label: 'Website' },
+  { key: 'industry', label: 'Secteur' },
+  { key: 'company_size', label: 'Taille' },
+  { key: 'country', label: 'Pays' },
+  { key: 'contact_name', label: 'Contact' },
+  { key: 'contact_role', label: 'Poste' },
+  { key: 'contact_email', label: 'Email' },
+  { key: 'contact_phone', label: 'Téléphone' },
+  { key: 'linkedin_url', label: 'LinkedIn' },
+  { key: 'notes', label: 'Notes' },
+  { key: 'source_list', label: 'Liste / source' },
+];
+
+const EMPTY_MAPPING = '__none__';
+
+const guessFieldMapping = (headers = []) => {
+  const normalizedHeaders = headers.map((header) => normalizeHeaderKey(header));
+  const mapping = {};
+
+  for (const field of CANONICAL_FIELDS) {
+    const directMatch = normalizedHeaders.find((header) => ALIAS_TO_CANONICAL[header] === field.key);
+    mapping[field.key] = directMatch || EMPTY_MAPPING;
+  }
+  return mapping;
+};
+
+const applyUserMapping = (rows = [], mapping = {}) =>
+  rows.map((row) => {
+    const mapped = {};
+    for (const field of CANONICAL_FIELDS) {
+      const sourceHeader = mapping[field.key];
+      if (sourceHeader && sourceHeader !== EMPTY_MAPPING) {
+        mapped[field.key] = row[sourceHeader] || '';
+      }
+    }
+    return mapped;
+  });
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ImportCSVDialog({
@@ -223,6 +264,9 @@ export default function ImportCSVDialog({
   const { t } = useTranslation();
   const [preview, setPreview] = useState([]);
   const [allRows, setAllRows] = useState([]);
+  const [rawRows, setRawRows] = useState([]);
+  const [availableHeaders, setAvailableHeaders] = useState([]);
+  const [fieldMapping, setFieldMapping] = useState({});
   const [importing, setImporting] = useState(false);
   const [imported, setImported] = useState(false);
   const [importResult, setImportResult] = useState(null);
@@ -234,6 +278,9 @@ export default function ImportCSVDialog({
   const resetDialog = () => {
     setPreview([]);
     setAllRows([]);
+    setRawRows([]);
+    setAvailableHeaders([]);
+    setFieldMapping({});
     setImported(false);
     setImportResult(null);
     setHandoffAction(null);
@@ -255,6 +302,11 @@ export default function ImportCSVDialog({
     setError(null);
     setImported(false);
     setFileName(file.name);
+    setPreview([]);
+    setAllRows([]);
+    setRawRows([]);
+    setAvailableHeaders([]);
+    setFieldMapping({});
 
     const isXlsx = /\.xlsx$/i.test(file.name);
     const isLegacySpreadsheet = /\.(xls|ods)$/i.test(file.name);
@@ -267,13 +319,19 @@ export default function ImportCSVDialog({
     if (isXlsx) {
       void (async () => {
         try {
-          const rows = (await parseXlsx(file)).map(normalizeRow);
+          const rows = await parseXlsx(file);
           if (rows.length === 0) {
             setError(t('import.dialog.errors.noValidRows', { defaultValue: 'Aucune ligne exploitable trouvée. Vérifiez la présence d’une colonne company_name ou équivalente.' }));
             return;
           }
-          setAllRows(rows);
-          setPreview(rows.slice(0, 5));
+          const headers = Array.from(new Set(rows.flatMap((row) => Object.keys(row))));
+          const autoMapping = guessFieldMapping(headers);
+          const mappedRows = applyUserMapping(rows, autoMapping).map(normalizeRow);
+          setRawRows(rows);
+          setAvailableHeaders(headers);
+          setFieldMapping(autoMapping);
+          setAllRows(mappedRows);
+          setPreview(mappedRows.slice(0, 5));
         } catch (err) {
           setError(t('import.dialog.errors.excelParse', { defaultValue: 'Impossible de lire le fichier Excel : {{message}}', message: err?.message || 'unknown error' }));
         }
@@ -282,19 +340,33 @@ export default function ImportCSVDialog({
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const rows = parseCsv(String(e.target?.result || '')).map(normalizeRow);
+          const rows = parseCsv(String(e.target?.result || ''));
           if (rows.length === 0) {
             setError(t('import.dialog.errors.csvInvalid', { defaultValue: 'Le CSV doit contenir au moins une ligne valide avec company_name.' }));
             return;
           }
-          setAllRows(rows);
-          setPreview(rows.slice(0, 5));
+          const headers = Array.from(new Set(rows.flatMap((row) => Object.keys(row))));
+          const autoMapping = guessFieldMapping(headers);
+          const mappedRows = applyUserMapping(rows, autoMapping).map(normalizeRow);
+          setRawRows(rows);
+          setAvailableHeaders(headers);
+          setFieldMapping(autoMapping);
+          setAllRows(mappedRows);
+          setPreview(mappedRows.slice(0, 5));
         } catch {
           setError(t('import.dialog.errors.csvParse', { defaultValue: 'Impossible de lire ce fichier CSV.' }));
         }
       };
       reader.readAsText(file);
     }
+  };
+
+  const handleMappingChange = (fieldKey, headerValue) => {
+    const nextMapping = { ...fieldMapping, [fieldKey]: headerValue };
+    setFieldMapping(nextMapping);
+    const mappedRows = applyUserMapping(rawRows, nextMapping).map(normalizeRow);
+    setAllRows(mappedRows);
+    setPreview(mappedRows.slice(0, 5));
   };
 
   const handleImport = async () => {
@@ -343,6 +415,7 @@ export default function ImportCSVDialog({
   const previewHeaders = preview.length > 0
     ? PREVIEW_COLS.filter((col) => preview.some((row) => row[col]))
     : [];
+  const missingCompanyMapping = availableHeaders.length > 0 && (fieldMapping.company_name || EMPTY_MAPPING) === EMPTY_MAPPING;
   const stage = imported ? 'done' : preview.length > 0 ? 'review' : 'upload';
 
   const handleHandoff = async (action, callback) => {
@@ -416,6 +489,50 @@ export default function ImportCSVDialog({
             </p>
           </div>
 
+          {availableHeaders.length > 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-slate-900">
+                  {t('import.dialog.mapping.title', { defaultValue: 'Mapping des colonnes avant import' })}
+                </p>
+                <Badge variant="outline">
+                  {t('import.dialog.mapping.detected', {
+                    defaultValue: '{{count}} colonnes détectées',
+                    count: availableHeaders.length,
+                  })}
+                </Badge>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">
+                {t('import.dialog.mapping.body', {
+                  defaultValue: 'Assignez chaque champ AimLeads à la colonne de votre fichier. Vous pouvez importer des noms de colonnes personnalisés.',
+                })}
+              </p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {CANONICAL_FIELDS.map((field) => (
+                  <div key={field.key} className="rounded-xl border border-slate-200 px-3 py-2">
+                    <p className="text-xs font-semibold text-slate-700">
+                      {field.label}
+                      {field.required ? <span className="ml-1 text-rose-500">*</span> : null}
+                    </p>
+                    <Select value={fieldMapping[field.key] || EMPTY_MAPPING} onValueChange={(value) => handleMappingChange(field.key, value)}>
+                      <SelectTrigger className="mt-1 h-8 text-xs">
+                        <SelectValue placeholder="Choisir une colonne" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={EMPTY_MAPPING}>Ne pas importer</SelectItem>
+                        {availableHeaders.map((header) => (
+                          <SelectItem key={`${field.key}-${header}`} value={header} className="text-xs">
+                            {header}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           {!hasActiveIcp ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               <p className="font-semibold">
@@ -463,6 +580,15 @@ export default function ImportCSVDialog({
                   {error}
                 </div>
               )}
+
+              {missingCompanyMapping ? (
+                <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
+                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  {t('import.dialog.mapping.companyRequired', {
+                    defaultValue: 'Mappez le champ "Entreprise" avant import pour éviter de perdre des lignes.',
+                  })}
+                </div>
+              ) : null}
 
               {preview.length > 0 && (
                 <div>
@@ -522,7 +648,7 @@ export default function ImportCSVDialog({
                   <div className="flex gap-2 mt-4">
                     <Button
                       onClick={handleImport}
-                      disabled={importing}
+                      disabled={importing || missingCompanyMapping}
                       className="gap-2 bg-gradient-to-r from-brand-sky to-brand-sky-2"
                     >
                       {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}

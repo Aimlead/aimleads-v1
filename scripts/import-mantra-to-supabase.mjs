@@ -12,7 +12,7 @@ const ROOT = path.resolve(__dirname, '..');
 const LOCAL_DB_PATH = path.resolve(ROOT, 'server/data/db.json');
 
 const SOURCE_TAG = 'given_to_sales_onboarding_2024_09_11';
-const TARGET_ICP_NAME = 'ICP DSI RSSI - Liste securite IT';
+const MANTRA_ICP_NAME = 'ICP DSI RSSI - Liste securite IT';
 
 const parseArgs = (argv) => {
   const args = {};

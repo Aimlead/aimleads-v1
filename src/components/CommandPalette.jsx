@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
   BarChart3, Kanban, LayoutDashboard, LogOut, Search,
-  ScrollText, Settings, Sparkles, Target, Users, Upload,
+  Rows3, ScrollText, Settings, Sparkles, Target, Users, Upload,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/routes';
@@ -49,6 +49,7 @@ export default function CommandPalette({ open, onClose }) {
   const navItems = [
     { id: 'nav-dashboard', label: t('nav.dashboard', { defaultValue: 'Dashboard' }), icon: LayoutDashboard, href: ROUTES.dashboard, group: navigateGroup },
     { id: 'nav-pipeline', label: t('nav.pipeline', { defaultValue: 'Pipeline' }), icon: Kanban, href: ROUTES.pipeline, group: navigateGroup },
+    { id: 'nav-lists', label: t('nav.lists', { defaultValue: 'Lists' }), icon: Rows3, href: ROUTES.lists, group: navigateGroup },
     { id: 'nav-analytics', label: t('nav.analytics', { defaultValue: 'Analytics' }), icon: BarChart3, href: ROUTES.analytics, group: navigateGroup },
     { id: 'nav-icp', label: t('nav.icp', { defaultValue: 'ICP Profile' }), icon: Target, href: ROUTES.icp, group: navigateGroup },
     { id: 'nav-team', label: t('nav.team', { defaultValue: 'Team' }), icon: Users, href: ROUTES.team, group: navigateGroup },
