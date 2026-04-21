@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/lib/AuthContext';
@@ -8,8 +8,21 @@ import { resolvePostAuthRoute } from '@/lib/onboarding';
 import { dataClient } from '@/services/dataClient';
 import '@/styles/auth-v2.css';
 
+/**
+ * OAuth callback page.
+ *
+ * Supabase can redirect here with tokens in two ways:
+ *   1. **Implicit flow** — tokens arrive in the URL hash fragment:
+ *      /auth/callback#access_token=...&refresh_token=...
+ *   2. **PKCE / code flow** — an authorization code arrives as a query param:
+ *      /auth/callback?code=...
+ *
+ * This component detects which flow was used and exchanges the tokens/code
+ * for a backend httpOnly session via the appropriate API endpoint.
+ */
 export default function AuthCallback() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { checkAppState } = useAuth();
   const { t } = useTranslation();
   const [error, setError] = useState('');
@@ -19,13 +32,46 @@ export default function AuthCallback() {
     if (processed.current) return;
     processed.current = true;
 
-    const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-    const errorParam = params.get('error_description') || params.get('error');
+    // ── Check for errors first (both flows) ──────────────────────────────
+    const errorParam =
+      searchParams.get('error_description') ||
+      searchParams.get('error') ||
+      '';
 
     if (errorParam) {
       setError(decodeURIComponent(errorParam));
+      return;
+    }
+
+    // ── Detect PKCE / code flow ──────────────────────────────────────────
+    const code = searchParams.get('code');
+
+    if (code) {
+      // Clear the code from the URL immediately for security
+      window.history.replaceState(null, '', window.location.pathname);
+
+      dataClient.auth.ssoCodeExchange({ code })
+        .then(async () => {
+          if (checkAppState) await checkAppState().catch(() => {});
+          const redirectTarget = searchParams.get('redirect') || ROUTES.dashboard;
+          const nextRoute = await resolvePostAuthRoute(redirectTarget);
+          navigate(nextRoute, { replace: true });
+        })
+        .catch((err) => {
+          setError(err?.message || t('authCallback.ssoFailed'));
+        });
+
+      return;
+    }
+
+    // ── Detect implicit flow (hash fragment) ─────────────────────────────
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+    const hashError = hashParams.get('error_description') || hashParams.get('error');
+
+    if (hashError) {
+      setError(decodeURIComponent(hashError));
       return;
     }
 
@@ -34,19 +80,20 @@ export default function AuthCallback() {
       return;
     }
 
+    // Clear tokens from URL immediately for security
     window.history.replaceState(null, '', window.location.pathname);
 
     dataClient.auth.ssoSession({ access_token: accessToken, refresh_token: refreshToken })
       .then(async () => {
         if (checkAppState) await checkAppState().catch(() => {});
-        const redirectTarget = new URLSearchParams(window.location.search).get('redirect') || ROUTES.dashboard;
+        const redirectTarget = searchParams.get('redirect') || ROUTES.dashboard;
         const nextRoute = await resolvePostAuthRoute(redirectTarget);
         navigate(nextRoute, { replace: true });
       })
       .catch((err) => {
         setError(err?.message || t('authCallback.ssoFailed'));
       });
-  }, [navigate, checkAppState, t]);
+  }, [navigate, checkAppState, t, searchParams]);
 
   if (error) {
     return (

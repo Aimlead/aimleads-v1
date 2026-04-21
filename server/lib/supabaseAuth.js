@@ -332,18 +332,40 @@ export const ensureAuthUserWithPassword = async ({ email, password, fullName }) 
 };
 
 /**
+ * OAuth scopes per provider.
+ * Google: request email + profile so we get the user's name and email.
+ * Azure (Microsoft): request openid + email + profile for Entra ID / personal MS accounts.
+ * GitHub: request user:email for email visibility.
+ */
+const OAUTH_SCOPES = {
+  google: 'email profile',
+  azure: 'openid email profile',
+  github: 'user:email',
+};
+
+/**
  * Build the Supabase OAuth authorize URL for a given provider.
  * The user is redirected to this URL; after OAuth, Supabase redirects
  * back to `redirectTo` with tokens in the URL hash fragment (implicit flow).
+ *
+ * Includes the project's publishable key so the authorize endpoint can
+ * identify the Supabase project, and provider-specific scopes to ensure
+ * we receive the user's email and display name.
  */
 export const getOAuthSignInUrl = (provider, redirectTo) => {
   const config = getRuntimeConfig();
+  const normalizedProvider = String(provider || '').toLowerCase();
   const baseUrl = `${config.supabase.url.replace(/\/$/, '')}/auth/v1/authorize`;
   const params = new URLSearchParams({
-    provider: String(provider || '').toLowerCase(),
+    provider: normalizedProvider,
   });
   if (redirectTo) {
     params.set('redirect_to', String(redirectTo));
+  }
+  // Scopes ensure we receive email + profile information from the identity provider.
+  const scopes = OAUTH_SCOPES[normalizedProvider];
+  if (scopes) {
+    params.set('scopes', scopes);
   }
   return `${baseUrl}?${params.toString()}`;
 };
@@ -392,4 +414,31 @@ export const resolveSupabaseSessionFromRequest = async (req, res) => {
     clearSupabaseAuthCookies(res);
     return { session: null, authUser: null };
   }
+};
+
+/**
+ * Exchange an authorization code for a Supabase session.
+ * Used when Supabase is configured for PKCE flow (code exchange)
+ * instead of the implicit grant (hash fragment).
+ *
+ * @param {string} code - The authorization code from the OAuth callback query string.
+ * @returns {Promise<Object>} A session payload with access_token, refresh_token, user.
+ */
+export const exchangeCodeForSession = async (code) => {
+  const payload = await requestSupabaseAuth('/token', {
+    method: 'POST',
+    query: { grant_type: 'authorization_code' },
+    body: {
+      auth_code: String(code || ''),
+    },
+  });
+
+  const session = toSessionPayload(payload);
+  if (!session) {
+    const error = new Error('Invalid Supabase code exchange response');
+    error.status = 502;
+    throw error;
+  }
+
+  return session;
 };

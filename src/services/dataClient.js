@@ -315,6 +315,7 @@ const apiClient = {
     deleteMe: () => apiRequest('/auth/me', { method: 'DELETE' }),
     ssoInit: (provider) => `${API_BASE_URL}/auth/sso/init?provider=${encodeURIComponent(provider)}`,
     ssoSession: (payload) => apiRequest('/auth/sso/session', { method: 'POST', body: payload }),
+    ssoCodeExchange: (payload) => apiRequest('/auth/sso/code', { method: 'POST', body: payload }),
   },
   leads: {
     list: (sort = '-created_at') => apiRequest(`/leads?sort=${encodeURIComponent(sort)}`),
@@ -414,6 +415,14 @@ export const dataClient = {
       return runWithMode({
         operationName: 'auth.ssoSession',
         apiCall: () => apiClient.auth.ssoSession(payload),
+        fallbackCall: mockUnsupported,
+      });
+    },
+
+    async ssoCodeExchange(payload) {
+      return runWithMode({
+        operationName: 'auth.ssoCodeExchange',
+        apiCall: () => apiClient.auth.ssoCodeExchange(payload),
         fallbackCall: mockUnsupported,
       });
     },

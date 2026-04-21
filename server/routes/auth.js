@@ -19,6 +19,7 @@ import {
   adminDeleteAuthUser,
   clearSupabaseAuthCookies,
   adminCreateAuthUser,
+  exchangeCodeForSession,
   getOAuthSignInUrl,
   getSupabaseAuthCookies,
   getAuthUserFromAccessToken,
@@ -437,6 +438,49 @@ router.delete('/me', requireAuth, async (req, res) => {
 // `azure` is the Supabase identifier for Microsoft Entra / Azure AD / personal MS accounts.
 const ALLOWED_SSO_PROVIDERS = new Set(['google', 'github', 'azure']);
 
+// Human-readable labels for audit logs and observability.
+const SSO_PROVIDER_LABELS = { google: 'Google', azure: 'Microsoft', github: 'GitHub' };
+
+/**
+ * Shared helper: after validating the Supabase auth user from an SSO flow,
+ * set cookies, ensure workspace membership, send welcome email if new, and
+ * write an audit log entry.
+ */
+const finalizeSsoSession = async (res, { accessToken, refreshToken, expiresIn, authUser, provider }) => {
+  setSupabaseAuthCookies(res, { access_token: accessToken, refresh_token: refreshToken, expires_in: expiresIn || 3600, user: authUser });
+  setCsrfCookie(res);
+
+  const appUser = await ensureWorkspaceUserForAuth({
+    authUser,
+    fallbackFullName: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email || '',
+  });
+
+  // Audit log (fire-and-forget)
+  writeAuditLog({
+    user: appUser || { id: authUser.id, email: authUser.email },
+    action: 'create',
+    resourceType: 'sso_session',
+    resourceId: authUser.id,
+    changes: {
+      provider: provider || 'unknown',
+      provider_label: SSO_PROVIDER_LABELS[provider] || provider || 'unknown',
+      email: authUser.email,
+      is_new_user: Boolean(appUser?._is_new),
+    },
+  }).catch(() => {});
+
+  // Welcome email for new users (fire-and-forget)
+  if (appUser?._is_new) {
+    sendEmail(EmailTemplates.welcome({
+      toEmail: authUser.email,
+      fullName: appUser?.full_name || authUser.email,
+      workspaceName: null,
+    })).catch(() => {});
+  }
+
+  return appUser;
+};
+
 // Redirect user to Supabase OAuth authorize URL
 router.get('/sso/init', (req, res) => {
   if (!isAuthProviderSupabase()) {
@@ -448,20 +492,26 @@ router.get('/sso/init', (req, res) => {
     return res.status(400).json({ message: `Unsupported provider. Allowed: ${[...ALLOWED_SSO_PROVIDERS].join(', ')}.` });
   }
 
+  addBreadcrumb({
+    category: 'auth',
+    message: 'auth.sso.init',
+    data: { provider, provider_label: SSO_PROVIDER_LABELS[provider] || provider },
+  });
+
   const appUrl = String(process.env.CORS_ORIGIN || 'http://localhost:5173').replace(/\/$/, '');
   const redirectTo = `${appUrl}/auth/callback`;
   const authorizeUrl = getOAuthSignInUrl(provider, redirectTo);
   return res.redirect(authorizeUrl);
 });
 
-// Exchange access + refresh tokens (from OAuth hash fragment) for httpOnly cookies
-router.post('/sso/session', authLimiter, async (req, res) => {
+// Exchange access + refresh tokens (from OAuth hash fragment / implicit flow) for httpOnly cookies
+router.post('/sso/session', authLimiter, validateBody(schemas.authSsoSessionSchema), async (req, res) => {
   if (!isAuthProviderSupabase()) {
     return res.status(400).json({ message: 'SSO requires Supabase auth provider.' });
   }
 
-  const accessToken = String(req.body?.access_token || '').trim();
-  const refreshToken = String(req.body?.refresh_token || '').trim();
+  const accessToken = String(req.validatedBody.access_token).trim();
+  const refreshToken = String(req.validatedBody.refresh_token).trim();
   addBreadcrumb({
     category: 'auth',
     message: 'auth.sso.session_exchange',
@@ -471,36 +521,57 @@ router.post('/sso/session', authLimiter, async (req, res) => {
     },
   });
 
-  if (!accessToken || !refreshToken) {
-    return res.status(400).json({ message: 'access_token and refresh_token are required.' });
-  }
-
   try {
     const authUser = await getAuthUserFromAccessToken(accessToken);
     if (!authUser?.id) {
       return res.status(401).json({ message: 'Invalid or expired SSO token.' });
     }
 
-    setSupabaseAuthCookies(res, { access_token: accessToken, refresh_token: refreshToken, expires_in: 3600, user: authUser });
-    setCsrfCookie(res);
-
-    const appUser = await ensureWorkspaceUserForAuth({
-      authUser,
-      fallbackFullName: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email || '',
-    });
-
-    // Welcome email for new users (fire-and-forget)
-    if (appUser?._is_new) {
-      sendEmail(EmailTemplates.welcome({
-        toEmail: authUser.email,
-        fullName: appUser?.full_name || authUser.email,
-        workspaceName: null,
-      })).catch(() => {});
-    }
+    const provider = String(authUser.app_metadata?.provider || authUser.app_metadata?.providers?.[0] || 'unknown').toLowerCase();
+    const appUser = await finalizeSsoSession(res, { accessToken, refreshToken, expiresIn: 3600, authUser, provider });
 
     return res.json({ user: sanitizeUser(appUser) });
   } catch (error) {
     const normalized = toApiAuthError(error, 'SSO session exchange failed');
+    return res.status(normalized.status).json({ message: normalized.message });
+  }
+});
+
+// Exchange an authorization code (PKCE flow) for httpOnly session cookies.
+// When Supabase is configured for PKCE, the callback receives `?code=...`
+// instead of hash-fragment tokens. The frontend POSTs the code here.
+router.post('/sso/code', authLimiter, validateBody(schemas.authSsoCodeExchangeSchema), async (req, res) => {
+  if (!isAuthProviderSupabase()) {
+    return res.status(400).json({ message: 'SSO requires Supabase auth provider.' });
+  }
+
+  const code = String(req.validatedBody.code).trim();
+  addBreadcrumb({
+    category: 'auth',
+    message: 'auth.sso.code_exchange',
+    data: { has_code: Boolean(code) },
+  });
+
+  try {
+    const session = await exchangeCodeForSession(code);
+    const authUser = session.user;
+    if (!authUser?.id) {
+      return res.status(401).json({ message: 'Invalid or expired authorization code.' });
+    }
+
+    const provider = String(authUser.app_metadata?.provider || authUser.app_metadata?.providers?.[0] || 'unknown').toLowerCase();
+    const appUser = await finalizeSsoSession(res, {
+      accessToken: session.access_token,
+      refreshToken: session.refresh_token,
+      expiresIn: session.expires_in,
+      authUser,
+      provider,
+    });
+
+    return res.json({ user: sanitizeUser(appUser) });
+  } catch (error) {
+    logger.warn('sso_code_exchange_failed', { message: error?.message, code: error?.code });
+    const normalized = toApiAuthError(error, 'SSO code exchange failed');
     return res.status(normalized.status).json({ message: normalized.message });
   }
 });

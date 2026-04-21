@@ -289,6 +289,15 @@ const externalSignalsSchema = z.object({
   async: z.boolean().optional(),
 });
 
+const authSsoSessionSchema = z.object({
+  access_token: z.string().trim().min(1, 'access_token is required'),
+  refresh_token: z.string().trim().min(1, 'refresh_token is required'),
+});
+
+const authSsoCodeExchangeSchema = z.object({
+  code: z.string().trim().min(1, 'code is required'),
+});
+
 const authResetPasswordSchema = z.object({
   email: z.string().trim().email(),
 });
@@ -385,6 +394,8 @@ export const validateBody = (schema) => (req, _res, next) => {
 export const schemas = {
   authRegisterSchema,
   authLoginSchema,
+  authSsoSessionSchema,
+  authSsoCodeExchangeSchema,
   authResetPasswordSchema,
   authCompletePasswordResetSchema,
   demoRequestCreateSchema,
