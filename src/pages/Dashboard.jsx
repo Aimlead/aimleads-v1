@@ -836,10 +836,12 @@ export default function Dashboard() {
             })}
           </p>
         </div>
-        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1" role="tablist" aria-label={t('dashboard.viewMode.title', { defaultValue: 'Dashboard view mode' })}>
           <button
             type="button"
             onClick={() => setShowAdvancedBlocks(false)}
+            role="tab"
+            aria-selected={!showAdvancedBlocks}
             className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${!showAdvancedBlocks ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
           >
             {t('dashboard.viewMode.essential', { defaultValue: 'Essential' })}
@@ -847,6 +849,8 @@ export default function Dashboard() {
           <button
             type="button"
             onClick={() => setShowAdvancedBlocks(true)}
+            role="tab"
+            aria-selected={showAdvancedBlocks}
             className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${showAdvancedBlocks ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
           >
             {t('dashboard.viewMode.advanced', { defaultValue: 'Advanced' })}

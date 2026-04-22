@@ -422,7 +422,7 @@ export default function LeadDetail() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-start gap-4 mb-6 sticky top-20 bg-white z-10 py-3 -mx-6 px-6 border-b border-slate-100">
+      <div className="flex items-start gap-4 mb-6 sticky top-16 md:top-20 bg-white z-10 py-3 -mx-6 px-6 border-b border-slate-100">
         <Button variant="ghost" size="sm" className="gap-2 mt-1" onClick={() => navigate(-1)}>
           <ArrowLeft className="w-4 h-4" />
           {t('common.back')}
@@ -462,6 +462,36 @@ export default function LeadDetail() {
           </div>
         </div>
 
+      </div>
+
+      <div className="mb-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+              {t('leads.heroPrimaryAction', { defaultValue: "AimLead's call" })}
+            </p>
+            <div className="mt-1 flex items-end gap-2">
+              <span className="text-3xl font-semibold tracking-tight text-slate-900 tabular-nums">{finalScore ?? '-'}</span>
+              <span className="pb-1 text-xs text-slate-400">/100</span>
+              {lead.final_category ? (
+                <span className={`mb-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${categoryStyle(lead.final_category)}`}>
+                  {lead.final_category}
+                </span>
+              ) : null}
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+              {t('leads.nextBestAction', { defaultValue: 'Next best action' })}
+            </p>
+            <p className="mt-1 max-w-lg text-sm font-semibold text-slate-800">
+              {lead.final_recommended_action || t('leads.primaryActionFallback')}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              {t('leads.lastAnalyzedLabel')} · {formatDate(lead.last_analyzed_at, i18n.language) || '—'}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="mb-6">
