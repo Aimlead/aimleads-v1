@@ -680,8 +680,8 @@
     "analysisLevels": {
       "pending": "En attente",
       "pendingDescription": "Aucune analyse n'a encore été générée pour ce lead.",
-      "quick": "Quick",
-      "quickDescription": "Scoring rapide et déterministe basé sur l'ICP et les données disponibles.",
+      "standard": "Standard",
+      "standardDescription": "Scoring déterministe basé sur l'ICP et les données disponibles.",
       "deep": "Deep",
       "deepDescription": "Lead enrichi avec du raisonnement LLM et des suggestions d'outreach personnalisées.",
       "full": "Full",
@@ -691,7 +691,7 @@
       "high": "Lead à très bon fit avec des indicateurs de priorité solides et une prochaine action crédible.",
       "boosted": "Des signaux externes ou comportementaux ont clairement renforcé ce lead au-delà de la base ICP.",
       "signals": "Ce lead se distingue surtout grâce à {{signals}}.",
-      "quick": "Cette première passe suffit déjà pour décider si le lead mérite un suivi plus poussé.",
+      "standard": "Ce résultat initial suffit déjà pour décider si le lead mérite un suivi plus poussé.",
       "default": "Revoyez le score, les signaux les plus forts et l'action suggérée avant de faire avancer ce lead."
     },
     "copyEmail": "Copier l'email",

@@ -5,7 +5,7 @@ import { getLeadAnalysisLevelMeta } from '@/lib/leadPresentation';
 
 const ICON_BY_LEVEL = {
   pending: Loader2,
-  quick: Radar,
+  standard: Radar,
   deep: BrainCircuit,
   full: BrainCircuit,
 };

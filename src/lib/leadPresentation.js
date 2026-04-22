@@ -40,7 +40,7 @@ export const getLeadAnalysisLevel = (lead) => {
   const hasInternetSignals = Array.isArray(lead?.internet_signals) && lead.internet_signals.length > 0;
   if (lead?.llm_enriched && hasInternetSignals) return 'full';
   if (lead?.llm_enriched) return 'deep';
-  return 'quick';
+  return 'standard';
 };
 
 export const getLeadAnalysisLevelMeta = (lead, t) => {
@@ -54,10 +54,10 @@ export const getLeadAnalysisLevelMeta = (lead, t) => {
       }),
       className: 'border-slate-200 bg-slate-50 text-slate-600',
     },
-    quick: {
-      label: t('leads.analysisLevels.quick', { defaultValue: 'Quick' }),
-      description: t('leads.analysisLevels.quickDescription', {
-        defaultValue: 'Fast deterministic scoring based on ICP and available lead data.',
+    standard: {
+      label: t('leads.analysisLevels.standard', { defaultValue: 'Standard' }),
+      description: t('leads.analysisLevels.standardDescription', {
+        defaultValue: 'Deterministic scoring based on ICP and available lead data.',
       }),
       className: 'border-sky-200 bg-sky-50 text-sky-700',
     },
@@ -147,9 +147,9 @@ export const getLeadWhyItMatters = (lead, t) => {
     });
   }
 
-  if (levelMeta.level === 'quick') {
-    return t('leads.whyItMatters.quick', {
-      defaultValue: 'This first-pass result is enough to decide whether the lead deserves deeper follow-up.',
+  if (levelMeta.level === 'standard') {
+    return t('leads.whyItMatters.standard', {
+      defaultValue: 'This initial result is enough to decide whether the lead deserves deeper follow-up.',
     });
   }
 
