@@ -92,6 +92,25 @@ const formatDate = (value, locale) => {
   return parsed.toLocaleString(locale);
 };
 
+const ACTION_FR_LABELS = {
+  contact_now: 'Contacter maintenant',
+  contact_soon: 'Contacter rapidement',
+  nurture: 'Nurturer',
+  deprioritize: 'Déprioriser',
+};
+
+const translateForPresentation = (value, language) => {
+  if (language !== 'fr') return String(value || '');
+  return String(value || '')
+    .replaceAll('leadership change', 'changement de direction')
+    .replaceAll('market entry', 'entrée sur un nouveau marché')
+    .replaceAll('restructuring', 'restructuration')
+    .replaceAll('budget cuts', 'réduction de budget')
+    .replaceAll('layoffs', 'licenciements')
+    .replaceAll('hiring', 'recrutement')
+    .replaceAll('partnership', 'partenariat');
+};
+
 export default function LeadDetail() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -121,6 +140,7 @@ export default function LeadDetail() {
   const [handledJobId, setHandledJobId] = useState(null);
   const [sequenceTone, setSequenceTone] = useState('consultative');
   const [sequence, setSequence] = useState(null);
+  const [signalLanguage, setSignalLanguage] = useState('en');
   const [sequenceActiveJobId, setSequenceActiveJobId] = useState('');
   const [sequenceHandledJobId, setSequenceHandledJobId] = useState('');
 
@@ -149,7 +169,7 @@ export default function LeadDetail() {
     refetchInterval: activeJob?.jobId ? 1500 : false,
   });
 
-  const currentJob = polledJob || activeJob;
+  const currentJob = activeJob?.jobId ? (polledJob || activeJob) : null;
   const isJobActive = currentJob && !['completed', 'failed'].includes(currentJob.status);
 
   React.useEffect(() => {
@@ -269,18 +289,12 @@ export default function LeadDetail() {
     if (!lead) return;
     setAnalysing(true);
     try {
-      const response = await dataClient.leads.discoverSignals(lead.id, { async: asyncJobsEnabled, reanalyze: true, replace: true });
-      if (response?.jobId) {
-        setHandledJobId(null);
-        setActiveJob({ jobId: response.jobId, type: 'analyse', label: t('leads.analyseSignalsBtn') });
-        toast.success(t('leads.asyncJobQueued', { defaultValue: 'Background job queued.' }));
-        return;
-      }
-      toast.success(t('leads.saveAndReanalyzeSuccess', { score: response?.analysis?.final_score ?? '-', details: '' }));
+      await dataClient.leads.analyzeSignals(lead.id);
+      toast.success(t('leads.analyseSignalsSuccess', { defaultValue: 'Signal analysis completed.' }));
       queryClient.invalidateQueries({ queryKey: ['lead', lead.id] });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
     } catch (err) {
-      toast.error(err?.message || t('leads.saveAndReanalyzeFailed'));
+      toast.error(err?.message || t('leads.analyseSignalsFailed', { defaultValue: 'Signal analysis failed.' }));
     } finally {
       setAnalysing(false);
     }
@@ -384,6 +398,9 @@ export default function LeadDetail() {
   const finalScore = baseScores.finalScore ?? getNumericScoreDetail(scoreDetails, 'final_score') ?? icpScore;
   const aiBoost = icpScore !== null && finalScore !== null ? finalScore - icpScore : null;
   const summaryForHero = lead.icp_summary || lead.analysis_summary;
+  const signalAnalysis = lead?.score_details?.signal_analysis && typeof lead.score_details.signal_analysis === 'object'
+    ? lead.score_details.signal_analysis
+    : null;
   const displaySignals = getDisplaySignals(lead);
 
   const signalGroups = {
@@ -855,6 +872,73 @@ export default function LeadDetail() {
 
             {/* SIGNALS TAB */}
             <TabsContent value="signals" className="mt-4">
+              {signalAnalysis ? (
+                <Card className="shadow-sm mb-3">
+                  <CardContent className="pt-5 space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        {t('leads.signalAnalysisTitle', { defaultValue: 'Signal analysis' })}
+                      </p>
+                      <div className="inline-flex rounded-md border border-slate-200 overflow-hidden">
+                        {['en', 'fr'].map((lang) => (
+                          <button
+                            key={lang}
+                            type="button"
+                            onClick={() => setSignalLanguage(lang)}
+                            className={`px-2.5 py-1 text-xs font-semibold ${signalLanguage === lang ? 'bg-slate-900 text-white' : 'bg-white text-slate-600'}`}
+                          >
+                            {lang.toUpperCase()}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="grid sm:grid-cols-3 gap-2">
+                      <div className="rounded-lg border border-slate-200 p-2.5"><p className="text-[11px] text-slate-500">AI Score</p><p className="text-sm font-semibold text-slate-800">{signalAnalysis.ai_score ?? lead.ai_score ?? '—'}</p></div>
+                      <div className="rounded-lg border border-slate-200 p-2.5"><p className="text-[11px] text-slate-500">AI Boost</p><p className="text-sm font-semibold text-slate-800">{signalAnalysis.ai_boost ?? '—'}</p></div>
+                      <div className="rounded-lg border border-slate-200 p-2.5"><p className="text-[11px] text-slate-500">{t('leads.confidenceShort', { defaultValue: 'Confidence' })}</p><p className="text-sm font-semibold text-slate-800">{signalAnalysis.confidence ?? lead.ai_confidence ?? '—'}</p></div>
+                    </div>
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs font-semibold text-slate-600 mb-1.5">{t('leads.positiveSignals')}</p>
+                        <ul className="text-sm text-slate-700 list-disc pl-4 space-y-1">
+                          {(signalAnalysis.positives || []).map((entry, idx) => <li key={`p-${idx}`}>{translateForPresentation(entry, signalLanguage)}</li>)}
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-slate-600 mb-1.5">{t('leads.negativeSignals')}</p>
+                        <ul className="text-sm text-slate-700 list-disc pl-4 space-y-1">
+                          {(signalAnalysis.negatives || []).map((entry, idx) => <li key={`n-${idx}`}>{translateForPresentation(entry, signalLanguage)}</li>)}
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 p-3">
+                      <p className="text-xs text-slate-500">{t('leads.suggestedAction', { defaultValue: 'Suggested action' })}</p>
+                      <p className="text-sm font-semibold text-slate-800">
+                        {signalLanguage === 'fr'
+                          ? (ACTION_FR_LABELS[signalAnalysis.action] || signalAnalysis.action || '—')
+                          : (signalAnalysis.action || '—')}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs text-slate-500">Icebreaker</p>
+                        {signalAnalysis.icebreaker ? (
+                          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => handleCopy(signalAnalysis.icebreaker, 'signal-icebreaker')}>
+                            {copied === 'signal-icebreaker' ? t('common.copied') : t('common.copy')}
+                          </Button>
+                        ) : null}
+                      </div>
+                      <p className="text-sm text-slate-700">{translateForPresentation(signalAnalysis.icebreaker, signalLanguage)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-600 mb-1.5">{t('leads.buyingSignals')}</p>
+                      <ul className="text-sm text-slate-700 list-disc pl-4 space-y-1">
+                        {(signalAnalysis.signals || []).map((entry, idx) => <li key={`s-${idx}`}>{translateForPresentation(entry, signalLanguage)}</li>)}
+                      </ul>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : null}
               {providerStatus ? (
                 <Card className="shadow-sm mb-3">
                   <CardContent className="pt-5">
