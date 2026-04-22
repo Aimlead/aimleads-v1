@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowRightLeft, ArrowUpDown, ChevronLeft, ChevronRight, FolderOpen, Loader2, PencilLine, Sparkles, Tags } from 'lucide-react';
+import { ArrowRightLeft, ArrowUpDown, ChevronLeft, ChevronRight, FolderOpen, Loader2, PencilLine, Tags } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -222,10 +222,6 @@ export default function Lists() {
             })}
           </p>
         </div>
-        <Badge className="bg-brand-sky/10 text-brand-sky border-brand-sky/20">
-          <Sparkles className="w-3.5 h-3.5 mr-1" />
-          {t('lists.badge', { defaultValue: 'Ops data produit' })}
-        </Badge>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -434,8 +430,8 @@ export default function Lists() {
                     {t('lists.details.empty', { defaultValue: 'Aucun lead trouvé dans cette liste.' })}
                   </div>
                 ) : (
-                  <div className="mt-3 rounded-xl border border-slate-200 bg-white overflow-hidden">
-                    <div className="grid grid-cols-[minmax(220px,1.6fr)_minmax(140px,1fr)_minmax(140px,1fr)_auto] gap-2 px-3 py-2 text-xs font-medium text-slate-500 border-b border-slate-100">
+                  <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                    <div className="hidden grid-cols-[minmax(220px,1.6fr)_minmax(140px,1fr)_minmax(140px,1fr)_auto] gap-2 border-b border-slate-100 px-3 py-2 text-xs font-medium text-slate-500 md:grid">
                       <span>{t('lists.details.columns.company', { defaultValue: 'Entreprise' })}</span>
                       <span>{t('lists.details.columns.contact', { defaultValue: 'Contact' })}</span>
                       <span>{t('lists.details.columns.country', { defaultValue: 'Pays' })}</span>
@@ -443,15 +439,17 @@ export default function Lists() {
                     </div>
                     <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
                       {openedListLeads.map((lead) => (
-                        <div key={lead.id} className="grid grid-cols-[minmax(220px,1.6fr)_minmax(140px,1fr)_minmax(140px,1fr)_auto] gap-2 px-3 py-2 items-center">
-                          <div>
+                        <div key={lead.id} className="grid gap-2 px-3 py-3 md:grid-cols-[minmax(220px,1.6fr)_minmax(140px,1fr)_minmax(140px,1fr)_auto] md:items-center md:py-2">
+                          <div className="min-w-0">
                             <p className="text-sm font-medium text-slate-900 truncate">{lead.company_name || '-'}</p>
                             <p className="text-xs text-slate-500 truncate">{lead.website_url || lead.industry || '-'}</p>
                           </div>
-                          <p className="text-sm text-slate-700 truncate">{lead.contact_name || '-'}</p>
-                          <p className="text-sm text-slate-700 truncate">{lead.country || '-'}</p>
-                          <div className="text-right">
-                            <Button size="sm" variant="ghost" onClick={() => navigate(`/leads/${lead.id}`)}>
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 md:block md:text-sm md:text-slate-700">
+                            <p className="truncate"><span className="md:hidden text-slate-400 mr-1">Contact:</span>{lead.contact_name || '-'}</p>
+                            <p className="truncate"><span className="md:hidden text-slate-400 mr-1">Pays:</span>{lead.country || '-'}</p>
+                          </div>
+                          <div className="text-left md:text-right md:col-start-4">
+                            <Button size="sm" variant="ghost" className="h-7 px-2.5 text-xs md:h-8 md:px-3 md:text-sm" onClick={() => navigate(`/leads/${lead.id}`)}>
                               {t('lists.actions.openLead', { defaultValue: 'Voir le lead' })}
                             </Button>
                           </div>
