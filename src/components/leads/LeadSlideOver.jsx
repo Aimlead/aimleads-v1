@@ -212,6 +212,7 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
       setNotes(n);
       setIntentSignals(is);
       setInternetSignals(nets);
+      setIcpSummary(lead.icp_summary || null);
       initialRef.current = { followUpStatus: fs, notes: n, intentSignals: is };
     }
   }, [lead]);
@@ -784,4 +785,3 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
     </>
   );
 }
-
