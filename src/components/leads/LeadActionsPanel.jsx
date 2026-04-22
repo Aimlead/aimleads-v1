@@ -1,27 +1,24 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Globe, Loader2, Sparkles, Target, Zap } from 'lucide-react';
+import { Loader2, Sparkles, Target, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
 /**
  * Unified action panel surfaced in both LeadSlideOver and LeadDetail.
  * - ICP score is deterministic and free (no AI credit shown).
- * - Analyse and Discover are AI-powered and display their credit cost.
+ * - Analyse is AI-powered and displays its credit cost.
  *
  * Props:
- *   onScoreIcp, onAnalyse, onDiscover  — async handlers
- *   scoring, analysing, discovering    — booleans (loading)
+ *   onScoreIcp, onAnalyse              — async handlers
+ *   scoring, analysing                 — booleans (loading)
  *   disabled                           — global disable (job in flight)
  *   variant                            — "compact" (slide-over) or "full" (detail page)
  */
 export default function LeadActionsPanel({
   onScoreIcp,
   onAnalyse,
-  onDiscover,
   scoring = false,
   analysing = false,
-  discovering = false,
   disabled = false,
   variant = 'compact',
 }) {
@@ -48,14 +45,14 @@ export default function LeadActionsPanel({
             </p>
             <p className="text-xs text-slate-500 mt-0.5">
               {t('leads.leadActionsSubtitle', {
-                defaultValue: 'Deterministic ICP scoring is free. AI analysis and web discovery consume credits.',
+                defaultValue: 'Deterministic ICP scoring is free. AI signal analysis consumes credits.',
               })}
             </p>
           </div>
         </div>
       ) : null}
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         {/* 1. Score ICP — deterministic, FREE */}
         <Button
           variant="outline"
@@ -95,27 +92,6 @@ export default function LeadActionsPanel({
           </span>
         </Button>
 
-        {/* 3. Discover web — AI (10 credits) */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onDiscover}
-          disabled={discovering || disabled}
-          className={baseClass}
-          title={t('leads.discoverWebCost')}
-        >
-          {discovering ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Globe className={`${isFull ? 'w-5 h-5' : 'w-4 h-4'} text-emerald-600`} />
-          )}
-          <span className={`${isFull ? 'text-xs' : 'text-[11px]'} font-semibold leading-tight`}>
-            {discovering ? t('leads.discoverWebBtnLoading') : t('leads.discoverWebBtn')}
-          </span>
-          <span className={`${isFull ? 'text-[10px]' : 'text-[9px]'} text-slate-400`}>
-            {t('leads.discoverWebCost')}
-          </span>
-        </Button>
       </div>
     </motion.div>
   );
