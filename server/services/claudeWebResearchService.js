@@ -20,13 +20,14 @@ if (ANTHROPIC_API_KEY) {
 const EXTRACT_INTELLIGENCE_TOOL = {
   name: 'extract_company_intelligence',
   description:
-    'Extract structured buying signals and findings from web research about a B2B company.',
+    'Extract strictly verifiable buying signals (and optional signal providers) from web research about a B2B company.',
   input_schema: {
     type: 'object',
     properties: {
       findings: {
         type: 'array',
-        description: 'Key findings about the company from web research.',
+        description:
+          'Optional compact context findings that justify detected signals. Keep this short and factual.',
         items: {
           type: 'object',
           properties: {
@@ -46,7 +47,8 @@ const EXTRACT_INTELLIGENCE_TOOL = {
       },
       signals: {
         type: 'array',
-        description: 'Buying signals detected from the research.',
+        description:
+          'Buying signals detected from the research. Only include signals with explicit evidence (URL or concrete claim).',
         items: {
           type: 'object',
           properties: {
@@ -68,8 +70,22 @@ const EXTRACT_INTELLIGENCE_TOOL = {
         },
         maxItems: 6,
       },
+      signal_providers: {
+        type: 'array',
+        description:
+          'Optional list of external signal providers/sources worth monitoring for this company/segment (e.g. job boards, procurement portals, review sites).',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'Provider/source name.' },
+            reason: { type: 'string', description: 'Why this source is relevant for intent detection.' },
+          },
+          required: ['name', 'reason'],
+        },
+        maxItems: 4,
+      },
     },
-    required: ['findings', 'signals'],
+    required: ['signals'],
   },
 };
 
@@ -96,7 +112,16 @@ export async function researchCompanyOnWeb(lead) {
 
 Company: ${companyName}${websitePart}${industryPart}${countryPart}
 
-Search the web for recent news (last 6 months): funding rounds, notable hires or departures, product launches, expansion announcements, job postings signaling growth, or any events that indicate a buying opportunity. Then call extract_company_intelligence with your structured findings.`;
+Search the web for recent news (last 6 months): funding rounds, notable hires/departures, product launches, expansion announcements, job postings signaling growth, or events indicating buying intent.
+
+Important output rules:
+- Return ONLY high-signal, verifiable items.
+- Avoid generic/company-description content.
+- If evidence is weak or stale, skip the signal.
+- Prefer 3-6 strong signals over many weak ones.
+- Add optional signal_providers only when truly relevant.
+
+Then call extract_company_intelligence with the structured result.`;
 
   try {
     const message = await anthropicClient.messages.create(
@@ -123,6 +148,7 @@ Search the web for recent news (last 6 months): funding rounds, notable hires or
 
     const rawFindings = Array.isArray(toolUse.input.findings) ? toolUse.input.findings : [];
     const rawSignals = Array.isArray(toolUse.input.signals) ? toolUse.input.signals : [];
+    const rawProviders = Array.isArray(toolUse.input.signal_providers) ? toolUse.input.signal_providers : [];
 
     const findings = rawFindings.slice(0, 8).map((f) => ({
       title: String(f.title || '').slice(0, 300),
@@ -137,6 +163,17 @@ Search the web for recent news (last 6 months): funding rounds, notable hires or
       source_type: 'claude_web_research',
       found_at: new Date().toISOString(),
     }));
+
+    for (const provider of rawProviders.slice(0, 4)) {
+      const name = String(provider?.name || '').trim();
+      const reason = String(provider?.reason || '').trim();
+      if (!name || !reason) continue;
+      findings.push({
+        title: `Signal provider: ${name}`.slice(0, 300),
+        snippet: reason.slice(0, 400),
+        source_type: 'claude_web_research',
+      });
+    }
 
     logger.info('claude_web_research_success', {
       company: companyName,
