@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { dataClient } from '@/services/dataClient';
@@ -143,7 +144,7 @@ const parseXlsx = async (file) => {
 // in that same normalized form.
 const COLUMN_MAP = {
   company_name: [
-    'company name', 'company', 'name', 'nom', 'entreprise', 'societe', 'raison sociale',
+    'company name', 'company', 'nom entreprise', 'nom de l entreprise', 'entreprise', 'societe', 'raison sociale',
     'business', 'business name', 'organization', 'organisation', 'account', 'account name',
     'firma', 'compania', 'compagnie', 'prospect', 'firm',
   ],
@@ -163,8 +164,8 @@ const COLUMN_MAP = {
     'country', 'pays', 'nation', 'location', 'pays siege', 'country code', 'region', 'localisation',
   ],
   contact_name: [
-    'contact name', 'contact', 'nom contact', 'full name', 'nom complet',
-    'lead', 'lead name', 'first name last name', 'prenom nom', 'decideur',
+    'contact name', 'nom contact', 'full name', 'nom complet',
+    'lead name', 'first name last name', 'prenom nom', 'decideur',
     'first name', 'last name', 'firstname', 'lastname', 'nom prenom', 'owner',
   ],
   contact_role: [
@@ -236,11 +237,12 @@ const PREVIEW_COLS = ['company_name', 'website_url', 'industry', 'company_size',
 
 
 const scoreHeaderMatch = (header, fieldKey) => {
+  if (!header) return 0;
   const canonical = ALIAS_TO_CANONICAL[header];
   if (canonical === fieldKey) return 100;
 
   const aliases = COLUMN_MAP[fieldKey] || [];
-  if (aliases.some((alias) => header.includes(alias) || alias.includes(header))) return 70;
+  if (aliases.some((alias) => alias.length >= 5 && (header.includes(alias) || alias.includes(header)))) return 70;
 
   const headerTokens = new Set(header.split(' ').filter(Boolean));
   let bestOverlap = 0;
@@ -314,7 +316,25 @@ export default function ImportCSVDialog({
   const [handoffAction, setHandoffAction] = useState(null);
   const [error, setError] = useState(null);
   const [fileName, setFileName] = useState('');
+  const [listName, setListName] = useState('');
   const fileInputRef = useRef(null);
+
+  const buildDefaultListName = (name = '') =>
+    String(name)
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 80);
+
+  const applyListNameToRows = (rows = [], nextListName = '') => {
+    const normalizedListName = String(nextListName || '').trim();
+    if (!normalizedListName) return rows;
+    return rows.map((row) => ({
+      ...row,
+      source_list: String(row.source_list || '').trim() || normalizedListName,
+    }));
+  };
 
   const resetDialog = () => {
     setPreview([]);
@@ -328,6 +348,7 @@ export default function ImportCSVDialog({
     setError(null);
     setImporting(false);
     setFileName('');
+    setListName('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -348,6 +369,7 @@ export default function ImportCSVDialog({
     setRawRows([]);
     setAvailableHeaders([]);
     setFieldMapping({});
+    setListName(buildDefaultListName(file.name));
 
     const isCsv = /\.csv$/i.test(file.name);
     const isXlsx = /\.xlsx$/i.test(file.name);
@@ -374,11 +396,12 @@ export default function ImportCSVDialog({
           const headers = Array.from(new Set(rows.flatMap((row) => Object.keys(row))));
           const autoMapping = guessFieldMapping(headers);
           const mappedRows = applyUserMapping(rows, autoMapping).map(normalizeRow);
+          const rowsWithSourceList = applyListNameToRows(mappedRows, buildDefaultListName(file.name));
           setRawRows(rows);
           setAvailableHeaders(headers);
           setFieldMapping(autoMapping);
-          setAllRows(mappedRows);
-          setPreview(mappedRows.slice(0, 5));
+          setAllRows(rowsWithSourceList);
+          setPreview(rowsWithSourceList.slice(0, 5));
         } catch (err) {
           setError(t('import.dialog.errors.excelParse', { defaultValue: 'Impossible de lire le fichier Excel : {{message}}', message: err?.message || 'unknown error' }));
         }
@@ -397,11 +420,12 @@ export default function ImportCSVDialog({
         const headers = Array.from(new Set(rows.flatMap((row) => Object.keys(row))));
         const autoMapping = guessFieldMapping(headers);
         const mappedRows = applyUserMapping(rows, autoMapping).map(normalizeRow);
+        const rowsWithSourceList = applyListNameToRows(mappedRows, buildDefaultListName(file.name));
         setRawRows(rows);
         setAvailableHeaders(headers);
         setFieldMapping(autoMapping);
-        setAllRows(mappedRows);
-        setPreview(mappedRows.slice(0, 5));
+        setAllRows(rowsWithSourceList);
+        setPreview(rowsWithSourceList.slice(0, 5));
       } catch {
         setError(t('import.dialog.errors.csvParse', { defaultValue: 'Impossible de lire ce fichier CSV.' }));
       }
@@ -413,8 +437,18 @@ export default function ImportCSVDialog({
     const nextMapping = { ...fieldMapping, [fieldKey]: headerValue };
     setFieldMapping(nextMapping);
     const mappedRows = applyUserMapping(rawRows, nextMapping).map(normalizeRow);
-    setAllRows(mappedRows);
-    setPreview(mappedRows.slice(0, 5));
+    const rowsWithSourceList = applyListNameToRows(mappedRows, listName);
+    setAllRows(rowsWithSourceList);
+    setPreview(rowsWithSourceList.slice(0, 5));
+  };
+
+  const handleListNameChange = (event) => {
+    const nextListName = event.target.value;
+    setListName(nextListName);
+    const mappedRows = applyUserMapping(rawRows, fieldMapping).map(normalizeRow);
+    const rowsWithSourceList = applyListNameToRows(mappedRows, nextListName);
+    setAllRows(rowsWithSourceList);
+    setPreview(rowsWithSourceList.slice(0, 5));
   };
 
   const handleImport = async () => {
@@ -540,6 +574,22 @@ export default function ImportCSVDialog({
 
           {availableHeaders.length > 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="mb-4">
+                <p className="text-xs font-semibold text-slate-700">
+                  {t('import.dialog.listName.label', { defaultValue: 'Nom de la liste créée à l’import' })}
+                </p>
+                <Input
+                  value={listName}
+                  onChange={handleListNameChange}
+                  placeholder={t('import.dialog.listName.placeholder', { defaultValue: 'ex: Prospects Avril 2026' })}
+                  className="mt-1 h-9 text-sm"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  {t('import.dialog.listName.help', {
+                    defaultValue: 'Cette liste apparaîtra dans la page Listes et dans le filtre de listes du dashboard.',
+                  })}
+                </p>
+              </div>
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm font-semibold text-slate-900">
                   {t('import.dialog.mapping.title', { defaultValue: 'Mapping des colonnes avant import' })}
