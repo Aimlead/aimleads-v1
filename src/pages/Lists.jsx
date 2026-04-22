@@ -10,7 +10,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ROUTES } from '@/constants/routes';
 import { dataClient } from '@/services/dataClient';
 
 const UNLISTED = '__unlisted__';
@@ -39,6 +38,7 @@ export default function Lists() {
   const [bulkMoveTarget, setBulkMoveTarget] = useState(null);
   const [bulkMoveValue, setBulkMoveValue] = useState(UNLISTED);
   const [processingKey, setProcessingKey] = useState('');
+  const [openedListKey, setOpenedListKey] = useState(null);
   const PAGE_SIZE = 8;
 
   const { data: leads = [], isLoading } = useQuery({
@@ -206,6 +206,10 @@ export default function Lists() {
   const totalLists = listStats.length;
   const unlistedLeads = listStats.find((entry) => entry.key === UNLISTED)?.total || 0;
   const allVisibleSelected = paginatedLists.length > 0 && paginatedLists.every((entry) => selectedLists.includes(entry.key));
+  const openedListLeads = useMemo(
+    () => leads.filter((lead) => normalizeListKey(lead.source_list) === openedListKey),
+    [leads, openedListKey]
+  );
 
   return (
     <div className="space-y-6">
@@ -357,14 +361,11 @@ export default function Lists() {
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => {
-                        if (typeof window !== 'undefined') {
-                          window.localStorage.setItem(DASHBOARD_LIST_STORAGE_KEY, entry.key);
-                        }
-                        navigate(ROUTES.dashboard);
-                      }}
+                      onClick={() => setOpenedListKey((current) => (current === entry.key ? null : entry.key))}
                     >
-                      {t('lists.actions.open', { defaultValue: 'Ouvrir' })}
+                      {openedListKey === entry.key
+                        ? t('lists.actions.hide', { defaultValue: 'Masquer' })
+                        : t('lists.actions.open', { defaultValue: 'Ouvrir' })}
                     </Button>
                     <Button
                       variant="outline"
@@ -397,6 +398,70 @@ export default function Lists() {
                 </div>
               );
             })}
+            {openedListKey ? (
+              <div className="px-4 py-4 border-t border-slate-100 bg-slate-50/70">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {t('lists.details.title', {
+                        defaultValue: 'Leads de la liste : {{list}}',
+                        list: formatListLabel(openedListKey, t),
+                      })}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {t('lists.details.subtitle', {
+                        defaultValue: '{{count}} lead(s) dans cette liste.',
+                        count: openedListLeads.length,
+                      })}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      if (typeof window !== 'undefined') {
+                        window.localStorage.setItem(DASHBOARD_LIST_STORAGE_KEY, openedListKey);
+                      }
+                      toast.success(t('lists.toasts.filterSaved', { defaultValue: 'Filtre de liste enregistré pour le dashboard.' }));
+                    }}
+                  >
+                    {t('lists.actions.saveDashboardFilter', { defaultValue: 'Préparer ce filtre pour dashboard' })}
+                  </Button>
+                </div>
+
+                {openedListLeads.length === 0 ? (
+                  <div className="mt-3 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-4 text-sm text-slate-500">
+                    {t('lists.details.empty', { defaultValue: 'Aucun lead trouvé dans cette liste.' })}
+                  </div>
+                ) : (
+                  <div className="mt-3 rounded-xl border border-slate-200 bg-white overflow-hidden">
+                    <div className="grid grid-cols-[minmax(220px,1.6fr)_minmax(140px,1fr)_minmax(140px,1fr)_auto] gap-2 px-3 py-2 text-xs font-medium text-slate-500 border-b border-slate-100">
+                      <span>{t('lists.details.columns.company', { defaultValue: 'Entreprise' })}</span>
+                      <span>{t('lists.details.columns.contact', { defaultValue: 'Contact' })}</span>
+                      <span>{t('lists.details.columns.country', { defaultValue: 'Pays' })}</span>
+                      <span className="text-right">{t('lists.details.columns.actions', { defaultValue: 'Actions' })}</span>
+                    </div>
+                    <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
+                      {openedListLeads.map((lead) => (
+                        <div key={lead.id} className="grid grid-cols-[minmax(220px,1.6fr)_minmax(140px,1fr)_minmax(140px,1fr)_auto] gap-2 px-3 py-2 items-center">
+                          <div>
+                            <p className="text-sm font-medium text-slate-900 truncate">{lead.company_name || '-'}</p>
+                            <p className="text-xs text-slate-500 truncate">{lead.website_url || lead.industry || '-'}</p>
+                          </div>
+                          <p className="text-sm text-slate-700 truncate">{lead.contact_name || '-'}</p>
+                          <p className="text-sm text-slate-700 truncate">{lead.country || '-'}</p>
+                          <div className="text-right">
+                            <Button size="sm" variant="ghost" onClick={() => navigate(`/leads/${lead.id}`)}>
+                              {t('lists.actions.openLead', { defaultValue: 'Voir le lead' })}
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : null}
             <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
               <p className="text-xs text-slate-500">
                 {t('lists.table.paginationDetailed', {
