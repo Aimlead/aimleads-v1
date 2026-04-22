@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { AlertCircle, ArrowRight, CheckCircle2, FileText, Loader2, Sparkles, Target, Upload, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -24,6 +24,7 @@ const normalizeHeaderKey = (value) =>
     .trim()
     .toLowerCase()
     .replace(/[._\-/]+/g, ' ')
+    .replace(/[()[\]{}:]+/g, ' ')
     .replace(/\s+/g, ' ');
 
 /**
@@ -114,14 +115,17 @@ const parseCsv = (text) => {
  * Parse XLSX files in the browser.
  * Returns rows normalized with lowercase header keys (no accents, no punctuation).
  */
+const isNonEmptyRow = (row = []) => row.some((cell) => String(cell ?? '').trim() !== '');
+
 const parseXlsx = async (file) => {
   const { default: readXlsxFile } = await import('read-excel-file/browser');
   const rows = await readXlsxFile(file);
-  if (rows.length < 2) return [];
+  const filteredRows = rows.filter((row) => isNonEmptyRow(row));
+  if (filteredRows.length < 2) return [];
 
-  const headers = rows[0].map((header) => normalizeHeaderKey(header));
+  const headers = filteredRows[0].map((header) => normalizeHeaderKey(header));
 
-  return rows
+  return filteredRows
     .slice(1)
     .map((row) =>
       headers.reduce((normalized, header, idx) => {
@@ -156,14 +160,15 @@ const COLUMN_MAP = {
     'headcount', 'nb employes', 'nombre employes',
   ],
   country: [
-    'country', 'pays', 'nation', 'location', 'pays siege',
+    'country', 'pays', 'nation', 'location', 'pays siege', 'country code', 'region', 'localisation',
   ],
   contact_name: [
     'contact name', 'contact', 'nom contact', 'full name', 'nom complet',
     'lead', 'lead name', 'first name last name', 'prenom nom', 'decideur',
+    'first name', 'last name', 'firstname', 'lastname', 'nom prenom', 'owner',
   ],
   contact_role: [
-    'role', 'poste', 'title', 'job title', 'position', 'fonction', 'titre',
+    'role', 'poste', 'title', 'job title', 'position', 'fonction', 'titre', 'job', 'responsabilite',
   ],
   contact_email: [
     'email', 'mail', 'e mail', 'email address', 'adresse email', 'adresse mail',
@@ -227,13 +232,49 @@ const CANONICAL_FIELDS = [
 
 const EMPTY_MAPPING = '__none__';
 
+const PREVIEW_COLS = ['company_name', 'website_url', 'industry', 'company_size', 'country', 'contact_name', 'contact_email'];
+
+
+const scoreHeaderMatch = (header, fieldKey) => {
+  const canonical = ALIAS_TO_CANONICAL[header];
+  if (canonical === fieldKey) return 100;
+
+  const aliases = COLUMN_MAP[fieldKey] || [];
+  if (aliases.some((alias) => header.includes(alias) || alias.includes(header))) return 70;
+
+  const headerTokens = new Set(header.split(' ').filter(Boolean));
+  let bestOverlap = 0;
+  for (const alias of aliases) {
+    const aliasTokens = alias.split(' ').filter(Boolean);
+    const overlap = aliasTokens.filter((token) => headerTokens.has(token)).length;
+    bestOverlap = Math.max(bestOverlap, overlap);
+  }
+
+  if (bestOverlap >= 2) return 50 + bestOverlap;
+  if (bestOverlap === 1) return 30;
+  return 0;
+};
+
 const guessFieldMapping = (headers = []) => {
   const normalizedHeaders = headers.map((header) => normalizeHeaderKey(header));
   const mapping = {};
+  const usedHeaders = new Set();
 
   for (const field of CANONICAL_FIELDS) {
-    const directMatch = normalizedHeaders.find((header) => ALIAS_TO_CANONICAL[header] === field.key);
-    mapping[field.key] = directMatch || EMPTY_MAPPING;
+    let bestHeader = EMPTY_MAPPING;
+    let bestScore = 0;
+
+    for (const header of normalizedHeaders) {
+      if (usedHeaders.has(header)) continue;
+      const score = scoreHeaderMatch(header, field.key);
+      if (score > bestScore) {
+        bestScore = score;
+        bestHeader = header;
+      }
+    }
+
+    mapping[field.key] = bestScore >= 30 ? bestHeader : EMPTY_MAPPING;
+    if (mapping[field.key] !== EMPTY_MAPPING) usedHeaders.add(mapping[field.key]);
   }
   return mapping;
 };
@@ -418,10 +459,11 @@ export default function ImportCSVDialog({
     }
   };
 
-  const PREVIEW_COLS = ['company_name', 'website_url', 'industry', 'company_size', 'country'];
-  const previewHeaders = preview.length > 0
-    ? PREVIEW_COLS.filter((col) => preview.some((row) => row[col]))
-    : [];
+  const previewHeaders = useMemo(() => (
+    preview.length > 0
+      ? PREVIEW_COLS.filter((col) => preview.some((row) => row[col]))
+      : []
+  ), [preview]);
   const missingCompanyMapping = availableHeaders.length > 0 && (fieldMapping.company_name || EMPTY_MAPPING) === EMPTY_MAPPING;
   const stage = imported ? 'done' : preview.length > 0 ? 'review' : 'upload';
 
@@ -514,7 +556,7 @@ export default function ImportCSVDialog({
                   defaultValue: 'Assignez chaque champ AimLeads à la colonne de votre fichier. Vous pouvez importer des noms de colonnes personnalisés.',
                 })}
               </p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <div className="mt-3 grid max-h-[32vh] gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
                 {CANONICAL_FIELDS.map((field) => (
                   <div key={field.key} className="rounded-xl border border-slate-200 px-3 py-2">
                     <p className="text-xs font-semibold text-slate-700">
@@ -525,7 +567,7 @@ export default function ImportCSVDialog({
                       <SelectTrigger className="mt-1 h-8 text-xs">
                         <SelectValue placeholder="Choisir une colonne" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-72">
                         <SelectItem value={EMPTY_MAPPING}>Ne pas importer</SelectItem>
                         {availableHeaders.map((header) => (
                           <SelectItem key={`${field.key}-${header}`} value={header} className="text-xs">
@@ -612,7 +654,7 @@ export default function ImportCSVDialog({
                     </Badge>
                   </div>
 
-                  <div className="overflow-x-auto rounded-lg border border-slate-200">
+                  <div className="max-h-[34vh] overflow-auto rounded-lg border border-slate-200">
                     <Table>
                       <TableHeader>
                         <TableRow>
