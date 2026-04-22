@@ -42,6 +42,24 @@ const sourceListLabel = (value, emptyLabel) => {
 };
 
 const toMetric = (value) => (Number.isFinite(Number(value)) ? Number(value) : null);
+const toScore = (value) => {
+  const metric = toMetric(value);
+  if (metric === null) return null;
+  return Math.max(0, Math.min(100, Math.round(metric)));
+};
+
+const resolveLeadScores = (lead) => {
+  const icpScore = toScore(lead?.icp_score);
+  const aiScore = toScore(lead?.ai_score);
+  const explicitFinalScore = toScore(lead?.final_score);
+  const finalScore = explicitFinalScore ?? icpScore ?? 0;
+  return {
+    finalScore,
+    icpScore,
+    aiScore,
+    hasExplicitFinalScore: explicitFinalScore !== null,
+  };
+};
 
 const getScoreTier = (score) => {
   if (score >= 80) return { key: 'hot', badge: 'HOT', color: 'bg-rose-500', soft: 'bg-rose-50 text-rose-700 border-rose-200' };
@@ -96,7 +114,8 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
       const matchesFollowUp = followUpFilter === 'all' || lead.follow_up_status === followUpFilter;
       const matchesIndustry = !industryFilter || String(lead.industry || '').toLowerCase().includes(industryFilter.toLowerCase());
       const matchesCountry = !countryFilter || lead.country === countryFilter;
-      const matchesScore = !minScoreFilter || (lead.final_score ?? lead.icp_score ?? 0) >= Number(minScoreFilter);
+      const { finalScore } = resolveLeadScores(lead);
+      const matchesScore = !minScoreFilter || (finalScore ?? 0) >= Number(minScoreFilter);
 
       return matchesSearch && matchesStatus && matchesFollowUp && matchesIndustry && matchesCountry && matchesScore;
     });
@@ -503,9 +522,7 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
               </div>
               <div className="grid gap-3 lg:grid-cols-3">
                 {paginated.slice(0, 3).map((lead) => {
-                  const icpScore = toMetric(lead.icp_score);
-                  const aiScore = toMetric(lead.ai_score);
-                  const finalScore = toMetric(lead.final_score) ?? icpScore ?? 0;
+                  const { icpScore, aiScore, finalScore, hasExplicitFinalScore } = resolveLeadScores(lead);
                   const tier = getScoreTier(finalScore);
                   return (
                     <div
@@ -525,7 +542,12 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
                         <span className="text-xs text-slate-400 pb-1">/100</span>
                         <span className="ml-auto"><ScorePill score={finalScore} /></span>
                       </div>
-                      <div className="mt-3 text-xs text-slate-500">ICP {icpScore ?? '-'} · AI {aiScore ?? '-'}</div>
+                      <div className="mt-3 text-xs text-slate-500">
+                        {hasExplicitFinalScore ? tt('leads.scoreSourceFinal', 'Final score (ICP + AI)') : tt('leads.scoreSourceIcpOnly', 'ICP-only score')}
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        ICP {icpScore ?? '-'} · AI {aiScore ?? '-'}
+                      </div>
                       <div className="mt-3 flex items-center justify-between text-xs">
                         <span className="text-slate-500 truncate">{lead.final_recommended_action || tt('leads.primaryActionFallback', 'Review this lead')}</span>
                         <Button size="sm" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); onOpenLeadPage?.(lead); }}>
@@ -552,9 +574,7 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
               </div>
               <div className="divide-y divide-slate-100">
                 {paginated.map((lead) => {
-                  const icpScore = toMetric(lead.icp_score);
-                  const aiScore = toMetric(lead.ai_score);
-                  const finalScore = toMetric(lead.final_score) ?? icpScore ?? 0;
+                  const { icpScore, aiScore, finalScore, hasExplicitFinalScore } = resolveLeadScores(lead);
                   const tier = getScoreTier(finalScore);
                   const isAnalyzing = analyzingIds.has(lead.id) || lead.status === LEAD_STATUS.PROCESSING;
                   return (
@@ -595,7 +615,9 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
                         </Button>
                         <span className="text-[11px] text-slate-400">{tt('leads.companySizeEmployees', '{{size}} emp.', { size: formatCompanySize(lead.company_size, tt('leads.notAvailable', 'n/a')) })}</span>
                         <span className="text-[11px] text-slate-400">{sourceListLabel(lead.source_list, tt('leads.unlisted', 'Unlisted'))}</span>
-                        <span className="text-[11px] text-slate-400">ICP {icpScore ?? '-'} · AI {aiScore ?? '-'}</span>
+                        <span className="text-[11px] text-slate-400">
+                          {hasExplicitFinalScore ? tt('leads.scoreTagFinal', 'Final') : tt('leads.scoreTagIcp', 'ICP')} {finalScore ?? '-'} · ICP {icpScore ?? '-'} · AI {aiScore ?? '-'}
+                        </span>
                       </div>
                     </div>
                   );
