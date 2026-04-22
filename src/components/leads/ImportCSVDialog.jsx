@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { dataClient } from '@/services/dataClient';
@@ -455,10 +456,14 @@ export default function ImportCSVDialog({
     setImporting(true);
 
     try {
-      const validRows = allRows.filter((r) => r.company_name || r['company name'] || r.name);
-      const skippedRows = allRows
+      const resolvedListName = String(listName || '').trim()
+        || buildDefaultListName(fileName)
+        || `Import ${new Date().toISOString().slice(0, 10)}`;
+      const rowsToImport = applyListNameToRows(allRows, resolvedListName);
+      const validRows = rowsToImport.filter((r) => r.company_name || r['company name'] || r.name);
+      const skippedRows = rowsToImport
         .map((r, i) => ({ row: i + 2, data: r }))
-        .filter((_, i) => !(allRows[i].company_name || allRows[i]['company name'] || allRows[i].name));
+        .filter((_, i) => !(rowsToImport[i].company_name || rowsToImport[i]['company name'] || rowsToImport[i].name));
 
       const created = await dataClient.leads.bulkCreate(validRows);
 
