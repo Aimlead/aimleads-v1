@@ -146,10 +146,12 @@ export default function Dashboard() {
   }, [leads, t]);
 
   useEffect(() => {
+    if (isLoading) return;
+    if (sourceListOptions.length === 0) return;
     const valid =
       selectedSourceList === LIST_KEYS.ALL || sourceListOptions.some((option) => option.key === selectedSourceList);
     if (!valid) setSelectedSourceList(LIST_KEYS.ALL);
-  }, [selectedSourceList, sourceListOptions]);
+  }, [isLoading, selectedSourceList, sourceListOptions]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
