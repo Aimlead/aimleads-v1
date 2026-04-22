@@ -816,13 +816,9 @@ export default function Dashboard() {
             })}
       </div>
 
-      <div className="mb-5 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-        <div>
-          <p className="text-sm font-semibold text-slate-900">Dashboard focus mode</p>
-          <p className="text-xs text-slate-500">Affiche/masque les blocs avancés pour garder la zone leads plus lisible.</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => setShowAdvancedBlocks((value) => !value)}>
-          {showAdvancedBlocks ? 'Masquer l’avancé' : 'Afficher l’avancé'}
+      <div className="mb-5 flex items-center justify-end">
+        <Button variant="ghost" size="sm" onClick={() => setShowAdvancedBlocks((value) => !value)} className="text-xs text-slate-500 hover:text-slate-900">
+          {showAdvancedBlocks ? 'Masquer les modules avancés' : 'Afficher les modules avancés'}
         </Button>
       </div>
 
