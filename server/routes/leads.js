@@ -13,6 +13,7 @@ import { generateOutreachSequence, sequenceGeneratorAvailable, SEQUENCE_TONES } 
 import { findEmailForLead } from '../services/hunterService.js';
 import { fetchCompanyNewsFindings } from '../services/newsService.js';
 import { researchCompanyOnWeb } from '../services/claudeWebResearchService.js';
+import { runClaudeSignalAnalysis } from '../services/claudeSignalAnalysisService.js';
 import { toLeadAnalysisUpdatePayload } from '../services/leadAnalysisPersistence.js';
 import { getCrmIntegration, syncLeadToCrm } from '../services/crmService.js';
 import { normalizeLeadForResponse } from '../lib/leadNormalization.js';
@@ -52,6 +53,13 @@ const discoverLimiter = createUserRateLimit({
   windowMs: 60 * 60 * 1000,
   max: 15,
   message: 'Too many signal discovery requests, please wait.',
+});
+
+const analyzeSignalsLimiter = createUserRateLimit({
+  namespace: 'analyze_signals_user',
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  message: 'Too many signal analysis requests, please wait.',
 });
 
 const importLimiter = createUserRateLimit({
@@ -727,6 +735,85 @@ router.post('/:leadId/score-icp', scoreIcpLimiter, requireCredits('score_icp'), 
       summary: deterministicSummary.summary,
       improvement_tips: deterministicSummary.improvement_tips,
       deterministic: true,
+    },
+  });
+});
+
+router.post('/:leadId/analyze-signals', analyzeSignalsLimiter, requireCredits('analyze'), async (req, res) => {
+  const lead = await dataStore.getLeadById(req.user, req.params.leadId);
+  if (!lead) return res.status(404).json({ message: 'Lead not found' });
+
+  const activeIcp = await dataStore.getActiveIcpProfile(req.user);
+  if (!activeIcp) return res.status(400).json({ message: 'No active ICP profile found' });
+
+  const deterministic = await analyzeLead({ lead, icpProfile: activeIcp, skipLlm: true });
+  const icpBaseScore = Number(deterministic?.icp_score ?? lead?.icp_score ?? 0);
+  const signalResult = await runClaudeSignalAnalysis({ lead, icpBaseScore });
+
+  if (!signalResult) {
+    return res.status(502).json({ message: 'Signal analysis failed: invalid model response.' });
+  }
+
+  const finalScore = Math.max(0, Math.min(100, Math.round(icpBaseScore + signalResult.ai_boost)));
+  const scoreDetails = {
+    ...(lead?.score_details && typeof lead.score_details === 'object' ? lead.score_details : {}),
+    signal_analysis: {
+      ai_score: signalResult.ai_score,
+      ai_boost: signalResult.ai_boost,
+      confidence: signalResult.confidence,
+      positives: signalResult.positives,
+      negatives: signalResult.negatives,
+      action: signalResult.action,
+      signals: signalResult.signals,
+      icebreaker: signalResult.icebreaker,
+      model: signalResult?._meta?.model || null,
+      analyzed_at: new Date().toISOString(),
+    },
+  };
+
+  const updatePayload = {
+    icp_score: Math.round(icpBaseScore),
+    ai_score: signalResult.ai_score,
+    ai_confidence: signalResult.confidence,
+    final_score: finalScore,
+    recommended_action: signalResult.action,
+    final_recommended_action: signalResult.action,
+    analysis_summary: [
+      ...signalResult.positives.map((item) => `+ ${item}`),
+      ...signalResult.negatives.map((item) => `- ${item}`),
+    ].join('\n') || lead.analysis_summary || null,
+    signals: signalResult.signals.map((label) => ({ source: 'signal_analysis', type: 'neutral', points: 0, label })),
+    generated_icebreaker: signalResult.icebreaker,
+    generated_icebreakers: {
+      ...(lead.generated_icebreakers && typeof lead.generated_icebreakers === 'object' ? lead.generated_icebreakers : {}),
+      email: signalResult.icebreaker,
+    },
+    score_details: scoreDetails,
+    llm_enriched: true,
+    llm_provider: 'anthropic',
+    analysis_version: 'signal-analysis-v1',
+    last_analyzed_at: new Date().toISOString(),
+  };
+
+  const updatedLead = await dataStore.updateLead(req.user, lead.id, updatePayload);
+  if (!updatedLead) return res.status(500).json({ message: 'Failed to save signal analysis' });
+
+  if (signalResult?._meta?.usage) logTokenUsage(req, 'analyze_signals', signalResult._meta.usage);
+
+  logger.info('lead_signal_analysis_completed', {
+    user_id: req.user?.id || null,
+    workspace_id: req.user?.workspace_id || null,
+    lead_id: lead.id,
+    icp_base_score: icpBaseScore,
+    ai_boost: signalResult.ai_boost,
+    final_score: finalScore,
+    action: signalResult.action,
+  });
+
+  return res.json({
+    data: {
+      lead: normalizeLeadForResponse(updatedLead),
+      signal_analysis: scoreDetails.signal_analysis,
     },
   });
 });
