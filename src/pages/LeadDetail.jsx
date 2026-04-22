@@ -99,16 +99,31 @@ const ACTION_FR_LABELS = {
   deprioritize: 'Déprioriser',
 };
 
+const SIGNAL_PHRASE_FR_MAP = new Map([
+  ['leadership change', 'changement de direction'],
+  ['market entry', 'entrée sur un nouveau marché'],
+  ['restructuring', 'restructuration'],
+  ['budget cuts', 'réductions budgétaires'],
+  ['layoffs', 'licenciements'],
+  ['hiring', 'recrutement'],
+  ['partnership', 'partenariat'],
+  ['product launch', 'lancement produit'],
+  ['gtm shift', 'changement go-to-market'],
+  ['contact now', 'contacter maintenant'],
+  ['contact soon', 'contacter rapidement'],
+  ['nurture', 'nurturer'],
+  ['deprioritize', 'déprioriser'],
+]);
+
 const translateForPresentation = (value, language) => {
-  if (language !== 'fr') return String(value || '');
-  return String(value || '')
-    .replaceAll('leadership change', 'changement de direction')
-    .replaceAll('market entry', 'entrée sur un nouveau marché')
-    .replaceAll('restructuring', 'restructuration')
-    .replaceAll('budget cuts', 'réduction de budget')
-    .replaceAll('layoffs', 'licenciements')
-    .replaceAll('hiring', 'recrutement')
-    .replaceAll('partnership', 'partenariat');
+  const source = String(value || '');
+  if (language !== 'fr' || !source) return source;
+
+  let translated = source;
+  for (const [needle, replacement] of SIGNAL_PHRASE_FR_MAP.entries()) {
+    translated = translated.replaceAll(needle, replacement);
+  }
+  return translated;
 };
 
 export default function LeadDetail() {
@@ -143,6 +158,7 @@ export default function LeadDetail() {
   const [signalLanguage, setSignalLanguage] = useState('en');
   const [sequenceActiveJobId, setSequenceActiveJobId] = useState('');
   const [sequenceHandledJobId, setSequenceHandledJobId] = useState('');
+  const [signalAnalysisError, setSignalAnalysisError] = useState('');
 
   React.useEffect(() => {
     if (!lead) return;
@@ -288,13 +304,16 @@ export default function LeadDetail() {
   const handleAnalyse = async () => {
     if (!lead) return;
     setAnalysing(true);
+    setSignalAnalysisError('');
     try {
       await dataClient.leads.analyzeSignals(lead.id);
       toast.success(t('leads.analyseSignalsSuccess', { defaultValue: 'Signal analysis completed.' }));
       queryClient.invalidateQueries({ queryKey: ['lead', lead.id] });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
     } catch (err) {
-      toast.error(err?.message || t('leads.analyseSignalsFailed', { defaultValue: 'Signal analysis failed.' }));
+      const message = err?.message || t('leads.analyseSignalsFailed', { defaultValue: 'Signal analysis failed.' });
+      setSignalAnalysisError(message);
+      toast.error(message);
     } finally {
       setAnalysing(false);
     }
@@ -872,6 +891,21 @@ export default function LeadDetail() {
 
             {/* SIGNALS TAB */}
             <TabsContent value="signals" className="mt-4">
+              {analysing ? (
+                <Card className="shadow-sm mb-3 border-brand-sky/30">
+                  <CardContent className="pt-5 flex items-center gap-2 text-sm text-slate-600">
+                    <Loader2 className="w-4 h-4 animate-spin text-brand-sky" />
+                    {t('leads.analyseSignalsBtnLoading', { defaultValue: 'Analyzing signals…' })}
+                  </CardContent>
+                </Card>
+              ) : null}
+              {signalAnalysisError ? (
+                <Card className="shadow-sm mb-3 border-rose-200">
+                  <CardContent className="pt-5 text-sm text-rose-700">
+                    {signalAnalysisError}
+                  </CardContent>
+                </Card>
+              ) : null}
               {signalAnalysis ? (
                 <Card className="shadow-sm mb-3">
                   <CardContent className="pt-5 space-y-4">

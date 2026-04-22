@@ -164,9 +164,9 @@ const outputSchema = z.object({
   ai_score: z.number().int().min(0).max(100),
   ai_boost: z.number().int().min(-10).max(10),
   confidence: z.number().int().min(0).max(100),
-  signals: z.array(z.string().trim().min(1)).max(3),
-  positives: z.array(z.string().trim().min(1)).max(2),
-  negatives: z.array(z.string().trim().min(1)).max(2),
+  signals: z.array(z.string().trim().min(1)).max(25),
+  positives: z.array(z.string().trim().min(1)).max(25),
+  negatives: z.array(z.string().trim().min(1)).max(25),
   action: z.enum(['contact_now', 'contact_soon', 'nurture', 'deprioritize']),
   icebreaker: z.string().trim().min(1).max(500),
 }).strict();
@@ -196,15 +196,24 @@ const extractJsonCandidate = (text) => {
   return trimmed.slice(first, last + 1);
 };
 
+const extractJsonFromCodeFence = (text) => {
+  const raw = String(text || '');
+  const match = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (!match?.[1]) return '';
+  return extractJsonCandidate(match[1]);
+};
+
 const parseSignalJson = (rawText) => {
-  const candidate = extractJsonCandidate(rawText);
-  if (!candidate) return null;
-  try {
-    const parsed = JSON.parse(candidate);
-    return outputSchema.parse(parsed);
-  } catch {
-    return null;
+  const candidates = [extractJsonCandidate(rawText), extractJsonFromCodeFence(rawText)].filter(Boolean);
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      return outputSchema.parse(parsed);
+    } catch {
+      // Continue; we intentionally attempt multiple extraction strategies.
+    }
   }
+  return null;
 };
 
 export async function runClaudeSignalAnalysis({ lead, icpBaseScore }) {
@@ -223,6 +232,7 @@ export async function runClaudeSignalAnalysis({ lead, icpBaseScore }) {
     messages: [{ role: 'user', content: [{ type: 'text', text: prompt }] }],
     tools: [{ name: 'web_search', type: 'web_search_20250305', max_uses: 4 }],
     thinking: { type: 'disabled' },
+    output_config: { effort: 'low' },
   });
 
   const rawText = extractRawText(message);
