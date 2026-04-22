@@ -31,6 +31,7 @@ const LIST_KEYS = {
 };
 
 const STORAGE_KEY = 'aimleads:selected-source-list';
+const ADVANCED_BLOCKS_STORAGE_KEY = 'aimleads:dashboard-advanced-blocks';
 
 const STAT_STYLE = {
   total: { icon: Users, bg: 'bg-gradient-to-br from-violet-500 to-violet-600', glow: 'shadow-[0_6px_20px_-6px_rgba(139,92,246,0.5)]', tint: 'from-violet-50/60' },
@@ -96,7 +97,10 @@ export default function Dashboard() {
   const [isReanalyzing, setIsReanalyzing] = useState(false);
   const [isScoringIcpVisible, setIsScoringIcpVisible] = useState(false);
   const [isAnalyzingSignalsVisible, setIsAnalyzingSignalsVisible] = useState(false);
-  const [showAdvancedBlocks, setShowAdvancedBlocks] = useState(false);
+  const [showAdvancedBlocks, setShowAdvancedBlocks] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem(ADVANCED_BLOCKS_STORAGE_KEY) === '1';
+  });
 
   const { data: leads = [], isLoading, isError: leadsError, refetch: refetchLeads } = useQuery({
     queryKey: ['leads'],
@@ -156,6 +160,11 @@ export default function Dashboard() {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(STORAGE_KEY, selectedSourceList);
   }, [selectedSourceList]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(ADVANCED_BLOCKS_STORAGE_KEY, showAdvancedBlocks ? '1' : '0');
+  }, [showAdvancedBlocks]);
 
   useEffect(() => {
     if (searchParams.get('openImport') !== '1') return;
@@ -816,14 +825,33 @@ export default function Dashboard() {
             })}
       </div>
 
-      <div className="mb-5 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-semibold text-slate-900">Dashboard focus mode</p>
-          <p className="text-xs text-slate-500">Affiche/masque les blocs avancés pour garder la zone leads plus lisible.</p>
+          <p className="text-sm font-semibold text-slate-900">
+            {t('dashboard.viewMode.title', { defaultValue: 'Dashboard view mode' })}
+          </p>
+          <p className="text-xs text-slate-500">
+            {t('dashboard.viewMode.subtitle', {
+              defaultValue: 'Keep a clean lead workspace or expand to advanced intelligence and monetization blocks.',
+            })}
+          </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setShowAdvancedBlocks((value) => !value)}>
-          {showAdvancedBlocks ? 'Masquer l’avancé' : 'Afficher l’avancé'}
-        </Button>
+        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+          <button
+            type="button"
+            onClick={() => setShowAdvancedBlocks(false)}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${!showAdvancedBlocks ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            {t('dashboard.viewMode.essential', { defaultValue: 'Essential' })}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAdvancedBlocks(true)}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${showAdvancedBlocks ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            {t('dashboard.viewMode.advanced', { defaultValue: 'Advanced' })}
+          </button>
+        </div>
       </div>
 
       {showAdvancedBlocks && !isLoading && (
