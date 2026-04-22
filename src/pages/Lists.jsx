@@ -3,15 +3,18 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRightLeft, ArrowUpDown, ChevronLeft, ChevronRight, FolderOpen, Loader2, PencilLine, Sparkles, Tags } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ROUTES } from '@/constants/routes';
 import { dataClient } from '@/services/dataClient';
 
 const UNLISTED = '__unlisted__';
+const DASHBOARD_LIST_STORAGE_KEY = 'aimleads:selected-source-list';
 
 const normalizeListKey = (value = '') => {
   const trimmed = String(value || '').trim();
@@ -21,6 +24,7 @@ const normalizeListKey = (value = '') => {
 const formatListLabel = (value, t) => (value === UNLISTED ? t('lists.unlisted', { defaultValue: 'Non classée' }) : value);
 
 export default function Lists() {
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
@@ -103,6 +107,13 @@ export default function Lists() {
   }, [listStats, searchTerm, sortBy, sortDirection, t]);
 
   const totalPages = Math.max(Math.ceil(filteredAndSortedLists.length / PAGE_SIZE), 1);
+  const startIndex = filteredAndSortedLists.length > 0 ? ((page - 1) * PAGE_SIZE) + 1 : 0;
+  const endIndex = Math.min(page * PAGE_SIZE, filteredAndSortedLists.length);
+  const visiblePageNumbers = useMemo(() => {
+    if (totalPages <= 5) return Array.from({ length: totalPages }, (_, index) => index + 1);
+    const first = Math.max(1, Math.min(totalPages - 4, page - 2));
+    return Array.from({ length: 5 }, (_, index) => first + index);
+  }, [page, totalPages]);
   const paginatedLists = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
     return filteredAndSortedLists.slice(start, start + PAGE_SIZE);
@@ -344,6 +355,18 @@ export default function Lists() {
 
                   <div className="flex items-center gap-2 ml-auto">
                     <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        if (typeof window !== 'undefined') {
+                          window.localStorage.setItem(DASHBOARD_LIST_STORAGE_KEY, entry.key);
+                        }
+                        navigate(ROUTES.dashboard);
+                      }}
+                    >
+                      {t('lists.actions.open', { defaultValue: 'Ouvrir' })}
+                    </Button>
+                    <Button
                       variant="outline"
                       size="sm"
                       className="gap-1"
@@ -376,12 +399,30 @@ export default function Lists() {
             })}
             <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
               <p className="text-xs text-slate-500">
-                {t('lists.table.pagination', { defaultValue: 'Page {{page}} / {{total}}', page, total: totalPages })}
+                {t('lists.table.paginationDetailed', {
+                  defaultValue: '{{start}}-{{end}} sur {{total}} · Page {{page}} / {{pages}}',
+                  start: startIndex,
+                  end: endIndex,
+                  total: filteredAndSortedLists.length,
+                  page,
+                  pages: totalPages,
+                })}
               </p>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="icon" disabled={page <= 1} onClick={() => setPage((current) => Math.max(current - 1, 1))}>
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
+                {visiblePageNumbers.map((pageNumber) => (
+                  <Button
+                    key={pageNumber}
+                    variant={pageNumber === page ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-8 min-w-8 px-2"
+                    onClick={() => setPage(pageNumber)}
+                  >
+                    {pageNumber}
+                  </Button>
+                ))}
                 <Button variant="outline" size="icon" disabled={page >= totalPages} onClick={() => setPage((current) => Math.min(current + 1, totalPages))}>
                   <ChevronRight className="w-4 h-4" />
                 </Button>
