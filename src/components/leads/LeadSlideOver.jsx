@@ -20,11 +20,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FOLLOW_UP_STATUS_LIST } from '@/constants/leads';
 import { getLeadScores } from '@/lib/leadPresentation';
 import { dataClient } from '@/services/dataClient';
 import AnalysisHero from './AnalysisHero';
 import LeadActionsPanel from './LeadActionsPanel';
+import ScoreBreakdown from './ScoreBreakdown';
 import SignalBadge from './SignalBadge';
 import StatusBadge from './StatusBadge';
 
@@ -93,6 +95,13 @@ const getInternetSignalsFromLead = (lead) => {
 };
 
 const formatFoundAt = (value, locale) => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toLocaleString(locale);
+};
+
+const formatDate = (value, locale) => {
   if (!value) return null;
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return null;
@@ -424,7 +433,8 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
     { key: 'call', label: t('leads.copyCall'), icon: Phone, content: lead.generated_icebreakers?.call },
   ].filter((item) => item.content);
 
-  const { finalScore } = getLeadScores(lead);
+  const { finalScore, icpScore, aiScore, aiBoost } = getLeadScores(lead);
+  const scoreDetails = lead?.score_details && typeof lead.score_details === 'object' ? lead.score_details : {};
   const currentJob = polledJob || activeJob;
   const isJobActive = currentJob && !['completed', 'failed'].includes(currentJob.status);
 
@@ -514,6 +524,43 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
             </div>
           </div>
         </SheetHeader>
+
+        <div className="mb-4 grid gap-3 sm:grid-cols-2">
+          <Card className="shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">{t('leads.leadSnapshot')}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1.5 text-xs">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wide text-slate-500">{t('common.contact')}</p>
+                <p className="text-slate-900 font-medium">{lead.contact_name || 'N/A'}</p>
+                <p className="text-slate-500">{lead.contact_role || 'N/A'}</p>
+              </div>
+              {[
+                [t('common.industry'), lead.industry],
+                [t('common.country'), lead.country],
+                [t('common.size'), lead.company_size ? `${lead.company_size} ${i18n.language === 'fr' ? 'employés' : 'employees'}` : null],
+                [t('leads.clientType'), lead.client_type],
+                [t('leads.lastAnalyzedLabel'), formatDate(lead.last_analyzed_at, i18n.language)],
+              ]
+                .filter(([, value]) => value)
+                .map(([label, value]) => (
+                  <div key={label} className="flex items-center justify-between gap-2">
+                    <span className="text-slate-500">{label}</span>
+                    <span className="font-medium text-slate-800 text-right">{value}</span>
+                  </div>
+                ))}
+            </CardContent>
+          </Card>
+          <ScoreBreakdown
+            lead={lead}
+            finalScore={finalScore}
+            icpScore={icpScore}
+            aiScore={aiScore}
+            aiBoost={aiBoost}
+            scoreDetails={scoreDetails}
+          />
+        </div>
 
         <div className="mb-4">
           <AnalysisHero
@@ -713,7 +760,9 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
         {lead.analysis_summary && (
           <div className="mb-4">
             <p className="text-sm font-semibold text-slate-700 mb-2">{t('leads.analysisLabel')}</p>
-            <p className="text-sm text-slate-600 bg-slate-50 rounded-xl p-4 whitespace-pre-wrap">{lead.analysis_summary}</p>
+            <div className="bg-slate-50 rounded-xl border border-slate-100 p-4">
+              <p className="text-sm text-slate-600 whitespace-pre-line leading-relaxed">{lead.analysis_summary}</p>
+            </div>
           </div>
         )}
 
@@ -802,7 +851,6 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
     </>
   );
 }
-
 
 
 

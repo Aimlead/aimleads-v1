@@ -615,17 +615,7 @@ export default function LeadDetail() {
       <div className="grid lg:grid-cols-3 gap-6">
         {/* LEFT COLUMN */}
         <div className="lg:col-span-1 space-y-4">
-          {/* Score breakdown — explicit per-criterion view, aligned with docs/scoring-logic.md */}
-          <ScoreBreakdown
-            lead={lead}
-            finalScore={finalScore}
-            icpScore={icpScore}
-            aiScore={aiScore}
-            aiBoost={aiBoost}
-            scoreDetails={scoreDetails}
-          />
-
-          {/* Snapshot */}
+          {/* Snapshot (prioritized) */}
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="text-sm">{t('leads.leadSnapshot')}</CardTitle>
@@ -655,6 +645,16 @@ export default function LeadDetail() {
               ))}
             </CardContent>
           </Card>
+
+          {/* Score breakdown (moved up front under snapshot) */}
+          <ScoreBreakdown
+            lead={lead}
+            finalScore={finalScore}
+            icpScore={icpScore}
+            aiScore={aiScore}
+            aiBoost={aiBoost}
+            scoreDetails={scoreDetails}
+          />
 
           {/* Follow-up */}
           <Card className="shadow-sm">
@@ -970,7 +970,9 @@ export default function LeadDetail() {
               <Card className="shadow-sm">
                 <CardContent className="pt-6">
                   {lead.analysis_summary ? (
-                    <pre className="text-sm text-slate-700 whitespace-pre-wrap font-sans leading-relaxed">{lead.analysis_summary}</pre>
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
+                      <p className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">{lead.analysis_summary}</p>
+                    </div>
                   ) : (
                     <p className="text-slate-500 text-sm text-center py-6">{t('leads.noAnalysisSummaryYet')}</p>
                   )}
