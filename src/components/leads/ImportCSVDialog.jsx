@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { AlertCircle, ArrowRight, CheckCircle2, FileText, Loader2, Sparkles, Target, Upload, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -308,11 +308,17 @@ export default function ImportCSVDialog({
     setAvailableHeaders([]);
     setFieldMapping({});
 
+    const isCsv = /\.csv$/i.test(file.name);
     const isXlsx = /\.xlsx$/i.test(file.name);
     const isLegacySpreadsheet = /\.(xls|ods)$/i.test(file.name);
 
     if (isLegacySpreadsheet) {
       setError(t('import.dialog.errors.legacyFormat', { defaultValue: 'Les fichiers .xls et .ods sont désactivés pour des raisons de sécurité. Réexportez en .xlsx ou .csv.' }));
+      return;
+    }
+
+    if (!isCsv && !isXlsx) {
+      setError(t('import.dialog.errors.unsupportedFormat', { defaultValue: 'Format non supporté. Importez un fichier .csv ou .xlsx.' }));
       return;
     }
 
@@ -336,29 +342,30 @@ export default function ImportCSVDialog({
           setError(t('import.dialog.errors.excelParse', { defaultValue: 'Impossible de lire le fichier Excel : {{message}}', message: err?.message || 'unknown error' }));
         }
       })();
-    } else {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const rows = parseCsv(String(e.target?.result || ''));
-          if (rows.length === 0) {
-            setError(t('import.dialog.errors.csvInvalid', { defaultValue: 'Le CSV doit contenir au moins une ligne valide avec company_name.' }));
-            return;
-          }
-          const headers = Array.from(new Set(rows.flatMap((row) => Object.keys(row))));
-          const autoMapping = guessFieldMapping(headers);
-          const mappedRows = applyUserMapping(rows, autoMapping).map(normalizeRow);
-          setRawRows(rows);
-          setAvailableHeaders(headers);
-          setFieldMapping(autoMapping);
-          setAllRows(mappedRows);
-          setPreview(mappedRows.slice(0, 5));
-        } catch {
-          setError(t('import.dialog.errors.csvParse', { defaultValue: 'Impossible de lire ce fichier CSV.' }));
-        }
-      };
-      reader.readAsText(file);
+      return;
     }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const rows = parseCsv(String(e.target?.result || ''));
+        if (rows.length === 0) {
+          setError(t('import.dialog.errors.csvInvalid', { defaultValue: 'Le CSV doit contenir au moins une ligne valide avec company_name.' }));
+          return;
+        }
+        const headers = Array.from(new Set(rows.flatMap((row) => Object.keys(row))));
+        const autoMapping = guessFieldMapping(headers);
+        const mappedRows = applyUserMapping(rows, autoMapping).map(normalizeRow);
+        setRawRows(rows);
+        setAvailableHeaders(headers);
+        setFieldMapping(autoMapping);
+        setAllRows(mappedRows);
+        setPreview(mappedRows.slice(0, 5));
+      } catch {
+        setError(t('import.dialog.errors.csvParse', { defaultValue: 'Impossible de lire ce fichier CSV.' }));
+      }
+    };
+    reader.readAsText(file);
   };
 
   const handleMappingChange = (fieldKey, headerValue) => {
@@ -430,7 +437,7 @@ export default function ImportCSVDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t('import.dialog.title', { defaultValue: 'Importer vos leads' })}</DialogTitle>
           <DialogDescription>
