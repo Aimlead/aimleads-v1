@@ -16,6 +16,7 @@ export default function AnalysisHero({
   const whyItMatters = getLeadWhyItMatters(lead, t);
   const topSignals = getLeadTopSignals(lead);
   const nextActionText = getLeadPrimaryActionText(lead, t);
+  const showExtendedMetrics = !compact;
 
   return (
     <section className="overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white shadow-xl">
@@ -45,28 +46,31 @@ export default function AnalysisHero({
                   defaultValue: 'Why this lead deserves attention',
                 })}
               </h2>
-              <p className="max-w-3xl text-sm leading-6 text-slate-300">{whyItMatters}</p>
+              {showExtendedMetrics ? <p className="max-w-3xl text-sm leading-6 text-slate-300">{whyItMatters}</p> : null}
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-              <p className="text-[11px] uppercase tracking-wide text-slate-400">{t('leads.icpBase', { defaultValue: 'ICP base' })}</p>
-              <p className="mt-1 text-lg font-semibold text-white">{icpScore ?? 'n/a'}</p>
+          {showExtendedMetrics ? (
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                <p className="text-[11px] uppercase tracking-wide text-slate-400">{t('leads.icpBase', { defaultValue: 'ICP base' })}</p>
+                <p className="mt-1 text-lg font-semibold text-white">{icpScore ?? 'n/a'}</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                <p className="text-[11px] uppercase tracking-wide text-slate-400">{t('leads.aiScore', { defaultValue: 'AI score' })}</p>
+                <p className="mt-1 text-lg font-semibold text-white">{aiScore ?? 'n/a'}</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                <p className="text-[11px] uppercase tracking-wide text-slate-400">{t('leads.aiBoost', { defaultValue: 'AI boost' })}</p>
+                <p className={`mt-1 text-lg font-semibold ${aiBoost > 0 ? 'text-emerald-300' : aiBoost < 0 ? 'text-rose-300' : 'text-white'}`}>
+                  {aiBoost === null ? 'n/a' : aiBoost > 0 ? `+${aiBoost}` : aiBoost}
+                </p>
+              </div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-              <p className="text-[11px] uppercase tracking-wide text-slate-400">{t('leads.aiScore', { defaultValue: 'AI score' })}</p>
-              <p className="mt-1 text-lg font-semibold text-white">{aiScore ?? 'n/a'}</p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-              <p className="text-[11px] uppercase tracking-wide text-slate-400">{t('leads.aiBoost', { defaultValue: 'AI boost' })}</p>
-              <p className={`mt-1 text-lg font-semibold ${aiBoost > 0 ? 'text-emerald-300' : aiBoost < 0 ? 'text-rose-300' : 'text-white'}`}>
-                {aiBoost === null ? 'n/a' : aiBoost > 0 ? `+${aiBoost}` : aiBoost}
-              </p>
-            </div>
-          </div>
+          ) : null}
 
-          <div className="grid gap-3 lg:grid-cols-3">
+          {showExtendedMetrics ? (
+            <div className="grid gap-3 lg:grid-cols-3">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-white">
                 <Target className="h-4 w-4 text-sky-300" />
@@ -75,27 +79,29 @@ export default function AnalysisHero({
               <p className="mt-2 text-sm leading-6 text-slate-300">{whyItMatters}</p>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-              <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                <Sparkles className="h-4 w-4 text-emerald-300" />
-                {t('leads.heroSignalsTitle', { defaultValue: 'Signals to keep' })}
-              </div>
-              {topSignals.length > 0 ? (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {topSignals.map((signal) => (
-                    <span key={signal} className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-slate-200">
-                      {signal}
-                    </span>
-                  ))}
+            {showExtendedMetrics ? (
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                  <Sparkles className="h-4 w-4 text-emerald-300" />
+                  {t('leads.heroSignalsTitle', { defaultValue: 'Signals to keep' })}
                 </div>
-              ) : (
-                <p className="mt-2 text-sm leading-6 text-slate-300">
-                  {t('leads.heroSignalsEmpty', {
-                    defaultValue: 'No standout signal yet. Use the score and baseline fit to decide the next move.',
-                  })}
-                </p>
-              )}
-            </div>
+                {topSignals.length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {topSignals.map((signal) => (
+                      <span key={signal} className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-slate-200">
+                        {signal}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm leading-6 text-slate-300">
+                    {t('leads.heroSignalsEmpty', {
+                      defaultValue: 'No standout signal yet. Use the score and baseline fit to decide the next move.',
+                    })}
+                  </p>
+                )}
+              </div>
+            ) : null}
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-white">
@@ -121,7 +127,8 @@ export default function AnalysisHero({
                 </div>
               ) : null}
             </div>
-          </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

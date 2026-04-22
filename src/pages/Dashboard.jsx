@@ -94,6 +94,8 @@ export default function Dashboard() {
   });
   const [isSwitchingIcp, setIsSwitchingIcp] = useState(false);
   const [isReanalyzing, setIsReanalyzing] = useState(false);
+  const [isScoringIcpVisible, setIsScoringIcpVisible] = useState(false);
+  const [isAnalyzingSignalsVisible, setIsAnalyzingSignalsVisible] = useState(false);
   const [showAdvancedBlocks, setShowAdvancedBlocks] = useState(false);
 
   const { data: leads = [], isLoading, isError: leadsError, refetch: refetchLeads } = useQuery({
@@ -360,6 +362,77 @@ export default function Dashboard() {
     }
   };
 
+  const handleScoreIcpVisible = async () => {
+    if (visibleLeads.length === 0) {
+      toast(t('dashboard.toasts.noLeadsInList'));
+      return;
+    }
+    setIsScoringIcpVisible(true);
+    try {
+      let scoredCount = 0;
+      for (const lead of visibleLeads) {
+        await dataClient.leads.scoreIcp(lead.id);
+        scoredCount += 1;
+      }
+      toast.success(
+        t('dashboard.toasts.icpScoredBatch', {
+          defaultValue: '{{count}} lead(s) scored with ICP.',
+          count: scoredCount,
+        })
+      );
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    } catch (error) {
+      console.warn('ICP scoring failed', error);
+      toast.error(
+        t('dashboard.toasts.failedIcpScoreBatch', {
+          defaultValue: 'ICP scoring failed for this batch.',
+        })
+      );
+    } finally {
+      setIsScoringIcpVisible(false);
+    }
+  };
+
+  const handleAnalyzeSignalsVisible = async () => {
+    if (visibleLeads.length === 0) {
+      toast(t('dashboard.toasts.noLeadsInList'));
+      return;
+    }
+    setIsAnalyzingSignalsVisible(true);
+    try {
+      let updatedCount = 0;
+      let queuedCount = 0;
+      for (const lead of visibleLeads) {
+        const response = await dataClient.leads.discoverSignals(lead.id, { async: asyncJobsEnabled, reanalyze: true, replace: true });
+        if (response?.jobId) queuedCount += 1;
+        else updatedCount += 1;
+      }
+
+      toast.success(
+        queuedCount > 0 && updatedCount === 0
+          ? t('dashboard.toasts.signalsAnalyzeQueuedBatch', {
+              defaultValue: '{{count}} lead(s) queued for signal analysis.',
+              count: queuedCount,
+            })
+          : t('dashboard.toasts.signalsAnalyzedBatch', {
+              defaultValue: 'Signal analysis finished for {{count}} lead(s).',
+              count: updatedCount,
+            })
+      );
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['workspaceAiRuns'] });
+    } catch (error) {
+      console.warn('Signal analysis failed', error);
+      toast.error(
+        t('dashboard.toasts.failedSignalAnalyzeBatch', {
+          defaultValue: 'Signal analysis failed for this batch.',
+        })
+      );
+    } finally {
+      setIsAnalyzingSignalsVisible(false);
+    }
+  };
+
   const getLeadScore = useMemo(() => (lead) => {
     const finalScore = toNumericScore(lead?.final_score);
     if (finalScore !== null) return finalScore;
@@ -564,6 +637,26 @@ export default function Dashboard() {
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleScoreIcpVisible}
+            disabled={isScoringIcpVisible || isReanalyzing || isAnalyzingSignalsVisible}
+            className="gap-1.5 h-8 text-xs border-brand-sky/30 text-brand-sky hover:bg-brand-sky/5"
+          >
+            {isScoringIcpVisible ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Target className="w-3.5 h-3.5" />}
+            {t('dashboard.actions.analyzeIcp', { defaultValue: 'Analyse ICP' })}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleAnalyzeSignalsVisible}
+            disabled={isAnalyzingSignalsVisible || isReanalyzing || isScoringIcpVisible}
+            className="gap-1.5 h-8 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+          >
+            {isAnalyzingSignalsVisible ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+            {t('dashboard.actions.analyzeSignals', { defaultValue: 'Analyse signaux' })}
+          </Button>
           <Button variant="outline" size="sm" onClick={handleReanalyzeVisible} disabled={isReanalyzing} className="gap-1.5 h-8 text-xs">
             {isReanalyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCcw className="w-3.5 h-3.5" />}
             {t('dashboard.actions.reanalyze')}
