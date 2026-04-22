@@ -150,7 +150,6 @@ export default function LeadDetail() {
   const [copied, setCopied] = useState(null);
   const [scoring, setScoring] = useState(false);
   const [analysing, setAnalysing] = useState(false);
-  const [discovering, setDiscovering] = useState(false);
   const [activeJob, setActiveJob] = useState(null);
   const [handledJobId, setHandledJobId] = useState(null);
   const [sequenceTone, setSequenceTone] = useState('consultative');
@@ -319,27 +318,6 @@ export default function LeadDetail() {
     }
   };
 
-  const handleDiscover = async () => {
-    if (!lead) return;
-    setDiscovering(true);
-    try {
-      const response = await dataClient.leads.discoverSignals(lead.id, { async: asyncJobsEnabled, reanalyze: false, replace: true });
-      if (response?.jobId) {
-        setHandledJobId(null);
-        setActiveJob({ jobId: response.jobId, type: 'discover', label: t('leads.discoverWebBtn') });
-        toast.success(t('leads.asyncJobQueued', { defaultValue: 'Scan en cours en arrière-plan…' }));
-        return;
-      }
-      toast.success(t('leads.signalDiscovered'));
-      queryClient.invalidateQueries({ queryKey: ['lead', lead.id] });
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
-    } catch (err) {
-      toast.error(err?.message || t('common.error'));
-    } finally {
-      setDiscovering(false);
-    }
-  };
-
   const icebreakers = useMemo(
     () =>
       [
@@ -430,6 +408,16 @@ export default function LeadDetail() {
   const providerStatus = lead?.auto_signal_metadata?.provider_status && typeof lead.auto_signal_metadata.provider_status === 'object'
     ? lead.auto_signal_metadata.provider_status
     : null;
+  const importantIcpCriteria = Object.entries(scoreDetails)
+    .filter(([key, value]) => value && typeof value === 'object' && ['industrie', 'roles', 'typeClient', 'structure', 'geo', 'industry', 'role', 'client_type', 'company_size', 'geography'].includes(key))
+    .map(([key, value]) => ({
+      key,
+      label: key.replace(/_/g, ' '),
+      match: value.match || value.evaluated_value || '—',
+      points: Number(value.points),
+    }))
+    .filter((criterion) => Number.isFinite(criterion.points))
+    .sort((a, b) => b.points - a.points);
   const primaryHeroAction = icebreakers[0]?.content
     ? {
         label: t('leads.heroPrimaryCopy', { defaultValue: 'Copy best outreach' }),
@@ -541,10 +529,8 @@ export default function LeadDetail() {
           variant="full"
           onScoreIcp={handleScoreIcp}
           onAnalyse={handleAnalyse}
-          onDiscover={handleDiscover}
           scoring={scoring}
           analysing={analysing}
-          discovering={discovering}
           disabled={isJobActive}
         />
       </div>
@@ -674,15 +660,52 @@ export default function LeadDetail() {
 
         {/* RIGHT COLUMN */}
         <div className="lg:col-span-2 space-y-4">
-          <Tabs defaultValue="outreach">
+          <Tabs defaultValue="icp">
             <TabsList className="bg-slate-100">
-              <TabsTrigger value="outreach">{t('outreach.title')}</TabsTrigger>
-              <TabsTrigger value="signals">{t('leads.buyingSignals')}</TabsTrigger>
-              <TabsTrigger value="analysis">{t('leads.analysisLabel')}</TabsTrigger>
+              <TabsTrigger value="icp">ICP Analysis</TabsTrigger>
+              <TabsTrigger value="criteria">Important ICP Criteria</TabsTrigger>
+              <TabsTrigger value="ai">AI Signal Analysis</TabsTrigger>
             </TabsList>
 
-            {/* OUTREACH TAB */}
-            <TabsContent value="outreach" className="space-y-4 mt-4">
+            <TabsContent value="icp" className="mt-4">
+              <Card className="shadow-sm">
+                <CardContent className="pt-6">
+                  {lead.icp_summary ? (
+                    <div className="rounded-lg border border-sky-100 bg-sky-50/50 p-4">
+                      <p className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">{lead.icp_summary}</p>
+                    </div>
+                  ) : lead.analysis_summary ? (
+                    <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
+                      <p className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">{lead.analysis_summary}</p>
+                    </div>
+                  ) : (
+                    <p className="text-slate-500 text-sm text-center py-6">{t('leads.noAnalysisSummaryYet')}</p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="criteria" className="mt-4">
+              <Card className="shadow-sm">
+                <CardContent className="pt-5 space-y-2">
+                  {importantIcpCriteria.length > 0 ? importantIcpCriteria.map((criterion) => (
+                    <div key={criterion.key} className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0">
+                      <div>
+                        <p className="text-sm font-medium text-slate-800">{criterion.label}</p>
+                        <p className="text-xs text-slate-500">{criterion.match}</p>
+                      </div>
+                      <span className={`text-xs font-semibold px-2 py-1 rounded-md ${criterion.points >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                        {criterion.points > 0 ? '+' : ''}{criterion.points}
+                      </span>
+                    </div>
+                  )) : (
+                    <p className="text-slate-500 text-sm text-center py-6">{t('leads.noAnalysisSummaryYet')}</p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="ai" className="space-y-4 mt-4">
               {/* Icebreakers */}
               {icebreakers.length > 0 && icebreakers.map(({ key, label, content }) => (
                 <motion.div key={key} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
@@ -860,10 +883,6 @@ export default function LeadDetail() {
                   })}
                 </motion.div>
               )}
-            </TabsContent>
-
-            {/* SIGNALS TAB */}
-            <TabsContent value="signals" className="mt-4">
               {analysing ? (
                 <Card className="shadow-sm mb-3 border-brand-sky/30">
                   <CardContent className="pt-5 flex items-center gap-2 text-sm text-slate-600">
@@ -1004,21 +1023,6 @@ export default function LeadDetail() {
                   </CardContent>
                 </Card>
               )}
-            </TabsContent>
-
-            {/* ANALYSIS TAB */}
-            <TabsContent value="analysis" className="mt-4">
-              <Card className="shadow-sm">
-                <CardContent className="pt-6">
-                  {lead.analysis_summary ? (
-                    <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
-                      <p className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">{lead.analysis_summary}</p>
-                    </div>
-                  ) : (
-                    <p className="text-slate-500 text-sm text-center py-6">{t('leads.noAnalysisSummaryYet')}</p>
-                  )}
-                </CardContent>
-              </Card>
             </TabsContent>
           </Tabs>
         </div>
