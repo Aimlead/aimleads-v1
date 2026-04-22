@@ -110,6 +110,27 @@ const parseCsv = (text) => {
     });
 };
 
+/**
+ * Parse XLSX files in the browser.
+ * Returns rows normalized with lowercase header keys (no accents, no punctuation).
+ */
+const parseXlsx = async (file) => {
+  const { default: readXlsxFile } = await import('read-excel-file/browser');
+  const rows = await readXlsxFile(file);
+  if (rows.length < 2) return [];
+
+  const headers = rows[0].map((header) => normalizeHeaderKey(header));
+
+  return rows
+    .slice(1)
+    .map((row) =>
+      headers.reduce((normalized, header, idx) => {
+        normalized[header] = String(row[idx] ?? '').trim();
+        return normalized;
+      }, {})
+    );
+};
+
 // ─── Column mapping ────────────────────────────────────────────────────────────
 
 // Each canonical lead field maps to many possible header aliases.
@@ -288,8 +309,39 @@ export default function ImportCSVDialog({
     setFieldMapping({});
 
     const isCsv = /\.csv$/i.test(file.name);
-    if (!isCsv) {
-      setError(t('import.dialog.errors.csvOnly', { defaultValue: 'Seuls les fichiers CSV sont acceptés pour cet import.' }));
+    const isXlsx = /\.xlsx$/i.test(file.name);
+    const isLegacySpreadsheet = /\.(xls|ods)$/i.test(file.name);
+
+    if (isLegacySpreadsheet) {
+      setError(t('import.dialog.errors.legacyFormat', { defaultValue: 'Les fichiers .xls et .ods sont désactivés pour des raisons de sécurité. Réexportez en .xlsx ou .csv.' }));
+      return;
+    }
+
+    if (!isCsv && !isXlsx) {
+      setError(t('import.dialog.errors.unsupportedFormat', { defaultValue: 'Format non supporté. Importez un fichier .csv ou .xlsx.' }));
+      return;
+    }
+
+    if (isXlsx) {
+      void (async () => {
+        try {
+          const rows = await parseXlsx(file);
+          if (rows.length === 0) {
+            setError(t('import.dialog.errors.noValidRows', { defaultValue: 'Aucune ligne exploitable trouvée. Vérifiez la présence d’une colonne company_name ou équivalente.' }));
+            return;
+          }
+          const headers = Array.from(new Set(rows.flatMap((row) => Object.keys(row))));
+          const autoMapping = guessFieldMapping(headers);
+          const mappedRows = applyUserMapping(rows, autoMapping).map(normalizeRow);
+          setRawRows(rows);
+          setAvailableHeaders(headers);
+          setFieldMapping(autoMapping);
+          setAllRows(mappedRows);
+          setPreview(mappedRows.slice(0, 5));
+        } catch (err) {
+          setError(t('import.dialog.errors.excelParse', { defaultValue: 'Impossible de lire le fichier Excel : {{message}}', message: err?.message || 'unknown error' }));
+        }
+      })();
       return;
     }
 
@@ -390,7 +442,7 @@ export default function ImportCSVDialog({
           <DialogTitle>{t('import.dialog.title', { defaultValue: 'Importer vos leads' })}</DialogTitle>
           <DialogDescription>
             {t('import.dialog.subtitle', {
-              defaultValue: 'Seuls les fichiers CSV sont pris en charge. Le but ici est simple: vérifier votre fichier, importer proprement, puis vous envoyer vers la bonne prochaine action.',
+              defaultValue: 'CSV et Excel (.xlsx) sont pris en charge. Le but ici est simple: vérifier votre fichier, importer proprement, puis vous envoyer vers la bonne prochaine action.',
             })}
           </DialogDescription>
         </DialogHeader>
@@ -439,7 +491,7 @@ export default function ImportCSVDialog({
             </p>
             <p className="mt-1">
               {t('import.dialog.formatBody', {
-                defaultValue: 'Format accepté: CSV. Colonne requise: company_name. Colonnes utiles: website_url, industry, company_size, country, contact_name, contact_role, contact_email, notes, source_list.',
+                defaultValue: 'Formats acceptés: CSV et .xlsx. Colonne requise: company_name. Colonnes utiles: website_url, industry, company_size, country, contact_name, contact_role, contact_email, notes, source_list.',
               })}
             </p>
           </div>
@@ -507,7 +559,7 @@ export default function ImportCSVDialog({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".csv"
+                  accept=".csv,.xlsx"
                   className="hidden"
                   id="lead-file-upload"
                   onChange={handleFileChange}
@@ -519,10 +571,10 @@ export default function ImportCSVDialog({
                   ) : (
                     <>
                       <p className="text-sm font-medium text-slate-700">
-                        {t('import.dialog.dropzone.title', { defaultValue: 'Cliquez pour charger un fichier CSV' })}
+                        {t('import.dialog.dropzone.title', { defaultValue: 'Cliquez pour charger un fichier CSV ou Excel' })}
                       </p>
                       <p className="text-xs text-slate-400 mt-1">
-                        {t('import.dialog.dropzone.subtitle', { defaultValue: '.csv' })}
+                        {t('import.dialog.dropzone.subtitle', { defaultValue: '.csv · .xlsx' })}
                       </p>
                     </>
                   )}
