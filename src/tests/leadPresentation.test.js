@@ -11,7 +11,7 @@ const t = (_key, options = {}) => options.defaultValue || _key;
 describe('leadPresentation helpers', () => {
   it('classifies analysis depth from persisted lead data', () => {
     expect(getLeadAnalysisLevel({})).toBe('pending');
-    expect(getLeadAnalysisLevel({ final_score: 61 })).toBe('quick');
+    expect(getLeadAnalysisLevel({ final_score: 61 })).toBe('standard');
     expect(getLeadAnalysisLevel({ final_score: 72, llm_enriched: true })).toBe('deep');
     expect(getLeadAnalysisLevel({ final_score: 84, llm_enriched: true, internet_signals: [{ key: 'recent_funding' }] })).toBe('full');
   });

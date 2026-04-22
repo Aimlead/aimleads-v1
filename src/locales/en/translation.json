@@ -615,8 +615,8 @@
     "analysisLevels": {
       "pending": "Pending",
       "pendingDescription": "No analysis has been generated for this lead yet.",
-      "quick": "Quick",
-      "quickDescription": "Fast deterministic scoring based on ICP and available lead data.",
+      "standard": "Standard",
+      "standardDescription": "Deterministic scoring based on ICP and available lead data.",
       "deep": "Deep",
       "deepDescription": "Lead enriched with LLM reasoning and tailored outreach suggestions.",
       "full": "Full",
@@ -626,7 +626,7 @@
       "high": "High-fit lead with strong priority indicators and a credible next action.",
       "boosted": "External or behavioral signals materially improved this lead beyond the ICP baseline.",
       "signals": "This lead stands out because of {{signals}}.",
-      "quick": "This first-pass result is enough to decide whether the lead deserves deeper follow-up.",
+      "standard": "This initial result is enough to decide whether the lead deserves deeper follow-up.",
       "default": "Review the score, the strongest signals, and the suggested action before moving this lead forward."
     },
     "copyEmail": "Copy email",
