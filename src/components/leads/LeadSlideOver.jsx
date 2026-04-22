@@ -525,7 +525,7 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
           </div>
         </SheetHeader>
 
-        <div className="mb-4 grid gap-3 sm:grid-cols-2">
+        <div className="mb-4">
           <Card className="shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">{t('leads.leadSnapshot')}</CardTitle>
@@ -552,14 +552,6 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
                 ))}
             </CardContent>
           </Card>
-          <ScoreBreakdown
-            lead={lead}
-            finalScore={finalScore}
-            icpScore={icpScore}
-            aiScore={aiScore}
-            aiBoost={aiBoost}
-            scoreDetails={scoreDetails}
-          />
         </div>
 
         <div className="mb-4">
@@ -694,77 +686,84 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
           </div>
         </div>
 
-        {lead.signals?.length > 0 && (
-          <div className="mb-4 space-y-3">
-            <p className="text-sm font-semibold text-slate-700">{t('leads.computedSignals')}</p>
+        <Tabs defaultValue="icp_analysis" className="mb-4">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="icp_analysis">{t('leads.icpAnalysisTab', { defaultValue: 'Analyse ICP' })}</TabsTrigger>
+            <TabsTrigger value="icp_criteria">{t('leads.icpCriteriaTab', { defaultValue: 'Critères ICP' })}</TabsTrigger>
+            <TabsTrigger value="ai_signals">{t('leads.aiSignalsTab', { defaultValue: 'Analyse signaux IA' })}</TabsTrigger>
+          </TabsList>
 
-            {['positive', 'negative', 'neutral'].map((type) => {
-              const items = groupedSignals[type] || [];
-              if (items.length === 0) return null;
-              const title = type === 'positive' ? t('leads.positiveSignals') : type === 'negative' ? t('leads.negativeSignals') : t('leads.neutralSignals');
+          <TabsContent value="icp_analysis" className="space-y-3">
+            {icpSummary ? (
+              <div className="rounded-xl border border-brand-sky/20 bg-brand-sky/4 p-4">
+                <p className="text-xs font-semibold text-brand-sky mb-1.5 flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5" />
+                  {t('leads.icpSummary')}
+                </p>
+                <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{icpSummary}</p>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">{t('leads.noAnalysisSummaryYet')}</div>
+            )}
+          </TabsContent>
 
-              return (
-                <div key={type} className={`rounded-lg border px-3 py-2 ${signalTypeClass(type)}`}>
-                  <p className="text-xs font-semibold mb-1">{title} ({items.length})</p>
-                  <div className="flex flex-wrap gap-2">
-                    {items.map((signal, index) => (
-                      <SignalBadge key={`${type}-${index}`} signal={signal} />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+          <TabsContent value="icp_criteria" className="space-y-3">
+            <ScoreBreakdown
+              lead={lead}
+              finalScore={finalScore}
+              icpScore={icpScore}
+              aiScore={aiScore}
+              aiBoost={aiBoost}
+              scoreDetails={scoreDetails}
+            />
+          </TabsContent>
 
-        {icebreakers.length > 0 && (
-          <Tabs defaultValue={icebreakers[0].key} className="mb-4">
-            <TabsList className="w-full">
-              {icebreakers.map(({ key, label, icon: Icon }) => (
-                <TabsTrigger key={key} value={key} className="flex-1 gap-1.5">
-                  <Icon className="w-3.5 h-3.5" />
-                  {label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+          <TabsContent value="ai_signals" className="space-y-3">
+            {lead.signals?.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-slate-700">{t('leads.computedSignals')}</p>
+                {['positive', 'negative', 'neutral'].map((type) => {
+                  const items = groupedSignals[type] || [];
+                  if (items.length === 0) return null;
+                  const title = type === 'positive' ? t('leads.positiveSignals') : type === 'negative' ? t('leads.negativeSignals') : t('leads.neutralSignals');
+                  return (
+                    <div key={type} className={`rounded-lg border px-3 py-2 ${signalTypeClass(type)}`}>
+                      <p className="text-xs font-semibold mb-1">{title} ({items.length})</p>
+                      <div className="flex flex-wrap gap-2">
+                        {items.map((signal, index) => (
+                          <SignalBadge key={`${type}-${index}`} signal={signal} />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
-            {icebreakers.map(({ key, content }) => (
-              <TabsContent key={key} value={key}>
-                <div className="bg-slate-50 rounded-xl p-4 relative">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="absolute top-2 right-2 h-7 gap-1"
-                    onClick={() => handleCopy(content, key)}
-                    aria-label="Copier dans le presse-papier"
-                  >
-                    {copied === key ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                  </Button>
-                  <pre className="text-sm text-slate-700 whitespace-pre-wrap font-sans leading-relaxed pr-8">{content}</pre>
-                </div>
-              </TabsContent>
-            ))}
-          </Tabs>
-        )}
-
-        {icpSummary && (
-          <div className="mb-4 rounded-xl border border-brand-sky/20 bg-brand-sky/4 p-4">
-            <p className="text-xs font-semibold text-brand-sky mb-1.5 flex items-center gap-1.5">
-              <Target className="w-3.5 h-3.5" />
-              {t('leads.icpSummary')}
-            </p>
-            <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{icpSummary}</p>
-          </div>
-        )}
-
-        {lead.analysis_summary && (
-          <div className="mb-4">
-            <p className="text-sm font-semibold text-slate-700 mb-2">{t('leads.analysisLabel')}</p>
-            <div className="bg-slate-50 rounded-xl border border-slate-100 p-4">
-              <p className="text-sm text-slate-600 whitespace-pre-line leading-relaxed">{lead.analysis_summary}</p>
-            </div>
-          </div>
-        )}
+            {icebreakers.length > 0 && (
+              <Tabs defaultValue={icebreakers[0].key}>
+                <TabsList className="w-full">
+                  {icebreakers.map(({ key, label, icon: Icon }) => (
+                    <TabsTrigger key={key} value={key} className="flex-1 gap-1.5">
+                      <Icon className="w-3.5 h-3.5" />
+                      {label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                {icebreakers.map(({ key, content }) => (
+                  <TabsContent key={key} value={key}>
+                    <div className="bg-slate-50 rounded-xl p-4 relative">
+                      <Button size="sm" variant="ghost" className="absolute top-2 right-2 h-7 gap-1" onClick={() => handleCopy(content, key)} aria-label="Copier dans le presse-papier">
+                        {copied === key ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      </Button>
+                      <pre className="text-sm text-slate-700 whitespace-pre-wrap font-sans leading-relaxed pr-8">{content}</pre>
+                    </div>
+                  </TabsContent>
+                ))}
+              </Tabs>
+            )}
+          </TabsContent>
+        </Tabs>
 
         <div className="border-t border-slate-100 pt-4 space-y-3">
           <p className="text-sm font-semibold text-slate-700">{t('leads.followUp')}</p>
@@ -851,6 +850,4 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
     </>
   );
 }
-
-
 

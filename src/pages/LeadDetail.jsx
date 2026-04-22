@@ -99,17 +99,40 @@ const ACTION_FR_LABELS = {
   deprioritize: 'Déprioriser',
 };
 
+const SIGNAL_PHRASE_FR_MAP = new Map([
+  ['leadership change', 'changement de direction'],
+  ['market entry', 'entrée sur un nouveau marché'],
+  ['restructuring', 'restructuration'],
+  ['budget cuts', 'réductions budgétaires'],
+  ['layoffs', 'licenciements'],
+  ['hiring', 'recrutement'],
+  ['partnership', 'partenariat'],
+  ['product launch', 'lancement produit'],
+  ['gtm shift', 'changement go-to-market'],
+  ['contact now', 'contacter maintenant'],
+  ['contact soon', 'contacter rapidement'],
+  ['nurture', 'nurturer'],
+  ['deprioritize', 'déprioriser'],
+]);
+
 const translateForPresentation = (value, language) => {
-  if (language !== 'fr') return String(value || '');
-  return String(value || '')
-    .replaceAll('leadership change', 'changement de direction')
-    .replaceAll('market entry', 'entrée sur un nouveau marché')
-    .replaceAll('restructuring', 'restructuration')
-    .replaceAll('budget cuts', 'réduction de budget')
-    .replaceAll('layoffs', 'licenciements')
-    .replaceAll('hiring', 'recrutement')
-    .replaceAll('partnership', 'partenariat');
+  const source = String(value || '');
+  if (language !== 'fr' || !source) return source;
+
+  let translated = source;
+  for (const [needle, replacement] of SIGNAL_PHRASE_FR_MAP.entries()) {
+    translated = translated.replaceAll(needle, replacement);
+  }
+  return translated;
 };
+
+const ICP_CRITERIA = [
+  { key: 'industrie', label: 'Industry' },
+  { key: 'roles', label: 'Role' },
+  { key: 'typeClient', label: 'Client type' },
+  { key: 'structure', label: 'Company size' },
+  { key: 'geo', label: 'Geography' },
+];
 
 export default function LeadDetail() {
   const navigate = useNavigate();
@@ -143,6 +166,7 @@ export default function LeadDetail() {
   const [signalLanguage, setSignalLanguage] = useState('en');
   const [sequenceActiveJobId, setSequenceActiveJobId] = useState('');
   const [sequenceHandledJobId, setSequenceHandledJobId] = useState('');
+  const [signalAnalysisError, setSignalAnalysisError] = useState('');
 
   React.useEffect(() => {
     if (!lead) return;
@@ -288,13 +312,16 @@ export default function LeadDetail() {
   const handleAnalyse = async () => {
     if (!lead) return;
     setAnalysing(true);
+    setSignalAnalysisError('');
     try {
       await dataClient.leads.analyzeSignals(lead.id);
       toast.success(t('leads.analyseSignalsSuccess', { defaultValue: 'Signal analysis completed.' }));
       queryClient.invalidateQueries({ queryKey: ['lead', lead.id] });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
     } catch (err) {
-      toast.error(err?.message || t('leads.analyseSignalsFailed', { defaultValue: 'Signal analysis failed.' }));
+      const message = err?.message || t('leads.analyseSignalsFailed', { defaultValue: 'Signal analysis failed.' });
+      setSignalAnalysisError(message);
+      toast.error(message);
     } finally {
       setAnalysing(false);
     }
@@ -682,52 +709,47 @@ export default function LeadDetail() {
 
         {/* RIGHT COLUMN */}
         <div className="lg:col-span-2 space-y-4">
-          <Tabs defaultValue="outreach">
+          <Tabs defaultValue="icp_analysis">
             <TabsList className="bg-slate-100">
-              <TabsTrigger value="outreach">{t('outreach.title')}</TabsTrigger>
-              <TabsTrigger value="signals">{t('leads.buyingSignals')}</TabsTrigger>
-              <TabsTrigger value="analysis">{t('leads.analysisLabel')}</TabsTrigger>
+              <TabsTrigger value="icp_analysis">{t('leads.icpAnalysisTab', { defaultValue: 'Analyse ICP' })}</TabsTrigger>
+              <TabsTrigger value="icp_criteria">{t('leads.icpCriteriaTab', { defaultValue: 'Critères ICP importants' })}</TabsTrigger>
+              <TabsTrigger value="ai_signals">{t('leads.aiSignalsTab', { defaultValue: 'Analyse signaux IA' })}</TabsTrigger>
             </TabsList>
 
-            {/* OUTREACH TAB */}
-            <TabsContent value="outreach" className="space-y-4 mt-4">
-              {/* Icebreakers */}
-              {icebreakers.length > 0 && icebreakers.map(({ key, label, content }) => (
-                <motion.div key={key} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-                  <Card className="shadow-sm">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          {lead.llm_enriched && <Sparkles className="w-3.5 h-3.5 text-brand-sky" />}
-                          {label}
-                        </CardTitle>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="gap-1.5 h-7 text-xs"
-                          onClick={() => handleCopy(content, key)}
-                        >
-                          {copied === key ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                          {copied === key ? t('common.copied') : t('common.copy')}
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <pre className="text-sm text-slate-700 whitespace-pre-wrap font-sans leading-relaxed">{content}</pre>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-              {icebreakers.length === 0 && !sequence && (
-                <Card className="shadow-sm border-dashed border-slate-200 bg-slate-50/50">
-                  <CardContent className="pt-6 pb-4 text-center">
-                    <Sparkles className="w-7 h-7 text-slate-300 mx-auto mb-2" />
-                    <p className="text-slate-500 text-sm">{t('leads.noIcebreakersYet')}</p>
-                  </CardContent>
-                </Card>
-              )}
+            <TabsContent value="icp_analysis" className="space-y-4 mt-4">
+              <Card className="shadow-sm">
+                <CardHeader><CardTitle className="text-sm">{t('leads.icpAnalysisTab', { defaultValue: 'Analyse ICP' })}</CardTitle></CardHeader>
+                <CardContent>
+                  {lead.icp_summary || lead.analysis_summary ? (
+                    <p className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">{lead.icp_summary || lead.analysis_summary}</p>
+                  ) : (
+                    <p className="text-slate-500 text-sm">{t('leads.noAnalysisSummaryYet')}</p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-              {/* 3-touch sequence generator */}
+            <TabsContent value="icp_criteria" className="space-y-4 mt-4">
+              <Card className="shadow-sm">
+                <CardHeader><CardTitle className="text-sm">{t('leads.icpCriteriaTab', { defaultValue: 'Critères ICP importants' })}</CardTitle></CardHeader>
+                <CardContent className="space-y-2">
+                  {ICP_CRITERIA.map((criterion) => {
+                    const entry = scoreDetails?.[criterion.key];
+                    if (!entry) return null;
+                    return (
+                      <div key={criterion.key} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <p className="text-xs text-slate-500">{criterion.label}</p>
+                        <p className="text-sm font-medium text-slate-800">{entry?.match || '—'} {Number.isFinite(Number(entry?.points)) ? `(${entry.points})` : ''}</p>
+                        {entry?.evaluated_value ? <p className="text-xs text-slate-500 mt-1">{String(entry.evaluated_value)}</p> : null}
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* SIGNALS IA TAB */}
+            <TabsContent value="ai_signals" className="space-y-4 mt-4">
               <Card className="shadow-sm">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between flex-wrap gap-2">
@@ -810,7 +832,6 @@ export default function LeadDetail() {
                 </CardContent>
               </Card>
 
-              {/* Sequence result */}
               {sequence && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
                   <div className="bg-gradient-to-r from-brand-sky/5 to-transparent rounded-xl border border-brand-sky/10 p-4">
@@ -868,10 +889,40 @@ export default function LeadDetail() {
                   })}
                 </motion.div>
               )}
-            </TabsContent>
-
-            {/* SIGNALS TAB */}
-            <TabsContent value="signals" className="mt-4">
+              {analysing ? (
+                <Card className="shadow-sm mb-3 border-brand-sky/30">
+                  <CardContent className="pt-5 flex items-center gap-2 text-sm text-slate-600">
+                    <Loader2 className="w-4 h-4 animate-spin text-brand-sky" />
+                    {t('leads.analyseSignalsBtnLoading', { defaultValue: 'Analyzing signals…' })}
+                  </CardContent>
+                </Card>
+              ) : null}
+              {signalAnalysisError ? (
+                <Card className="shadow-sm mb-3 border-rose-200">
+                  <CardContent className="pt-5 text-sm text-rose-700">
+                    {signalAnalysisError}
+                  </CardContent>
+                </Card>
+              ) : null}
+              {icebreakers.length > 0 && icebreakers.map(({ key, label, content }) => (
+                <motion.div key={key} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+                  <Card className="shadow-sm">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          {lead.llm_enriched && <Sparkles className="w-3.5 h-3.5 text-brand-sky" />}
+                          {label}
+                        </CardTitle>
+                        <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs" onClick={() => handleCopy(content, key)}>
+                          {copied === key ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                          {copied === key ? t('common.copied') : t('common.copy')}
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent><pre className="text-sm text-slate-700 whitespace-pre-wrap font-sans leading-relaxed">{content}</pre></CardContent>
+                  </Card>
+                </motion.div>
+              ))}
               {signalAnalysis ? (
                 <Card className="shadow-sm mb-3">
                   <CardContent className="pt-5 space-y-4">
@@ -997,21 +1048,6 @@ export default function LeadDetail() {
                   </CardContent>
                 </Card>
               )}
-            </TabsContent>
-
-            {/* ANALYSIS TAB */}
-            <TabsContent value="analysis" className="mt-4">
-              <Card className="shadow-sm">
-                <CardContent className="pt-6">
-                  {lead.analysis_summary ? (
-                    <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
-                      <p className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">{lead.analysis_summary}</p>
-                    </div>
-                  ) : (
-                    <p className="text-slate-500 text-sm text-center py-6">{t('leads.noAnalysisSummaryYet')}</p>
-                  )}
-                </CardContent>
-              </Card>
             </TabsContent>
           </Tabs>
         </div>
