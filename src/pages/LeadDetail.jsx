@@ -64,90 +64,16 @@ const getBaseIcpScore = (lead) => {
   return null;
 };
 
-const extractSignalLabel = (item) => {
-  if (typeof item === 'string') return normalizeLabel(item);
-  if (!item || typeof item !== 'object') return '';
-  return normalizeLabel(item.label || item.key || item.signal);
-};
-
-const normalizeIntentSignalPayload = (value) => {
-  const normalized = {
-    pre_call: [],
-    post_contact: [],
-    negative: [],
-  };
-
-  const pushUnique = (bucket, item) => {
-    const label = extractSignalLabel(item);
-    if (!label || normalized[bucket].includes(label)) return;
-    normalized[bucket].push(label);
-  };
-
-  if (Array.isArray(value)) {
-    value.forEach((item) => {
-      const explicitType = String(item?.type || '').toLowerCase();
-      const inferredType = explicitType || inferSignalTypeFromKey(item?.key || item?.signal || item?.label || item);
-      pushUnique(inferredType === 'negative' ? 'negative' : 'pre_call', item);
-    });
-    return normalized;
-  }
-
-  if (!value || typeof value !== 'object') return normalized;
-
-  const appendBucket = (bucket, payload) => {
-    if (!Array.isArray(payload)) return;
-    payload.forEach((item) => pushUnique(bucket, item));
-  };
-
-  appendBucket('pre_call', value.pre_call || value.preCall || value.pre || value.precall);
-  appendBucket('post_contact', value.post_contact || value.postContact || value.post);
-  appendBucket('negative', value.negative || value.negatives || value.negative_signals);
-
-  return normalized;
-};
-
-const getIntentSignals = (lead) => {
-  const payload = normalizeIntentSignalPayload(lead?.intent_signals);
-
-  return [
-    ...(Array.isArray(payload.pre_call) ? payload.pre_call : []).map((label) => ({
-      type: 'positive',
-      label: normalizeLabel(label),
-      source: 'intent',
-      evidence: 'pre_call',
-    })),
-    ...(Array.isArray(payload.post_contact) ? payload.post_contact : []).map((label) => ({
-      type: 'positive',
-      label: normalizeLabel(label),
-      source: 'intent',
-      evidence: 'post_contact',
-    })),
-    ...(Array.isArray(payload.negative) ? payload.negative : []).map((label) => ({
-      type: 'negative',
-      label: normalizeLabel(label),
-      source: 'intent',
-      evidence: 'negative',
-    })),
-  ];
-};
-
 const getInternetSignals = (lead) => (Array.isArray(lead?.internet_signals) ? lead.internet_signals : []);
 
-const getDisplaySignals = (lead) => {
-  const legacySignals = Array.isArray(lead?.signals) ? lead.signals : [];
-  if (legacySignals.length > 0) return legacySignals;
-
-  return [
-    ...getIntentSignals(lead),
-    ...getInternetSignals(lead).map((signal) => ({
-      type: inferSignalTypeFromKey(signal?.key || signal?.label),
-      label: normalizeLabel(signal?.label || signal?.key || signal?.evidence),
-      source: signal?.source_type || 'internet',
-      evidence: signal?.evidence || signal?.key,
-      confidence: signal?.confidence,
-    })),
-  ].filter((signal) => Boolean(signal.label));
-};
+const getDisplaySignals = (lead) =>
+  getInternetSignals(lead).map((signal) => ({
+    type: inferSignalTypeFromKey(signal?.key || signal?.label),
+    label: normalizeLabel(signal?.label || signal?.key || signal?.evidence),
+    source: signal?.source_type || 'internet',
+    evidence: signal?.evidence || signal?.key,
+    confidence: signal?.confidence,
+  })).filter((signal) => Boolean(signal.label));
 
 const categoryStyle = (cat) => {
   const key = String(cat || '').toLowerCase();
@@ -466,7 +392,9 @@ export default function LeadDetail() {
     neutral: displaySignals.filter((s) => String(s?.type || '').toLowerCase() === 'neutral'),
   };
 
-  const internetSignals = getInternetSignals(lead);
+  const providerStatus = lead?.auto_signal_metadata?.provider_status && typeof lead.auto_signal_metadata.provider_status === 'object'
+    ? lead.auto_signal_metadata.provider_status
+    : null;
   const primaryHeroAction = icebreakers[0]?.content
     ? {
         label: t('leads.heroPrimaryCopy', { defaultValue: 'Copy best outreach' }),
@@ -742,9 +670,6 @@ export default function LeadDetail() {
               <TabsTrigger value="outreach">{t('outreach.title')}</TabsTrigger>
               <TabsTrigger value="signals">{t('leads.buyingSignals')}</TabsTrigger>
               <TabsTrigger value="analysis">{t('leads.analysisLabel')}</TabsTrigger>
-              {internetSignals.length > 0 && (
-                <TabsTrigger value="internet">{t('leads.internetSignals')} ({internetSignals.length})</TabsTrigger>
-              )}
             </TabsList>
 
             {/* OUTREACH TAB */}
@@ -930,6 +855,31 @@ export default function LeadDetail() {
 
             {/* SIGNALS TAB */}
             <TabsContent value="signals" className="mt-4">
+              {providerStatus ? (
+                <Card className="shadow-sm mb-3">
+                  <CardContent className="pt-5">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-2">
+                      {t('leads.signalProviders', { defaultValue: 'Signal providers' })}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(providerStatus).map(([provider, status]) => (
+                        <span
+                          key={provider}
+                          className={`text-xs px-2.5 py-1 rounded-full border ${
+                            status === 'ok'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : status === 'skipped'
+                                ? 'bg-slate-50 text-slate-500 border-slate-200'
+                                : 'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}
+                        >
+                          {provider}: {status}
+                        </span>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : null}
               {displaySignals.length > 0 ? (
                 <div className="space-y-3">
                   {['positive', 'negative', 'neutral'].map((type) => {
@@ -977,41 +927,6 @@ export default function LeadDetail() {
                 </CardContent>
               </Card>
             </TabsContent>
-
-            {/* INTERNET SIGNALS TAB */}
-            {internetSignals.length > 0 && (
-              <TabsContent value="internet" className="mt-4">
-                <Card className="shadow-sm">
-                  <CardContent className="pt-6">
-                    <div className="space-y-2">
-                      {internetSignals.slice(0, 20).map((signal, i) => (
-                        <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 text-xs">
-                          <span className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${
-                            String(signal.key || '').includes('bankruptcy') || String(signal.key || '').includes('closed')
-                              ? 'bg-rose-500'
-                              : 'bg-emerald-500'
-                          }`} />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-slate-700">{signal.key?.replace(/_/g, ' ')}</p>
-                            {signal.evidence && (
-                              <a
-                                href={signal.evidence}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-brand-sky hover:underline truncate block"
-                              >
-                                {signal.evidence}
-                              </a>
-                            )}
-                            {signal.confidence && <p className="text-slate-400">{t('leads.confidenceLabel')}: {signal.confidence}%</p>}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
           </Tabs>
         </div>
       </div>

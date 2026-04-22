@@ -305,6 +305,15 @@ const runDiscoverSignalsOperation = async ({
     ? mergeInternetSignals([], incomingSignals, lead)
     : mergeInternetSignals(lead.internet_signals, incomingSignals, lead);
 
+  const providerStatus = {
+    website: (discovered.signals || []).length > 0 ? 'ok' : 'no_results',
+    hunter: !process.env.HUNTER_API_KEY ? 'skipped' : (hunterResult?.email ? 'ok' : 'no_results'),
+    news: !process.env.NEWS_API_KEY ? 'skipped' : (newsFindings.length > 0 ? 'ok' : 'no_results'),
+    web_research: !process.env.ANTHROPIC_API_KEY
+      ? 'skipped'
+      : ((webResearch.signals || []).length > 0 || (webResearch.findings || []).length > 0 ? 'ok' : 'no_results'),
+  };
+
   let updatedLead = await dataStore.updateLead(req.user, lead.id, {
     ...leadEmailPatch,
     ...(nextIntentSignals ? { intent_signals: nextIntentSignals } : {}),
@@ -318,6 +327,7 @@ const runDiscoverSignalsOperation = async ({
       web_research_signals: (webResearch.signals || []).length,
       hunter_email: hunterResult?.email || null,
       warnings: discovered.warnings || [],
+      provider_status: providerStatus,
     },
   });
 
@@ -331,15 +341,6 @@ const runDiscoverSignalsOperation = async ({
 
   if (analysis?._token_usage) logTokenUsage(req, 'analyze', analysis._token_usage);
   updatedLead = analyzedLead;
-
-  const providerStatus = {
-    website: (discovered.signals || []).length > 0 ? 'ok' : 'no_results',
-    hunter: !process.env.HUNTER_API_KEY ? 'skipped' : (hunterResult?.email ? 'ok' : 'no_results'),
-    news: !process.env.NEWS_API_KEY ? 'skipped' : (newsFindings.length > 0 ? 'ok' : 'no_results'),
-    web_research: !process.env.ANTHROPIC_API_KEY
-      ? 'skipped'
-      : ((webResearch.signals || []).length > 0 || (webResearch.findings || []).length > 0 ? 'ok' : 'no_results'),
-  };
 
   return {
     lead: normalizeLeadForResponse(updatedLead),
