@@ -3,11 +3,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRightLeft, FolderOpen, Loader2, PencilLine, Sparkles, Tags } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ROUTES } from '@/constants/routes';
 import { dataClient } from '@/services/dataClient';
 
 const UNLISTED = '__unlisted__';
@@ -21,6 +23,7 @@ const formatListLabel = (value, t) => (value === UNLISTED ? t('lists.unlisted', 
 
 export default function Lists() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [renameTarget, setRenameTarget] = useState(null);
   const [renameValue, setRenameValue] = useState('');
@@ -68,6 +71,15 @@ export default function Lists() {
   }, [leads]);
 
   const refreshLeads = () => queryClient.invalidateQueries({ queryKey: ['leads'] });
+
+  const openListInDashboard = (listKey) => {
+    navigate(ROUTES.dashboard, {
+      state: {
+        sourceListKey: listKey,
+        fromLists: true,
+      },
+    });
+  };
 
   const renameList = async () => {
     if (!renameTarget) return;
@@ -129,7 +141,7 @@ export default function Lists() {
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{t('lists.title', { defaultValue: 'Gestion des listes' })}</h1>
           <p className="text-slate-500 mt-1 text-sm">
             {t('lists.subtitle', {
-              defaultValue: 'Centralisez vos listes importées, fusionnez les doublons et nettoyez vos sources avant les prochaines campagnes.',
+              defaultValue: 'Cliquez sur une liste pour afficher directement ses leads dans le dashboard.',
             })}
           </p>
         </div>
@@ -174,8 +186,12 @@ export default function Lists() {
               const busy = processingKey.includes(entry.key);
               return (
                 <div key={entry.key} className="px-4 py-3 flex flex-wrap items-center gap-3">
-                  <div className="min-w-[220px] flex-1">
-                    <p className="font-semibold text-slate-900">{formatListLabel(entry.key, t)}</p>
+                  <button
+                    type="button"
+                    onClick={() => openListInDashboard(entry.key)}
+                    className="min-w-[220px] flex-1 text-left rounded-lg p-2 -m-2 hover:bg-slate-50 transition-colors"
+                  >
+                    <p className="font-semibold text-slate-900 underline-offset-2 hover:underline">{formatListLabel(entry.key, t)}</p>
                     <p className="text-xs text-slate-500 mt-0.5">
                       {t('lists.row.meta', {
                         defaultValue: '{{count}} leads · {{qualified}} high fit',
@@ -183,7 +199,7 @@ export default function Lists() {
                         qualified: entry.qualified,
                       })}
                     </p>
-                  </div>
+                  </button>
 
                   <div className="flex items-center gap-2 text-xs">
                     <Badge variant="outline" className="gap-1">
@@ -198,6 +214,14 @@ export default function Lists() {
                   </div>
 
                   <div className="flex items-center gap-2 ml-auto">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => openListInDashboard(entry.key)}
+                    >
+                      {t('lists.actions.open', { defaultValue: 'Ouvrir' })}
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"

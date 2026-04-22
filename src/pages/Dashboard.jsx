@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Brain, CheckCircle2, Clock3, CreditCard, Database, Download, Loader2, MessageSquare, RefreshCcw, Sparkles, Target, TrendingUp, Upload, Users, XCircle } from 'lucide-react';
 import { BarChart, Bar, Cell, Tooltip, ResponsiveContainer } from 'recharts';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import ActivationChecklist from '@/components/ActivationChecklist';
 import LeadSlideOver from '@/components/leads/LeadSlideOver';
@@ -79,6 +79,7 @@ const getBillingActionLabel = (action, t) => {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -154,6 +155,13 @@ export default function Dashboard() {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(STORAGE_KEY, selectedSourceList);
   }, [selectedSourceList]);
+
+  useEffect(() => {
+    const requestedList = String(location.state?.sourceListKey || '').trim();
+    if (!requestedList) return;
+    setSelectedSourceList(requestedList);
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
 
   useEffect(() => {
     if (searchParams.get('openImport') !== '1') return;
