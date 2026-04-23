@@ -834,9 +834,32 @@ export default function LeadDetail() {
                         <p className="text-sm font-semibold text-slate-800">{sequence.sequence_name}</p>
                         <p className="text-xs text-slate-500 mt-0.5">{sequence.objective}</p>
                       </div>
-                      <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-slate-400 hover:text-slate-600 flex-shrink-0" onClick={() => setSequence(null)}>
-                        ✕
-                      </Button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {Array.isArray(sequence.touches) && sequence.touches.length > 0 ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs gap-1"
+                            onClick={() => {
+                              const blocks = sequence.touches.map((touch, index) => {
+                                const header = `--- J${touch.day} · ${touch.channel || 'email'} (${index + 1}/${sequence.touches.length}) ---`;
+                                const subject = touch.subject ? `${t('outreach.sequence.subjectLabel')}: ${touch.subject}` : '';
+                                const cta = touch.cta ? `→ ${touch.cta}` : '';
+                                return [header, subject, touch.body, cta].filter(Boolean).join('\n');
+                              });
+                              handleCopy(blocks.join('\n\n'), 'seq-all');
+                            }}
+                          >
+                            {copied === 'seq-all' ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                            {copied === 'seq-all'
+                              ? t('common.copied')
+                              : t('outreach.sequence.copyAll', { defaultValue: 'Tout copier' })}
+                          </Button>
+                        ) : null}
+                        <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-slate-400 hover:text-slate-600" onClick={() => setSequence(null)}>
+                          ✕
+                        </Button>
+                      </div>
                     </div>
                     {sequence.personalization_hooks?.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mt-3">
@@ -972,20 +995,25 @@ export default function LeadDetail() {
                       {t('leads.signalProviders', { defaultValue: 'Signal providers' })}
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {Object.entries(providerStatus).map(([provider, status]) => (
-                        <span
-                          key={provider}
-                          className={`text-xs px-2.5 py-1 rounded-full border ${
-                            status === 'ok'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : status === 'skipped'
-                                ? 'bg-slate-50 text-slate-500 border-slate-200'
-                                : 'bg-amber-50 text-amber-700 border-amber-200'
-                          }`}
-                        >
-                          {provider}: {status}
-                        </span>
-                      ))}
+                      {Object.entries(providerStatus).map(([provider, status]) => {
+                        const providerHint = t(`leads.signalProviderHints.${provider}`, { defaultValue: '' });
+                        const statusLabel = t(`leads.signalProviderStatus.${status}`, { defaultValue: status });
+                        return (
+                          <span
+                            key={provider}
+                            title={providerHint ? `${providerHint} — ${statusLabel}` : statusLabel}
+                            className={`text-xs px-2.5 py-1 rounded-full border ${
+                              status === 'ok'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : status === 'skipped'
+                                  ? 'bg-slate-50 text-slate-500 border-slate-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                            }`}
+                          >
+                            {provider}: {statusLabel}
+                          </span>
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>

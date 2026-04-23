@@ -541,6 +541,18 @@ export default function Dashboard() {
   const focusLead = visibleLeads
     .filter((lead) => toNumericScore(lead.final_score ?? lead.icp_score) !== null)
     .sort((left, right) => toNumericScore(right.final_score ?? right.icp_score) - toNumericScore(left.final_score ?? left.icp_score))[0] || null;
+  // Leads analyzed more than 30 days ago with no follow-up progression: surfaced so the user
+  // can re-score or re-engage them before the data becomes stale.
+  const staleLeadCount = useMemo(() => {
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    return visibleLeads.filter((lead) => {
+      const analyzedAt = lead.last_analyzed_at ? new Date(lead.last_analyzed_at).getTime() : NaN;
+      if (!Number.isFinite(analyzedAt)) return false;
+      if (analyzedAt >= cutoff) return false;
+      const status = String(lead.follow_up_status || '').toLowerCase();
+      return !status.includes('won') && !status.includes('lost');
+    }).length;
+  }, [visibleLeads]);
 
   const handleActivationAnalysis = async () => {
     if (leads.length === 0) {
@@ -698,7 +710,7 @@ export default function Dashboard() {
         </div>
       </div>
       {!isLoading && totalLeads > 0 && (
-        <div className="mt-4 grid gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs text-slate-600 md:grid-cols-3">
+        <div className="mt-4 grid gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs text-slate-600 md:grid-cols-4">
           <div>
             <p className="uppercase tracking-[0.14em] text-[10px] text-slate-400">Focus</p>
             <p className="mt-1 font-medium text-slate-700">
@@ -712,6 +724,16 @@ export default function Dashboard() {
           <div>
             <p className="uppercase tracking-[0.14em] text-[10px] text-slate-400">Pipeline readiness</p>
             <p className="mt-1 font-medium text-slate-700">{qualifiedLeads} qualified · {toAnalyze} pending analysis</p>
+          </div>
+          <div>
+            <p className="uppercase tracking-[0.14em] text-[10px] text-slate-400">
+              {t('dashboard.banner.staleLabel', { defaultValue: 'Leads à rafraîchir' })}
+            </p>
+            <p className={`mt-1 font-medium ${staleLeadCount > 0 ? 'text-amber-700' : 'text-slate-700'}`}>
+              {staleLeadCount > 0
+                ? t('dashboard.banner.staleValue', { defaultValue: '{{count}} scorés il y a > 30j', count: staleLeadCount })
+                : t('dashboard.banner.staleNone', { defaultValue: 'Tous récemment scorés' })}
+            </p>
           </div>
         </div>
       )}
@@ -761,7 +783,17 @@ export default function Dashboard() {
           </Select>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">{t('dashboard.selectors.list')}</p>
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{t('dashboard.selectors.list')}</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(ROUTES.lists)}
+              className="h-6 px-2 text-[11px] text-brand-sky hover:bg-brand-sky/5"
+            >
+              {t('dashboard.selectors.manageLists', { defaultValue: 'Gérer les listes' })}
+            </Button>
+          </div>
           <Select value={selectedSourceList} onValueChange={setSelectedSourceList}>
             <SelectTrigger className="h-9 text-sm">
               <SelectValue placeholder={t('dashboard.placeholders.selectLeadList')} />
