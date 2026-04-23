@@ -148,11 +148,10 @@ describe('LeadsTable', () => {
 
   it('calls onSelectLead when clicking a row', async () => {
     await renderTable();
-    // Use the desktop table row (font-medium class — mobile cards use font-semibold)
     const nameEl = screen.getAllByText('Alpha Corp').find(
-      (el) => el.className.includes('font-medium')
+      (el) => el.className.includes('font-semibold')
     );
-    const row = nameEl.closest('tr');
+    const row = nameEl.closest('div[class*="px-4 py-3"]');
     await userEvent.click(row);
     expect(defaultProps.onSelectLead).toHaveBeenCalledWith(MOCK_LEADS[0]);
   });
