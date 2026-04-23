@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Database, Loader2, Mail, Phone, Search, Sparkles, Trash2, Upload, Users } from 'lucide-react';
+import { ArrowDownUp, ChevronLeft, ChevronRight, Database, Loader2, Mail, Phone, Search, Sparkles, Trash2, Upload, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SkeletonRow } from '@/components/ui/skeleton';
 import { ROUTES } from '@/constants/routes';
@@ -84,6 +84,8 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
   const [industryFilter, setIndustryFilter] = useState('');
   const [countryFilter, setCountryFilter] = useState('');
   const [minScoreFilter, setMinScoreFilter] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('score_desc');
   const [analyzingIds, setAnalyzingIds] = useState(new Set());
   const [activeAnalyzeJob, setActiveAnalyzeJob] = useState(null);
   const [handledAnalyzeJobId, setHandledAnalyzeJobId] = useState('');
@@ -116,14 +118,29 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
       const matchesCountry = !countryFilter || lead.country === countryFilter;
       const { finalScore } = resolveLeadScores(lead);
       const matchesScore = !minScoreFilter || (finalScore ?? 0) >= Number(minScoreFilter);
+      const tier = getScoreTier(finalScore);
+      const matchesPriority = priorityFilter === 'all' || tier.key === priorityFilter;
 
-      return matchesSearch && matchesStatus && matchesFollowUp && matchesIndustry && matchesCountry && matchesScore;
+      return matchesSearch && matchesStatus && matchesFollowUp && matchesIndustry && matchesCountry && matchesScore && matchesPriority;
     });
-  }, [leads, debouncedSearch, statusFilter, followUpFilter, industryFilter, countryFilter, minScoreFilter]);
+  }, [leads, debouncedSearch, statusFilter, followUpFilter, industryFilter, countryFilter, minScoreFilter, priorityFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const sortedFiltered = useMemo(() => {
+    const list = [...filtered];
+    list.sort((left, right) => {
+      if (sortBy === 'company_asc') return String(left.company_name || '').localeCompare(String(right.company_name || ''));
+      if (sortBy === 'recent_desc') return new Date(right.created_at || 0).getTime() - new Date(left.created_at || 0).getTime();
+      if (sortBy === 'recent_asc') return new Date(left.created_at || 0).getTime() - new Date(right.created_at || 0).getTime();
+      const leftScore = resolveLeadScores(left).finalScore ?? 0;
+      const rightScore = resolveLeadScores(right).finalScore ?? 0;
+      return rightScore - leftScore;
+    });
+    return list;
+  }, [filtered, sortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedFiltered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paginated = sortedFiltered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const filteredStats = useMemo(() => {
     const total = filtered.length;
@@ -132,7 +149,7 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
     return { total, qualified, toAnalyze };
   }, [filtered]);
 
-  const filteredIds = useMemo(() => new Set(filtered.map((l) => l.id)), [filtered]);
+  const filteredIds = useMemo(() => new Set(sortedFiltered.map((l) => l.id)), [sortedFiltered]);
 
   const { data: featureFlagsData = null } = useQuery({
     queryKey: ['workspaceFeatureFlags', 'leads-table'],
@@ -350,6 +367,40 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
       </div>
       <StatusFilter value={statusFilter} onChange={handleStatusChange} />
       <FollowUpFilter value={followUpFilter} onChange={handleFollowUpChange} />
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: 'all', label: tt('leads.priority.all', 'All priorities') },
+            { key: 'hot', label: 'HOT ≥ 80' },
+            { key: 'warm', label: 'WARM 65-79' },
+            { key: 'cool', label: 'COOL < 65' },
+          ].map((segment) => (
+            <button
+              key={segment.key}
+              onClick={() => { setPriorityFilter(segment.key); setPage(1); }}
+              className={`h-7 rounded-lg border px-2.5 text-xs font-medium transition-colors ${priorityFilter === segment.key ? 'border-brand-sky/35 bg-brand-sky/10 text-brand-sky' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}
+            >
+              {segment.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1 text-[11px] uppercase tracking-[0.12em] text-slate-400">
+            <ArrowDownUp className="h-3 w-3" />
+            {tt('leads.sortBy', 'Sort by')}
+          </span>
+          <select
+            value={sortBy}
+            onChange={(event) => { setSortBy(event.target.value); setPage(1); }}
+            className="text-xs h-7 rounded-lg border border-slate-200 bg-white px-2 text-slate-600 focus:outline-none focus:ring-1 focus:ring-brand-sky/30"
+          >
+            <option value="score_desc">{tt('leads.sort.scoreDesc', 'Highest score')}</option>
+            <option value="recent_desc">{tt('leads.sort.recentDesc', 'Newest first')}</option>
+            <option value="recent_asc">{tt('leads.sort.recentAsc', 'Oldest first')}</option>
+            <option value="company_asc">{tt('leads.sort.companyAsc', 'Company A-Z')}</option>
+          </select>
+        </div>
+      </div>
       <div className="flex flex-wrap gap-2">
         <select
           value={industryFilter}
@@ -376,9 +427,9 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
           onChange={(e) => handleMinScoreChange(e.target.value)}
           className="text-xs h-7 w-24 rounded-lg border border-slate-200 bg-white px-2 text-slate-600 focus:outline-none focus:ring-1 focus:ring-brand-sky/30"
         />
-        {(industryFilter || countryFilter || minScoreFilter) && (
+        {(industryFilter || countryFilter || minScoreFilter || priorityFilter !== 'all') && (
           <button
-            onClick={() => { handleIndustryChange(''); handleCountryChange(''); handleMinScoreChange(''); }}
+            onClick={() => { handleIndustryChange(''); handleCountryChange(''); handleMinScoreChange(''); setPriorityFilter('all'); }}
             className="text-xs h-7 px-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"
           >
             {tt('leads.clearFilters', 'Clear filters')}

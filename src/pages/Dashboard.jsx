@@ -537,6 +537,10 @@ export default function Dashboard() {
     { key: 'avg', value: avgScore, label: t('dashboard.stats.avg') },
     { key: 'toAnalyze', value: toAnalyze, label: t('dashboard.stats.toAnalyze') },
   ];
+  const highPriorityCount = visibleLeads.filter((lead) => toNumericScore(lead.final_score ?? lead.icp_score) >= 80).length;
+  const focusLead = visibleLeads
+    .filter((lead) => toNumericScore(lead.final_score ?? lead.icp_score) !== null)
+    .sort((left, right) => toNumericScore(right.final_score ?? right.icp_score) - toNumericScore(left.final_score ?? left.icp_score))[0] || null;
 
   const handleActivationAnalysis = async () => {
     if (leads.length === 0) {
@@ -625,7 +629,8 @@ export default function Dashboard() {
   return (
     <>
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
+      <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{t('dashboard.title')}</h1>
           <p className="text-slate-500 mt-0.5 text-sm">{t('dashboard.subtitle')}</p>
@@ -691,6 +696,25 @@ export default function Dashboard() {
             {t('dashboard.actions.importCsv')}
           </Button>
         </div>
+      </div>
+      {!isLoading && totalLeads > 0 && (
+        <div className="mt-4 grid gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs text-slate-600 md:grid-cols-3">
+          <div>
+            <p className="uppercase tracking-[0.14em] text-[10px] text-slate-400">Focus</p>
+            <p className="mt-1 font-medium text-slate-700">
+              {focusLead ? `${focusLead.company_name} · ${toNumericScore(focusLead.final_score ?? focusLead.icp_score)}/100` : t('dashboard.banner.readyToAnalyze')}
+            </p>
+          </div>
+          <div>
+            <p className="uppercase tracking-[0.14em] text-[10px] text-slate-400">High priority</p>
+            <p className="mt-1 font-medium text-slate-700">{highPriorityCount} leads ≥ 80</p>
+          </div>
+          <div>
+            <p className="uppercase tracking-[0.14em] text-[10px] text-slate-400">Pipeline readiness</p>
+            <p className="mt-1 font-medium text-slate-700">{qualifiedLeads} qualified · {toAnalyze} pending analysis</p>
+          </div>
+        </div>
+      )}
       </div>
 
       {/* ── No-ICP warning ─────────────────────────────────────────────── */}
