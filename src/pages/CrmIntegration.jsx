@@ -198,7 +198,9 @@ function CrmCard({
   const [token, setToken] = useState('');
   const [instanceUrl, setInstanceUrl] = useState(integration?.config?.instance_url || '');
   const [showToken, setShowToken] = useState(false);
-  const [showInstructions, setShowInstructions] = useState(false);
+  // Instructions expand by default when the user hasn't connected yet so they can follow the steps
+  // without an extra click; once connected they collapse to reduce noise.
+  const [showInstructions, setShowInstructions] = useState(!isConnected);
 
   const maskedToken = integration?.api_token || '';
   const planBlocksNewConnection = Boolean(quota?.limitReached && !isConnected);
@@ -504,6 +506,7 @@ export default function CrmIntegration() {
   const crmUsed = crmUsage?.crm_slots_used ?? integrations.filter((integration) => integration?.is_active).length;
   const crmRemaining = crmUsage?.crm_slots_remaining ?? Math.max(0, crmTotal - crmUsed);
   const crmLimitReached = Boolean(crmUsage?.crm_limit_reached);
+  const hasActiveCrm = integrations.some((integration) => integration?.is_active);
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['crmIntegrations'] });
@@ -518,6 +521,27 @@ export default function CrmIntegration() {
           {t('crm.subtitle')}
         </p>
       </div>
+
+      {!isLoading && !hasActiveCrm ? (
+        <div className="rounded-2xl border border-sky-200 bg-sky-50/80 px-4 py-4 shadow-sm">
+          <div className="flex items-start gap-3">
+            <Database className="w-5 h-5 text-sky-500 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-sky-900">
+                {t('crm.empty.title', { defaultValue: 'Aucun CRM connecté pour le moment' })}
+              </p>
+              <p className="mt-1 text-sm text-sky-800/80">
+                {t('crm.empty.body', { defaultValue: 'Connectez HubSpot ou Salesforce pour pousser vos leads scorés directement dans votre pipeline commercial et garder toute l’équipe alignée.' })}
+              </p>
+              <ul className="mt-2 text-xs text-sky-900/80 list-disc list-inside space-y-0.5">
+                <li>{t('crm.empty.benefit1', { defaultValue: 'Push en un clic depuis le panneau latéral ou la page complète du lead' })}</li>
+                <li>{t('crm.empty.benefit2', { defaultValue: 'Mappez score, catégorie et notes AimLeads sur les champs de votre CRM' })}</li>
+                <li>{t('crm.empty.benefit3', { defaultValue: 'Suivez l’historique de synchronisation par lead' })}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className={`rounded-2xl border px-4 py-4 shadow-sm ${
         crmLimitReached

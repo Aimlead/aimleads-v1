@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowRightLeft, ArrowUpDown, ChevronLeft, ChevronRight, FolderOpen, Loader2, PencilLine, Tags } from 'lucide-react';
+import { ArrowRightLeft, ArrowUpDown, ChevronLeft, ChevronRight, Download, FolderOpen, Loader2, PencilLine, Tags } from 'lucide-react';
+import { exportLeadsToCsv } from '@/lib/exportCsv';
+import { LEAD_STATUS } from '@/constants/leads';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -55,6 +57,7 @@ export default function Lists() {
         key,
         total: 0,
         qualified: 0,
+        toAnalyze: 0,
         scoreSum: 0,
         scored: 0,
         lastImportAt: null,
@@ -62,6 +65,7 @@ export default function Lists() {
 
       current.total += 1;
       if ((lead.final_category || '').toLowerCase() === 'high fit') current.qualified += 1;
+      if (lead.status === LEAD_STATUS.TO_ANALYZE) current.toAnalyze += 1;
 
       const score = Number.isFinite(lead.final_score) ? lead.final_score : lead.icp_score;
       if (Number.isFinite(score)) {
@@ -203,6 +207,19 @@ export default function Lists() {
     }
   };
 
+  const exportList = (listKey) => {
+    const listLeads = leads.filter((lead) => normalizeListKey(lead.source_list) === listKey);
+    if (listLeads.length === 0) {
+      toast(t('lists.toasts.exportEmpty', { defaultValue: 'Aucun lead à exporter dans cette liste.' }));
+      return;
+    }
+    const safeName = listKey === UNLISTED
+      ? 'unlisted'
+      : String(listKey).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'list';
+    exportLeadsToCsv(listLeads, `leads-${safeName}.csv`);
+    toast.success(t('lists.toasts.exportSuccess', { defaultValue: '{{count}} leads exportés en CSV.', count: listLeads.length }));
+  };
+
   const totalLists = listStats.length;
   const unlistedLeads = listStats.find((entry) => entry.key === UNLISTED)?.total || 0;
   const allVisibleSelected = paginatedLists.length > 0 && paginatedLists.every((entry) => selectedLists.includes(entry.key));
@@ -338,6 +355,11 @@ export default function Lists() {
                         count: entry.total,
                         qualified: entry.qualified,
                       })}
+                      {entry.toAnalyze > 0 ? (
+                        <span className="ml-1 text-amber-600">
+                          · {t('lists.row.toAnalyze', { defaultValue: '{{count}} à analyser', count: entry.toAnalyze })}
+                        </span>
+                      ) : null}
                     </p>
                   </div>
 
@@ -389,6 +411,17 @@ export default function Lists() {
                     >
                       <ArrowRightLeft className="w-3.5 h-3.5" />
                       {t('lists.actions.move', { defaultValue: 'Fusionner / déplacer' })}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                      disabled={busy || entry.total === 0}
+                      onClick={() => exportList(entry.key)}
+                      aria-label={t('lists.actions.export', { defaultValue: 'Exporter la liste en CSV' })}
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      {t('common.export', { defaultValue: 'Exporter' })}
                     </Button>
                   </div>
                 </div>

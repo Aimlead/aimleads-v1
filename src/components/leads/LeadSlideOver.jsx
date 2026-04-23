@@ -1,9 +1,10 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, Check, Copy, Database, ExternalLink, Loader2, Linkedin, Mail, Phone, Sparkles, Target } from 'lucide-react';
+import { AlertTriangle, Check, Copy, Database, ExternalLink, Loader2, Linkedin, Mail, Phone, Sparkles, Tag, Target } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { ROUTES } from '@/constants/routes';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -452,18 +453,24 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader className="pb-4">
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <SheetTitle className="text-xl">{lead.company_name}</SheetTitle>
+            <div className="min-w-0">
+              <SheetTitle className="text-xl truncate">{lead.company_name}</SheetTitle>
               {lead.website_url && (
                 <a
                   href={/^https?:\/\//i.test(lead.website_url) ? lead.website_url : `https://${lead.website_url}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-brand-sky hover:underline"
+                  className="text-sm text-brand-sky hover:underline truncate block"
                 >
                   {lead.website_url}
                 </a>
               )}
+              {lead.source_list ? (
+                <span className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-brand-sky/5 px-2 py-0.5 text-[11px] font-medium text-brand-sky border border-brand-sky/15">
+                  <Tag className="w-3 h-3" />
+                  {lead.source_list}
+                </span>
+              ) : null}
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -721,6 +728,36 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : isDirty ? t('leads.saveChangesCta') : t('common.save')}
           </Button>
         </div>
+
+        {/* CRM empty-state CTA — shown once the lead is scored but no CRM is configured */}
+        {activeCrmTypes.length === 0 && finalScore !== null && (
+          <div className="border-t border-slate-100 pt-4">
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/60 p-3">
+              <div className="flex items-start gap-3">
+                <Database className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-800">
+                    {t('leads.crmEmptyTitle', { defaultValue: 'Envoyer ce lead dans votre CRM' })}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {t('leads.crmEmptyBody', { defaultValue: 'Connectez HubSpot ou Salesforce pour synchroniser les leads scorés en un clic.' })}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    onOpenChange(false);
+                    navigate(ROUTES.crmIntegration);
+                  }}
+                  className="shrink-0 h-7 text-xs"
+                >
+                  {t('leads.crmEmptyCta', { defaultValue: 'Configurer' })}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* CRM Sync section — only shown when at least one CRM is configured */}
         {activeCrmTypes.length > 0 && (

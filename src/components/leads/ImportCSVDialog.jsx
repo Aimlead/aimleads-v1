@@ -505,6 +505,18 @@ export default function ImportCSVDialog({
   const missingCompanyMapping = availableHeaders.length > 0 && (fieldMapping.company_name || EMPTY_MAPPING) === EMPTY_MAPPING;
   const stage = imported ? 'done' : preview.length > 0 ? 'review' : 'upload';
 
+  // Confidence label for the auto-mapping UI: helps users verify that a detected column
+  // is a good match before importing, and spot fields that need manual attention.
+  const mappingConfidence = (fieldKey) => {
+    const header = fieldMapping[fieldKey];
+    if (!header || header === EMPTY_MAPPING) return null;
+    const score = scoreHeaderMatch(header, fieldKey);
+    if (score >= 100) return { level: 'exact', tone: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+    if (score >= 70) return { level: 'strong', tone: 'bg-sky-50 text-sky-700 border-sky-200' };
+    if (score >= 30) return { level: 'weak', tone: 'bg-amber-50 text-amber-700 border-amber-200' };
+    return { level: 'manual', tone: 'bg-slate-50 text-slate-600 border-slate-200' };
+  };
+
   const handleHandoff = async (action, callback) => {
     if (!callback || !importResult) return;
     setHandoffAction(action);
@@ -611,27 +623,56 @@ export default function ImportCSVDialog({
                 })}
               </p>
               <div className="mt-3 grid max-h-[32vh] gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
-                {CANONICAL_FIELDS.map((field) => (
-                  <div key={field.key} className="rounded-xl border border-slate-200 px-3 py-2">
-                    <p className="text-xs font-semibold text-slate-700">
-                      {field.label}
-                      {field.required ? <span className="ml-1 text-rose-500">*</span> : null}
-                    </p>
-                    <Select value={fieldMapping[field.key] || EMPTY_MAPPING} onValueChange={(value) => handleMappingChange(field.key, value)}>
-                      <SelectTrigger className="mt-1 h-8 text-xs">
-                        <SelectValue placeholder="Choisir une colonne" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-72">
-                        <SelectItem value={EMPTY_MAPPING}>Ne pas importer</SelectItem>
-                        {availableHeaders.map((header) => (
-                          <SelectItem key={`${field.key}-${header}`} value={header} className="text-xs">
-                            {header}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
+                {CANONICAL_FIELDS.map((field) => {
+                  const confidence = mappingConfidence(field.key);
+                  return (
+                    <div key={field.key} className="rounded-xl border border-slate-200 px-3 py-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-semibold text-slate-700">
+                          {field.label}
+                          {field.required ? <span className="ml-1 text-rose-500">*</span> : null}
+                        </p>
+                        {confidence ? (
+                          <span
+                            className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${confidence.tone}`}
+                            title={t(`import.dialog.mapping.confidenceHint.${confidence.level}`, {
+                              defaultValue: confidence.level === 'exact'
+                                ? 'Correspondance exacte détectée automatiquement.'
+                                : confidence.level === 'strong'
+                                  ? 'Correspondance probable, vérifiez si besoin.'
+                                  : confidence.level === 'weak'
+                                    ? 'Correspondance faible. Vérifiez la colonne choisie.'
+                                    : 'Colonne sélectionnée manuellement.',
+                            })}
+                          >
+                            {t(`import.dialog.mapping.confidence.${confidence.level}`, {
+                              defaultValue: confidence.level === 'exact'
+                                ? 'Exact'
+                                : confidence.level === 'strong'
+                                  ? 'Match'
+                                  : confidence.level === 'weak'
+                                    ? 'À vérifier'
+                                    : 'Manuel',
+                            })}
+                          </span>
+                        ) : null}
+                      </div>
+                      <Select value={fieldMapping[field.key] || EMPTY_MAPPING} onValueChange={(value) => handleMappingChange(field.key, value)}>
+                        <SelectTrigger className="mt-1 h-8 text-xs">
+                          <SelectValue placeholder="Choisir une colonne" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-72">
+                          <SelectItem value={EMPTY_MAPPING}>Ne pas importer</SelectItem>
+                          {availableHeaders.map((header) => (
+                            <SelectItem key={`${field.key}-${header}`} value={header} className="text-xs">
+                              {header}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : null}
@@ -857,9 +898,15 @@ export default function ImportCSVDialog({
                 </Button>
               </div>
 
-              <Button variant="ghost" onClick={() => handleOpenChange(false)} className="w-full">
-                {t('import.dialog.actions.doLater', { defaultValue: 'Je termine ça plus tard' })}
-              </Button>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button variant="outline" onClick={resetDialog} className="w-full gap-2">
+                  <Upload className="w-4 h-4" />
+                  {t('import.dialog.actions.importAnother', { defaultValue: 'Importer un autre fichier' })}
+                </Button>
+                <Button variant="ghost" onClick={() => handleOpenChange(false)} className="w-full">
+                  {t('import.dialog.actions.doLater', { defaultValue: 'Je termine ça plus tard' })}
+                </Button>
+              </div>
             </div>
           )}
         </div>
