@@ -1,7 +1,21 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, Check, Copy, Database, ExternalLink, Loader2, Linkedin, Mail, Phone, Sparkles, Tag, Target } from 'lucide-react';
+import {
+  AlertTriangle,
+  Check,
+  Copy,
+  Database,
+  ExternalLink,
+  Globe,
+  Linkedin,
+  Loader2,
+  Mail,
+  Phone,
+  Sparkles,
+  Tag,
+  Target,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ROUTES } from '@/constants/routes';
@@ -20,13 +34,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FOLLOW_UP_STATUS_LIST } from '@/constants/leads';
 import { getLeadScores } from '@/lib/leadPresentation';
 import { dataClient } from '@/services/dataClient';
-import AnalysisHero from './AnalysisHero';
-import LeadActionsPanel from './LeadActionsPanel';
-import ScoreBreakdown from './ScoreBreakdown';
 import SignalBadge from './SignalBadge';
 import StatusBadge from './StatusBadge';
 
@@ -145,7 +155,6 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
   const [activeJob, setActiveJob] = useState(null);
   const [handledJobId, setHandledJobId] = useState(null);
 
-  // CRM sync status for this lead
   const { data: crmSyncRecords = [], refetch: refetchCrmStatus } = useQuery({
     queryKey: ['crmSyncStatus', lead?.id],
     queryFn: () => dataClient.crm.getSyncStatus(lead.id),
@@ -200,7 +209,6 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
     .filter((i) => i.is_active)
     .map((i) => i.crm_type);
 
-  // Track initial values to detect unsaved changes
   const initialRef = useRef({ followUpStatus: '', notes: '', intentSignals: {} });
 
   React.useEffect(() => {
@@ -373,20 +381,16 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
 
   if (!lead) return null;
 
-  const icebreakers = [
-    { key: 'email', label: 'Email', icon: Mail, content: lead.generated_icebreakers?.email || lead.generated_icebreaker },
-    { key: 'linkedin', label: 'LinkedIn', icon: Linkedin, content: lead.generated_icebreakers?.linkedin },
-    { key: 'call', label: t('leads.copyCall'), icon: Phone, content: lead.generated_icebreakers?.call },
-  ].filter((item) => item.content);
-
   const { finalScore, icpScore, aiScore, aiBoost } = getLeadScores(lead);
   const scoreDetails = lead?.score_details && typeof lead.score_details === 'object' ? lead.score_details : {};
-  const currentJob = polledJob || activeJob;
-  const isJobActive = currentJob && !['completed', 'failed'].includes(currentJob.status);
-
   const signalAnalysis = lead?.score_details?.signal_analysis && typeof lead.score_details.signal_analysis === 'object'
     ? lead.score_details.signal_analysis
     : null;
+  const groupedSignals = {
+    positive: (lead.signals || []).filter((signal) => String(signal?.type || '').toLowerCase() === 'positive'),
+    negative: (lead.signals || []).filter((signal) => String(signal?.type || '').toLowerCase() === 'negative'),
+    neutral: (lead.signals || []).filter((signal) => String(signal?.type || '').toLowerCase() === 'neutral'),
+  };
   const importantIcpCriteria = Object.entries(scoreDetails)
     .filter(([key, value]) => IMPORTANT_ICP_KEYS.includes(key) && value && typeof value === 'object')
     .map(([key, value]) => ({
@@ -398,427 +402,337 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
     .filter((item) => Number.isFinite(item.points))
     .sort((a, b) => b.points - a.points);
 
-  const groupedSignals = {
-    positive: (lead.signals || []).filter((signal) => String(signal?.type || '').toLowerCase() === 'positive'),
-    negative: (lead.signals || []).filter((signal) => String(signal?.type || '').toLowerCase() === 'negative'),
-    neutral: (lead.signals || []).filter((signal) => String(signal?.type || '').toLowerCase() === 'neutral'),
-  };
-
   const openFullLeadPage = () => {
     onOpenChange(false);
     navigate(`/leads/${lead.id}`, { state: { lead } });
   };
 
-  const primaryHeroAction = icebreakers[0]?.content
-    ? {
-        label: t('leads.heroPrimaryCopy', { defaultValue: 'Copy best outreach' }),
-        onClick: () => handleCopy(icebreakers[0].content, icebreakers[0].key),
-      }
-    : lead.contact_email
-      ? {
-          label: t('leads.heroPrimaryEmail', { defaultValue: 'Email this lead' }),
-          onClick: () => {
-            window.location.href = `mailto:${lead.contact_email}`;
-          },
-        }
-      : {
-          label: t('leads.openFullPage', { defaultValue: 'Full page' }),
-          onClick: openFullLeadPage,
-        };
+  const contactPhone = lead.contact_phone || lead.phone || lead.phone_number || null;
+  const contactEmail = lead.contact_email || lead.email || null;
+  const linkedinUrl = lead.contact_linkedin || lead.linkedin_url || null;
+  const websiteUrl = lead.website_url ? (/^https?:\/\//i.test(lead.website_url) ? lead.website_url : `https://${lead.website_url}`) : null;
+  const scorePercent = Number.isFinite(Number(finalScore)) ? Math.max(0, Math.min(100, Number(finalScore))) : 0;
+  const currentJob = polledJob || activeJob;
+  const isJobActive = currentJob && !['completed', 'failed'].includes(currentJob.status);
 
-  const secondaryHeroAction = {
-    label: t('leads.openFullPage', { defaultValue: 'Full page' }),
-    onClick: openFullLeadPage,
-  };
+  const intentSignalTotal = intentSignals.pre_call.length + intentSignals.post_contact.length + intentSignals.negative.length;
 
   return (
     <>
-    <AlertDialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{t('leads.unsavedChangesTitle')}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {t('leads.unsavedChangesDescription')}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>{t('leads.stayAndReview')}</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDiscardAndClose} className="bg-rose-600 hover:bg-rose-700">
-            {t('leads.discardChanges')}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
-        <SheetHeader className="pb-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <SheetTitle className="text-xl truncate">{lead.company_name}</SheetTitle>
-              {lead.website_url && (
-                <a
-                  href={/^https?:\/\//i.test(lead.website_url) ? lead.website_url : `https://${lead.website_url}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-brand-sky hover:underline truncate block"
-                >
-                  {lead.website_url}
-                </a>
-              )}
-              {lead.source_list ? (
-                <span className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-brand-sky/5 px-2 py-0.5 text-[11px] font-medium text-brand-sky border border-brand-sky/15">
-                  <Tag className="w-3 h-3" />
-                  {lead.source_list}
-                </span>
-              ) : null}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={openFullLeadPage}
-              >
+      <AlertDialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('leads.unsavedChangesTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('leads.unsavedChangesDescription')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('leads.stayAndReview')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDiscardAndClose} className="bg-rose-600 hover:bg-rose-700">
+              {t('leads.discardChanges')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Sheet open={open} onOpenChange={handleOpenChange}>
+        <SheetContent className="w-full sm:max-w-[500px] p-0 flex flex-col overflow-hidden bg-slate-50/60">
+          <SheetHeader className="border-b border-slate-200 px-5 py-4 bg-white">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <SheetTitle className="text-lg truncate">{lead.company_name}</SheetTitle>
+                  <StatusBadge status={lead.status || 'To Analyze'} />
+                </div>
+                <p className="text-xs text-slate-500 truncate mt-1">
+                  {[lead.contact_name, lead.contact_role].filter(Boolean).join(' • ') || t('common.contact')}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {lead.source_list ? (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 text-sky-700 border border-sky-100 px-2 py-0.5 text-[11px] font-medium">
+                      <Tag className="w-3 h-3" />
+                      {lead.source_list}
+                    </span>
+                  ) : null}
+                  {lead.industry ? <span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-600">{lead.industry}</span> : null}
+                  {lead.country ? <span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-600">{lead.country}</span> : null}
+                </div>
+              </div>
+              <Button variant="outline" size="sm" onClick={openFullLeadPage} className="shrink-0">
                 {t('leads.openFullPage')}
               </Button>
-              <StatusBadge status={lead.status || 'To Analyze'} />
             </div>
-          </div>
-        </SheetHeader>
+          </SheetHeader>
 
-        <div className="mb-4 grid gap-3 sm:grid-cols-2">
-          <Card className="shadow-sm">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">{t('leads.leadSnapshot')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1.5 text-xs">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                <p className="text-[10px] uppercase tracking-wide text-slate-500">{t('common.contact')}</p>
-                <p className="text-slate-900 font-medium">{lead.contact_name || 'N/A'}</p>
-                <p className="text-slate-500">{lead.contact_role || 'N/A'}</p>
-              </div>
-              {[
-                [t('common.industry'), lead.industry],
-                [t('common.country'), lead.country],
-                [t('common.size'), lead.company_size ? `${lead.company_size} ${i18n.language === 'fr' ? 'employés' : 'employees'}` : null],
-                [t('leads.clientType'), lead.client_type],
-                [t('leads.lastAnalyzedLabel'), formatDate(lead.last_analyzed_at, i18n.language)],
-              ]
-                .filter(([, value]) => value)
-                .map(([label, value]) => (
-                  <div key={label} className="flex items-center justify-between gap-2">
-                    <span className="text-slate-500">{label}</span>
-                    <span className="font-medium text-slate-800 text-right">{value}</span>
-                  </div>
-                ))}
-            </CardContent>
-          </Card>
-          <ScoreBreakdown
-            lead={lead}
-            finalScore={finalScore}
-            icpScore={icpScore}
-            aiScore={aiScore}
-            aiBoost={aiBoost}
-            scoreDetails={scoreDetails}
-          />
-        </div>
-
-        <div className="mb-4">
-          <AnalysisHero
-            lead={lead}
-            t={t}
-            compact
-            primaryAction={primaryHeroAction}
-            secondaryAction={secondaryHeroAction}
-          />
-        </div>
-
-        {finalScore === null && !isJobActive && (
-          <div className="mb-4 flex items-start gap-3 px-4 py-3 rounded-xl border border-sky-200 bg-sky-50">
-            <AlertTriangle className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-sky-800">
-                {t('leads.noScoreYet', { defaultValue: 'Not yet scored' })}
-              </p>
-              <p className="text-xs text-sky-700 mt-0.5">
-                {t('leads.noScoreYetBody', { defaultValue: 'Click Analyze to run AI scoring and get an ICP fit score for this lead.' })}
-              </p>
-            </div>
-            <Button
-              size="sm"
-              onClick={handleSaveAndAnalyze}
-              disabled={savingAndAnalyzing}
-              className="shrink-0 h-7 text-xs bg-sky-500 hover:bg-sky-600 text-white border-0 gap-1.5"
-            >
-              {savingAndAnalyzing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-              {t('leads.analyzeNow', { defaultValue: 'Analyze now' })}
-            </Button>
-          </div>
-        )}
-
-        <div className="mb-4 rounded-xl border border-slate-200 p-4 space-y-4 bg-slate-50/40">
-          {currentJob ? (
-            <div className="rounded-xl border border-brand-sky/20 bg-brand-sky/5 p-3">
-              <div className="flex items-center justify-between gap-3 text-sm">
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+            <section className="rounded-xl border border-slate-200 bg-white p-4">
+              <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="font-semibold text-slate-800">
-                    {activeJob?.label || t('leads.asyncJobRunning', { defaultValue: 'Background job running' })}
-                  </p>
-                  <p className="text-slate-600">
-                    {currentJob.message || t('leads.asyncJobQueued', { defaultValue: 'Background job queued.' })}
-                  </p>
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-slate-500">{t('leads.finalScoreLabel', { defaultValue: 'Final score' })}</p>
+                  <p className="text-4xl font-bold leading-none tracking-tight text-slate-900">{finalScore ?? '—'}</p>
                 </div>
-                <span className="rounded-md border border-brand-sky/20 bg-white px-2 py-1 text-xs font-medium text-brand-sky">
-                  {Math.max(0, Math.min(100, Number(currentJob.progress || 0)))}%
-                </span>
+                <div className="text-right text-xs text-slate-500">
+                  {formatDate(lead.last_analyzed_at, i18n.language)
+                    ? `${t('leads.lastAnalyzedLabel')}: ${formatDate(lead.last_analyzed_at, i18n.language)}`
+                    : t('leads.noAnalysisSummaryYet')}
+                </div>
               </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/80">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-brand-sky to-brand-sky-2 transition-all"
-                  style={{ width: `${Math.max(8, Math.min(100, Number(currentJob.progress || 0)))}%` }}
-                />
+              <div className="mt-3 h-2 rounded-full bg-slate-100 overflow-hidden">
+                <div className="h-full rounded-full bg-slate-900" style={{ width: `${scorePercent}%` }} />
               </div>
-            </div>
-          ) : null}
-
-          {/* Action buttons — deterministic ICP (free) + AI actions (credit-cost) */}
-          <div className="space-y-2">
-            <LeadActionsPanel
-              variant="compact"
-              onScoreIcp={handleScoreIcp}
-              onAnalyse={handleSaveAndAnalyze}
-              scoring={scoringIcp}
-              analysing={savingAndAnalyzing}
-              disabled={isJobActive}
-            />
-            <Button variant="ghost" size="sm" onClick={handleSave} disabled={saving || isJobActive} className="w-full text-xs text-slate-500">
-              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
-              {isDirty ? t('leads.saveChangesCta') : t('leads.saveDraft')}
-            </Button>
-          </div>
-        </div>
-
-        {lead.signals?.length > 0 && (
-          <div className="mb-4 space-y-3">
-            <p className="text-sm font-semibold text-slate-700">{t('leads.computedSignals')}</p>
-
-            {['positive', 'negative', 'neutral'].map((type) => {
-              const items = groupedSignals[type] || [];
-              if (items.length === 0) return null;
-              const title = type === 'positive' ? t('leads.positiveSignals') : type === 'negative' ? t('leads.negativeSignals') : t('leads.neutralSignals');
-
-              return (
-                <div key={type} className={`rounded-lg border px-3 py-2 ${signalTypeClass(type)}`}>
-                  <p className="text-xs font-semibold mb-1">{title} ({items.length})</p>
-                  <div className="flex flex-wrap gap-2">
-                    {items.map((signal, index) => (
-                      <SignalBadge key={`${type}-${index}`} signal={signal} />
-                    ))}
-                  </div>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2">
+                  <p className="text-[10px] uppercase tracking-wide text-slate-500">ICP</p>
+                  <p className="text-sm font-semibold text-slate-800">{icpScore ?? '—'}</p>
                 </div>
-              );
-            })}
-          </div>
-        )}
-
-        {icebreakers.length > 0 && (
-          <Tabs defaultValue={icebreakers[0].key} className="mb-4">
-            <TabsList className="w-full">
-              {icebreakers.map(({ key, label, icon: Icon }) => (
-                <TabsTrigger key={key} value={key} className="flex-1 gap-1.5">
-                  <Icon className="w-3.5 h-3.5" />
-                  {label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-
-            {icebreakers.map(({ key, content }) => (
-              <TabsContent key={key} value={key}>
-                <div className="bg-slate-50 rounded-xl p-4 relative">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="absolute top-2 right-2 h-7 gap-1"
-                    onClick={() => handleCopy(content, key)}
-                    aria-label="Copier dans le presse-papier"
-                  >
-                    {copied === key ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                  </Button>
-                  <pre className="text-sm text-slate-700 whitespace-pre-wrap font-sans leading-relaxed pr-8">{content}</pre>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2">
+                  <p className="text-[10px] uppercase tracking-wide text-slate-500">AI</p>
+                  <p className="text-sm font-semibold text-slate-800">{aiScore ?? '—'}</p>
                 </div>
-              </TabsContent>
-            ))}
-          </Tabs>
-        )}
-
-        <Tabs defaultValue="icp" className="mb-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="icp">ICP Analysis</TabsTrigger>
-            <TabsTrigger value="criteria">Important ICP Criteria</TabsTrigger>
-            <TabsTrigger value="ai">AI Signal Analysis</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="icp" className="mt-3">
-            <div className="rounded-xl border border-brand-sky/20 bg-brand-sky/4 p-4">
-              <p className="text-xs font-semibold text-brand-sky mb-1.5 flex items-center gap-1.5">
-                <Target className="w-3.5 h-3.5" />
-                ICP Analysis
-              </p>
-              <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
-                {icpSummary || t('leads.noAnalysisSummaryYet')}
-              </p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="criteria" className="mt-3">
-            <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2">
-              {importantIcpCriteria.length > 0 ? importantIcpCriteria.map((criterion) => (
-                <div key={criterion.key} className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0">
-                  <div>
-                    <p className="text-sm font-medium text-slate-800">{criterion.label}</p>
-                    <p className="text-xs text-slate-500">{criterion.match}</p>
-                  </div>
-                  <span className={`text-xs font-semibold px-2 py-1 rounded-md ${criterion.points >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                    {criterion.points > 0 ? '+' : ''}{criterion.points}
-                  </span>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2">
+                  <p className="text-[10px] uppercase tracking-wide text-slate-500">Boost</p>
+                  <p className="text-sm font-semibold text-slate-800">{aiBoost ?? '—'}</p>
                 </div>
-              )) : (
-                <p className="text-sm text-slate-500">{t('leads.noSignalsYet')}</p>
-              )}
-            </div>
-          </TabsContent>
+              </div>
+            </section>
 
-          <TabsContent value="ai" className="mt-3">
-            <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-4 space-y-3">
-              <p className="text-xs font-semibold text-violet-700">AI Signal Analysis</p>
-              {signalAnalysis ? (
-                <>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="rounded-lg border border-slate-200 bg-white p-2"><p className="text-[11px] text-slate-500">AI Score</p><p className="text-sm font-semibold">{signalAnalysis.ai_score ?? '—'}</p></div>
-                    <div className="rounded-lg border border-slate-200 bg-white p-2"><p className="text-[11px] text-slate-500">AI Boost</p><p className="text-sm font-semibold">{signalAnalysis.ai_boost ?? '—'}</p></div>
-                    <div className="rounded-lg border border-slate-200 bg-white p-2"><p className="text-[11px] text-slate-500">{t('leads.confidenceShort', { defaultValue: 'Confidence' })}</p><p className="text-sm font-semibold">{signalAnalysis.confidence ?? '—'}</p></div>
-                  </div>
-                  <p className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">{lead.analysis_summary || t('leads.noAnalysisSummaryYet')}</p>
-                </>
-              ) : (
-                <p className="text-sm text-slate-600">{t('leads.noAnalysisSummaryYet')}</p>
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
-
-        <div className="border-t border-slate-100 pt-4 space-y-3">
-          <p className="text-sm font-semibold text-slate-700">{t('leads.followUp')}</p>
-          <Select value={followUpStatus} onValueChange={setFollowUpStatus}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {FOLLOW_UP_STATUS_LIST.map((status) => (
-                <SelectItem key={status} value={status}>
-                  {status}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Textarea placeholder={t('common.notes')} value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} />
-
-          <Button onClick={handleSave} disabled={saving || savingAndAnalyzing || isJobActive} className="w-full relative">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : isDirty ? t('leads.saveChangesCta') : t('common.save')}
-          </Button>
-        </div>
-
-        {/* CRM empty-state CTA — shown once the lead is scored but no CRM is configured */}
-        {activeCrmTypes.length === 0 && finalScore !== null && (
-          <div className="border-t border-slate-100 pt-4">
-            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/60 p-3">
-              <div className="flex items-start gap-3">
-                <Database className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-800">
-                    {t('leads.crmEmptyTitle', { defaultValue: 'Envoyer ce lead dans votre CRM' })}
-                  </p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {t('leads.crmEmptyBody', { defaultValue: 'Connectez HubSpot ou Salesforce pour synchroniser les leads scorés en un clic.' })}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    onOpenChange(false);
-                    navigate(ROUTES.crmIntegration);
-                  }}
-                  className="shrink-0 h-7 text-xs"
-                >
-                  {t('leads.crmEmptyCta', { defaultValue: 'Configurer' })}
+            <section className="rounded-xl border border-slate-200 bg-white p-3">
+              <p className="text-xs font-semibold text-slate-700 mb-2">{t('leads.nextActionTitle', { defaultValue: 'Next action' })}</p>
+              <div className="grid grid-cols-5 gap-2">
+                <Button size="sm" variant="outline" disabled={!contactPhone} onClick={() => window.open(`tel:${contactPhone}`)} className="gap-1 px-2">
+                  <Phone className="w-3.5 h-3.5" />
+                  <span className="text-[11px]">Call</span>
+                </Button>
+                <Button size="sm" variant="outline" disabled={!contactEmail} onClick={() => window.location.href = `mailto:${contactEmail}`} className="gap-1 px-2">
+                  <Mail className="w-3.5 h-3.5" />
+                  <span className="text-[11px]">Email</span>
+                </Button>
+                <Button size="sm" variant="outline" disabled={!linkedinUrl} onClick={() => window.open(linkedinUrl, '_blank', 'noopener,noreferrer')} className="gap-1 px-2">
+                  <Linkedin className="w-3.5 h-3.5" />
+                  <span className="text-[11px]">LinkedIn</span>
+                </Button>
+                <Button size="sm" variant="outline" onClick={openFullLeadPage} className="gap-1 px-2">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span className="text-[11px]">Open</span>
+                </Button>
+                <Button size="sm" onClick={handleSaveAndAnalyze} disabled={savingAndAnalyzing || isJobActive} className="gap-1 px-2 bg-slate-900 hover:bg-slate-800 text-white">
+                  {savingAndAnalyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  <span className="text-[11px]">Analyze</span>
                 </Button>
               </div>
-            </div>
-          </div>
-        )}
+              {(!contactPhone || !contactEmail || !linkedinUrl) ? (
+                <p className="text-[11px] text-slate-500 mt-2">TODO: Missing contact channel data keeps related action disabled.</p>
+              ) : null}
+            </section>
 
-        {/* CRM Sync section — only shown when at least one CRM is configured */}
-        {activeCrmTypes.length > 0 && (
-          <div className="border-t border-slate-100 pt-4 space-y-3">
-            <p className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-              <Database className="w-4 h-4 text-slate-400" />
-              CRM
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {activeCrmTypes.map((crmType) => {
-                const lastSync = crmSyncRecords
-                  .filter((r) => r.crm_type === crmType && r.status === 'success')
-                  .at(0);
-                const label = crmType === 'hubspot' ? 'HubSpot' : 'Salesforce';
-                const isSyncing =
-                  crmSyncMutation.isPending &&
-                  crmSyncMutation.variables?.crmType === crmType;
+            {finalScore === null && !isJobActive ? (
+              <div className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-sky-500 mt-0.5" />
+                <p className="text-xs text-sky-800">{t('leads.noScoreYetBody', { defaultValue: 'Click Analyze to run AI scoring and get an ICP fit score for this lead.' })}</p>
+              </div>
+            ) : null}
 
-                return (
-                  <div key={crmType} className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => crmSyncMutation.mutate({ leadId: lead.id, crmType })}
-                      disabled={crmSyncMutation.isPending}
-                    >
-                      {isSyncing ? (
-                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                      ) : (
-                        <Database className="w-3.5 h-3.5 mr-1.5" />
-                      )}
-                      {t('leads.pushToCrm', { crm: label })}
-                    </Button>
-                    {lastSync?.crm_object_url && (
-                      <a
-                        href={lastSync.crm_object_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-blue-600 hover:underline flex items-center gap-0.5"
-                      >
-                        {t('leads.viewInCrm', { crm: label })}
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
+            {currentJob ? (
+              <section className="rounded-xl border border-brand-sky/20 bg-brand-sky/5 p-3">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <div>
+                    <p className="font-semibold text-slate-800">{activeJob?.label || t('leads.asyncJobRunning', { defaultValue: 'Background job running' })}</p>
+                    <p className="text-slate-600 text-xs">{currentJob.message || t('leads.asyncJobQueued', { defaultValue: 'Background job queued.' })}</p>
                   </div>
-                );
-              })}
-            </div>
-            {crmSyncRecords.length > 0 && (
-              <p className="text-xs text-slate-400">
-                {t('leads.lastCrmSync')}{' '}
-                {new Date(crmSyncRecords[0].created_at).toLocaleString(i18n.language)}
-                {crmSyncRecords[0].status === 'failed' && (
-                  <span className="text-red-400 ml-1">— {t('common.error').toLowerCase()}</span>
+                  <span className="rounded-md border border-brand-sky/20 bg-white px-2 py-1 text-xs font-medium text-brand-sky">
+                    {Math.max(0, Math.min(100, Number(currentJob.progress || 0)))}%
+                  </span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/80">
+                  <div className="h-full rounded-full bg-gradient-to-r from-brand-sky to-brand-sky-2 transition-all" style={{ width: `${Math.max(8, Math.min(100, Number(currentJob.progress || 0)))}%` }} />
+                </div>
+              </section>
+            ) : null}
+
+            <Tabs defaultValue="overview" className="space-y-3">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="scorecard">Scorecard</TabsTrigger>
+                <TabsTrigger value="signals">Signals</TabsTrigger>
+                <TabsTrigger value="actions">Outreach</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="overview" className="space-y-3 m-0">
+                <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm space-y-1.5">
+                  {[
+                    [t('common.contact'), lead.contact_name || 'N/A'],
+                    [t('common.role'), lead.contact_role || 'N/A'],
+                    [t('common.size'), lead.company_size ? `${lead.company_size} ${i18n.language === 'fr' ? 'employés' : 'employees'}` : '—'],
+                    [t('leads.clientType'), lead.client_type || '—'],
+                  ].map(([label, value]) => (
+                    <div key={label} className="flex items-center justify-between gap-2">
+                      <span className="text-slate-500">{label}</span>
+                      <span className="font-medium text-slate-800 text-right">{value}</span>
+                    </div>
+                  ))}
+                  {websiteUrl ? (
+                    <a href={websiteUrl} target="_blank" rel="noopener noreferrer" className="pt-2 inline-flex items-center gap-1 text-sky-700 hover:underline text-xs">
+                      <Globe className="w-3.5 h-3.5" />
+                      {lead.website_url}
+                    </a>
+                  ) : null}
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white p-3">
+                  <p className="text-xs font-semibold text-slate-700 mb-2">{t('leads.followUp')}</p>
+                  <Select value={followUpStatus} onValueChange={setFollowUpStatus}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FOLLOW_UP_STATUS_LIST.map((status) => (
+                        <SelectItem key={status} value={status}>{status}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Textarea placeholder={t('common.notes')} value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} className="mt-2" />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="scorecard" className="space-y-3 m-0">
+                <div className="rounded-xl border border-brand-sky/20 bg-brand-sky/5 p-3">
+                  <p className="text-xs font-semibold text-brand-sky mb-1.5 flex items-center gap-1.5">
+                    <Target className="w-3.5 h-3.5" />
+                    ICP Analysis
+                  </p>
+                  <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{icpSummary || t('leads.noAnalysisSummaryYet')}</p>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+                  <p className="text-xs font-semibold text-slate-700">{t('leads.importantIcpCriteria', { defaultValue: 'Important ICP criteria' })}</p>
+                  {importantIcpCriteria.length > 0 ? importantIcpCriteria.map((criterion) => (
+                    <div key={criterion.key} className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0">
+                      <div>
+                        <p className="text-sm font-medium text-slate-800">{criterion.label}</p>
+                        <p className="text-xs text-slate-500">{criterion.match}</p>
+                      </div>
+                      <span className={`text-xs font-semibold px-2 py-1 rounded-md ${criterion.points >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                        {criterion.points > 0 ? '+' : ''}
+                        {criterion.points}
+                      </span>
+                    </div>
+                  )) : <p className="text-sm text-slate-500">{t('leads.noSignalsYet')}</p>}
+                </div>
+
+                <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-3 space-y-2">
+                  <p className="text-xs font-semibold text-violet-700">AI Signal Analysis</p>
+                  {signalAnalysis ? (
+                    <>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="rounded-lg border border-slate-200 bg-white p-2"><p className="text-[11px] text-slate-500">AI Score</p><p className="text-sm font-semibold">{signalAnalysis.ai_score ?? '—'}</p></div>
+                        <div className="rounded-lg border border-slate-200 bg-white p-2"><p className="text-[11px] text-slate-500">AI Boost</p><p className="text-sm font-semibold">{signalAnalysis.ai_boost ?? '—'}</p></div>
+                        <div className="rounded-lg border border-slate-200 bg-white p-2"><p className="text-[11px] text-slate-500">{t('leads.confidenceShort', { defaultValue: 'Confidence' })}</p><p className="text-sm font-semibold">{signalAnalysis.confidence ?? '—'}</p></div>
+                      </div>
+                      <p className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">{lead.analysis_summary || t('leads.noAnalysisSummaryYet')}</p>
+                    </>
+                  ) : <p className="text-sm text-slate-600">{t('leads.noAnalysisSummaryYet')}</p>}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="signals" className="space-y-3 m-0">
+                {lead.signals?.length > 0 ? (
+                  ['positive', 'negative', 'neutral'].map((type) => {
+                    const items = groupedSignals[type] || [];
+                    if (items.length === 0) return null;
+                    const title = type === 'positive' ? t('leads.positiveSignals') : type === 'negative' ? t('leads.negativeSignals') : t('leads.neutralSignals');
+                    return (
+                      <div key={type} className={`rounded-lg border px-3 py-2 ${signalTypeClass(type)}`}>
+                        <p className="text-xs font-semibold mb-1">{title} ({items.length})</p>
+                        <div className="flex flex-wrap gap-2">
+                          {items.map((signal, index) => <SignalBadge key={`${type}-${index}`} signal={signal} />)}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-500">{t('leads.noSignalsYet')}</div>
                 )}
-              </p>
-            )}
+
+                <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-600 space-y-1">
+                  <div className="flex items-center justify-between"><span>Intent signals</span><span className="font-semibold text-slate-800">{intentSignalTotal}</span></div>
+                  <div className="flex items-center justify-between"><span>Internet signals</span><span className="font-semibold text-slate-800">{internetSignals.length}</span></div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="actions" className="space-y-3 m-0">
+                <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+                  <p className="text-xs font-semibold text-slate-700">{t('leads.actions', { defaultValue: 'Actions' })}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button variant="outline" onClick={handleScoreIcp} disabled={scoringIcp || isJobActive}>
+                      {scoringIcp ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : null}
+                      {t('leads.scoreIcpButton', { defaultValue: 'Score ICP' })}
+                    </Button>
+                    <Button variant="outline" onClick={handleSaveAndAnalyze} disabled={savingAndAnalyzing || isJobActive}>
+                      {savingAndAnalyzing ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />}
+                      {t('leads.saveAndReanalyze', { defaultValue: 'Save and reanalyze' })}
+                    </Button>
+                  </div>
+                </div>
+
+                {activeCrmTypes.length === 0 && finalScore !== null ? (
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3">
+                    <div className="flex items-start gap-3">
+                      <Database className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-800">{t('leads.crmEmptyTitle', { defaultValue: 'Envoyer ce lead dans votre CRM' })}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{t('leads.crmEmptyBody', { defaultValue: 'Connectez HubSpot ou Salesforce pour synchroniser les leads scorés en un clic.' })}</p>
+                      </div>
+                      <Button size="sm" variant="outline" onClick={() => {
+                        onOpenChange(false);
+                        navigate(ROUTES.crmIntegration);
+                      }} className="shrink-0 h-7 text-xs">
+                        {t('leads.crmEmptyCta', { defaultValue: 'Configurer' })}
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {activeCrmTypes.length > 0 ? (
+                  <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+                    <p className="text-xs font-semibold text-slate-700 flex items-center gap-1.5"><Database className="w-4 h-4 text-slate-400" />CRM</p>
+                    <div className="flex flex-wrap gap-2">
+                      {activeCrmTypes.map((crmType) => {
+                        const lastSync = crmSyncRecords.filter((r) => r.crm_type === crmType && r.status === 'success').at(0);
+                        const label = crmType === 'hubspot' ? 'HubSpot' : 'Salesforce';
+                        const isSyncing = crmSyncMutation.isPending && crmSyncMutation.variables?.crmType === crmType;
+                        return (
+                          <div key={crmType} className="flex items-center gap-2">
+                            <Button size="sm" variant="outline" onClick={() => crmSyncMutation.mutate({ leadId: lead.id, crmType })} disabled={crmSyncMutation.isPending}>
+                              {isSyncing ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Database className="w-3.5 h-3.5 mr-1.5" />}
+                              {t('leads.pushToCrm', { crm: label })}
+                            </Button>
+                            {lastSync?.crm_object_url ? (
+                              <a href={lastSync.crm_object_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline flex items-center gap-0.5">
+                                {t('leads.viewInCrm', { crm: label })}
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+              </TabsContent>
+            </Tabs>
           </div>
-        )}
-      </SheetContent>
-    </Sheet>
+
+          <div className="border-t border-slate-200 bg-white px-5 py-3 flex gap-2">
+            <Button variant="outline" onClick={handleSaveAndAnalyze} disabled={savingAndAnalyzing || isJobActive} className="flex-1">
+              {savingAndAnalyzing ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />}
+              {t('leads.analyzeNow', { defaultValue: 'Analyze now' })}
+            </Button>
+            <Button onClick={handleSave} disabled={saving || savingAndAnalyzing || isJobActive} className="flex-1">
+              {saving ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : null}
+              {isDirty ? t('leads.saveChangesCta') : t('common.save')}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }
