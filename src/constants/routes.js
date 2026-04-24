@@ -7,6 +7,7 @@ export const ROUTES = {
   analytics: '/analytics',
   pipeline: '/pipeline',
   lists: '/lists',
+  priorities: '/priorities',
   outreach: '/outreach',
   icp: '/icp',
   settings: '/settings',
