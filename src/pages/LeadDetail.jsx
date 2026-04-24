@@ -51,6 +51,13 @@ const inferSignalTypeFromKey = (value) => {
 const getScoreDetails = (lead) =>
   lead?.score_details && typeof lead.score_details === 'object' ? lead.score_details : {};
 
+const getIcpAnalysisText = (lead, scoreDetails) =>
+  lead?.icp_summary
+  || scoreDetails?.icp_analysis
+  || scoreDetails?.icp_analysis_text
+  || (scoreDetails?.signal_analysis ? null : lead?.analysis_summary)
+  || null;
+
 const getNumericScoreDetail = (details, key) => {
   const entry = details?.[key];
   if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
@@ -456,19 +463,30 @@ export default function LeadDetail() {
       ? lead.score_details.signal_analysis
       : null;
   const displaySignals = getDisplaySignals(lead);
+  const icpAnalysisText = getIcpAnalysisText(lead, scoreDetails);
+  const icpCriteriaSource =
+    (scoreDetails?.criteria_breakdown && typeof scoreDetails.criteria_breakdown === 'object' && scoreDetails.criteria_breakdown)
+    || (scoreDetails?.icp_criteria && typeof scoreDetails.icp_criteria === 'object' && scoreDetails.icp_criteria)
+    || scoreDetails;
 
   const signalGroups = {
-    positive: displaySignals.filter((s) => String(s?.type || '').toLowerCase() === 'positive'),
-    negative: displaySignals.filter((s) => String(s?.type || '').toLowerCase() === 'negative'),
-    neutral: displaySignals.filter((s) => String(s?.type || '').toLowerCase() === 'neutral'),
+    positive: (Array.isArray(signalAnalysis?.positives) ? signalAnalysis.positives : []).map((label) => ({ label })),
+    negative: (Array.isArray(signalAnalysis?.negatives) ? signalAnalysis.negatives : []).map((label) => ({ label })),
+    neutral: (Array.isArray(signalAnalysis?.neutrals) ? signalAnalysis.neutrals : []).map((label) => ({ label })),
   };
+  const fallbackNeutralSignals = signalGroups.neutral.length > 0
+    ? signalGroups.neutral
+    : (Array.isArray(signalAnalysis?.signals) ? signalAnalysis.signals : []).map((label) => ({ label }));
+  if (signalGroups.neutral.length === 0 && fallbackNeutralSignals.length > 0) {
+    signalGroups.neutral = fallbackNeutralSignals;
+  }
 
   const providerStatus =
     lead?.auto_signal_metadata?.provider_status && typeof lead.auto_signal_metadata.provider_status === 'object'
       ? lead.auto_signal_metadata.provider_status
       : null;
 
-  const importantIcpCriteria = Object.entries(scoreDetails)
+  const importantIcpCriteria = Object.entries(icpCriteriaSource)
     .filter(
       ([key, value]) =>
         value
@@ -695,10 +713,8 @@ export default function LeadDetail() {
               <CardTitle className="text-sm">{t('leads.icpAnalysis', { defaultValue: 'ICP fit' })}</CardTitle>
             </CardHeader>
             <CardContent>
-              {lead.icp_summary ? (
-                <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700">{lead.icp_summary}</p>
-              ) : lead.analysis_summary ? (
-                <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700">{lead.analysis_summary}</p>
+              {icpAnalysisText ? (
+                <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700">{icpAnalysisText}</p>
               ) : (
                 <p className="text-sm text-slate-500">{t('leads.noAnalysisSummaryYet')}</p>
               )}
@@ -844,7 +860,7 @@ export default function LeadDetail() {
                 </div>
               ) : null}
 
-              {displaySignals.length > 0 ? (
+              {signalAnalysis ? (
                 <div className="space-y-2">
                   {['positive', 'negative', 'neutral'].map((type) => {
                     const items = signalGroups[type] || [];
@@ -861,15 +877,21 @@ export default function LeadDetail() {
                         </p>
                         <div className="flex flex-wrap gap-2">
                           {items.map((signal, index) => (
-                            <SignalBadge key={`${type}-${index}`} signal={signal} />
+                            <SignalBadge key={`${type}-${index}`} signal={{ ...signal, type }} />
                           ))}
                         </div>
                       </div>
                     );
                   })}
+                  {signalAnalysis?.sources?.length > 0 || signalAnalysis?.website ? (
+                    <div className="rounded-lg border border-slate-200 p-3 text-xs text-slate-600">
+                      {signalAnalysis?.sources?.length > 0 ? <p>Sources: {signalAnalysis.sources.join(', ')}</p> : null}
+                      {signalAnalysis?.website ? <p>Website: {signalAnalysis.website}</p> : null}
+                    </div>
+                  ) : null}
                 </div>
               ) : (
-                <p className="text-sm text-slate-500">{t('leads.noSignalsYet')}</p>
+                <p className="text-sm text-slate-500">No AI buying signals detected yet</p>
               )}
             </CardContent>
           </Card>

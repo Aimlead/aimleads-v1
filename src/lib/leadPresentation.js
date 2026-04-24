@@ -82,7 +82,11 @@ export const getLeadAnalysisLevelMeta = (lead, t) => {
 
 export const getLeadTopSignals = (lead, limit = 3) => {
   const signals = Array.isArray(lead?.signals) ? lead.signals : [];
-  return signals
+  const aiSignals = Array.isArray(lead?.score_details?.signal_analysis?.signals)
+    ? lead.score_details.signal_analysis.signals
+    : [];
+
+  return [...signals, ...aiSignals]
     .map(normalizeSignalLabel)
     .filter(Boolean)
     .slice(0, limit);
