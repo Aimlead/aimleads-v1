@@ -502,13 +502,43 @@ export default function Dashboard() {
   return (
     <>
       <div className="mb-4 rounded-xl border border-[#e6e4df] bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex flex-col gap-3">
           <div>
             <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">{t('dashboard.priority.eyebrow', { defaultValue: 'Today · Priority' })}</p>
             <h1 className="mt-1 text-[30px] font-bold tracking-tight text-[#1a1200]">{t('dashboard.priority.title', { defaultValue: 'Who to contact now' })}</h1>
             <p className="mt-1 text-sm text-slate-500">{t('dashboard.priority.subtitle', { defaultValue: 'A focused view built from your real leads, ICP scoring, and AI signals.' })}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-1.5">
+
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
+            <div>
+              <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">{t('dashboard.selectors.list')}</p>
+              <div className="mt-2 flex items-center gap-2">
+                <Select value={selectedSourceList} onValueChange={setSelectedSourceList}>
+                  <SelectTrigger className="h-9 border-[#e6e4df] text-sm">
+                    <SelectValue placeholder={t('dashboard.placeholders.selectLeadList')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={LIST_KEYS.ALL}>{t('dashboard.lists.all')} ({leads.length})</SelectItem>
+                    {sourceListOptions.map((option) => (
+                      <SelectItem key={option.key} value={option.key}>
+                        {option.label} ({option.count})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="ghost" size="sm" onClick={() => navigate(ROUTES.lists)} className="h-9 px-3 text-xs">{t('dashboard.selectors.manageLists', { defaultValue: 'Manage lists' })}</Button>
+              </div>
+            </div>
+            <div>
+              <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">ICP</p>
+              <Select value={activeIcp?.id || ''} onValueChange={handleSwitchIcp} disabled={isSwitchingIcp || icpProfiles.length === 0}>
+                <SelectTrigger className="mt-2 h-9 border-[#e6e4df] text-sm"><SelectValue placeholder={t('dashboard.placeholders.selectActiveIcp')} /></SelectTrigger>
+                <SelectContent>{icpProfiles.map((profile) => <SelectItem key={profile.id} value={profile.id}>{profile.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
             <Button variant="outline" size="sm" onClick={handleScoreIcpVisible} disabled={isScoringIcpVisible || isReanalyzing || isAnalyzingSignalsVisible} className="h-8 gap-1.5 rounded-md border-[#e8e5de] text-[11.5px]">
               {isScoringIcpVisible ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Target className="h-3.5 w-3.5" />}
               {t('dashboard.actions.analyzeIcp', { defaultValue: 'Analyze ICP' })}
@@ -534,35 +564,6 @@ export default function Dashboard() {
               {t('dashboard.actions.researchLead', { defaultValue: 'Research lead' })}
             </Button>
           </div>
-        </div>
-      </div>
-
-      <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_280px]">
-        <div className="rounded-xl border border-[#e6e4df] bg-white p-4 shadow-sm">
-          <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">{t('dashboard.selectors.list')}</p>
-          <div className="mt-2 flex items-center gap-2">
-            <Select value={selectedSourceList} onValueChange={setSelectedSourceList}>
-              <SelectTrigger className="h-9 border-[#e6e4df] text-sm">
-                <SelectValue placeholder={t('dashboard.placeholders.selectLeadList')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={LIST_KEYS.ALL}>{t('dashboard.lists.all')} ({leads.length})</SelectItem>
-                {sourceListOptions.map((option) => (
-                  <SelectItem key={option.key} value={option.key}>
-                    {option.label} ({option.count})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button variant="ghost" size="sm" onClick={() => navigate(ROUTES.lists)} className="h-9 px-3 text-xs">{t('dashboard.selectors.manageLists', { defaultValue: 'Manage lists' })}</Button>
-          </div>
-        </div>
-        <div className="rounded-xl border border-[#e6e4df] bg-white p-4 shadow-sm">
-          <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">ICP</p>
-          <Select value={activeIcp?.id || ''} onValueChange={handleSwitchIcp} disabled={isSwitchingIcp || icpProfiles.length === 0}>
-            <SelectTrigger className="mt-2 h-9 border-[#e6e4df] text-sm"><SelectValue placeholder={t('dashboard.placeholders.selectActiveIcp')} /></SelectTrigger>
-            <SelectContent>{icpProfiles.map((profile) => <SelectItem key={profile.id} value={profile.id}>{profile.name}</SelectItem>)}</SelectContent>
-          </Select>
         </div>
       </div>
 
