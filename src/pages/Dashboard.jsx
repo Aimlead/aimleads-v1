@@ -56,6 +56,19 @@ const estimatePriorityScore = (lead) => {
   return Math.round(base + signalWeight + freshnessWeight + needsContactBoost);
 };
 
+const getHeatTier = (lead) => {
+  const score = clampScore(lead?.final_score ?? lead?.icp_score) ?? 0;
+  if (score >= 80) return 'Hot';
+  if (score >= 65) return 'Warm';
+  return 'Cold';
+};
+
+const HEAT_TIER_BADGE_STYLES = {
+  Hot: 'bg-rose-50 text-rose-700 ring-rose-200',
+  Warm: 'bg-amber-50 text-amber-700 ring-amber-200',
+  Cold: 'bg-slate-100 text-slate-700 ring-slate-200',
+};
+
 
 
 export default function Dashboard() {
@@ -634,9 +647,10 @@ export default function Dashboard() {
               const finalScore = clampScore(lead.final_score ?? lead.icp_score);
               const icpScore = clampScore(lead.icp_score);
               const aiScore = clampScore(lead.ai_score ?? lead?.score_details?.signal_analysis?.ai_score);
+              const heatTier = getHeatTier(lead);
               return (
-                <button key={lead.id} type="button" onClick={() => handleSelectLead(lead)} className="rounded-xl border border-[#e6e4df] bg-white p-4 text-left shadow-sm transition hover:border-[#d9d5cb]">
-                  <div className="flex items-start justify-between gap-2"><div><p className="text-2xl font-semibold text-slate-950">{lead.company_name}</p><p className="text-sm text-slate-500">{lead.contact_role || t('common.contact')}</p></div><span className="rounded-full bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-700">P{index + 1}</span></div>
+                <button key={lead.id} type="button" onClick={() => handleSelectLead(lead)} className="group rounded-xl border border-[#e6e4df] bg-white p-4 text-left shadow-sm transition hover:border-[#d9d5cb]">
+                  <div className="flex items-start justify-between gap-2"><div><p className="text-2xl font-semibold text-slate-950">{lead.company_name}</p><p className="text-sm text-slate-500">{lead.contact_role || t('common.contact')}</p></div><div className="flex items-center gap-1.5"><span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold leading-tight text-rose-700 ring-1 ring-rose-200 transition-colors group-hover:bg-rose-100">P{index + 1}</span><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold leading-tight ring-1 transition-colors ${HEAT_TIER_BADGE_STYLES[heatTier]}`}>{heatTier}</span></div></div>
                   <p className="mt-3 text-5xl font-bold leading-none text-slate-950">{finalScore ?? '—'}<span className="text-xl text-slate-300">/100</span></p>
                   <div className="mt-3 space-y-2">
                     <div><div className="mb-1 flex justify-between text-xs text-slate-500"><span>ICP</span><span>{icpScore ?? '—'}</span></div><div className="h-1.5 rounded-full bg-slate-100"><div className="h-full rounded-full bg-slate-900" style={{ width: `${icpScore ?? 0}%` }} /></div></div>
