@@ -23,6 +23,7 @@ const Analytics = lazy(() => import('@/pages/Analytics'));
 const Onboarding = lazy(() => import('@/pages/Onboarding'));
 const Pipeline = lazy(() => import('@/pages/Pipeline'));
 const Lists = lazy(() => import('@/pages/Lists'));
+const PriorityList = lazy(() => import('@/pages/PriorityList'));
 const Team = lazy(() => import('@/pages/Team.jsx'));
 const ICP = lazy(() => import('@/pages/ICP'));
 const Pricing = lazy(() => import('@/pages/Pricing'));
@@ -113,6 +114,7 @@ function AppRoutes() {
         <Route path={ROUTES.analytics} element={<Analytics />} />
         <Route path={ROUTES.pipeline} element={<Pipeline />} />
         <Route path={ROUTES.lists} element={<Lists />} />
+        <Route path={ROUTES.priorities} element={<PriorityList />} />
         <Route path={ROUTES.icp} element={<ICP />} />
         <Route path={ROUTES.settings} element={<Settings />} />
         <Route path={ROUTES.accountSettings} element={<AccountSettings />} />
