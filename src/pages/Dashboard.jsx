@@ -560,10 +560,6 @@ export default function Dashboard() {
                 <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Final score</p>
               </div>
             </div>
-          <p className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-[10.75px] font-semibold text-amber-700"><Flame className="h-3.5 w-3.5" /> {t('dashboard.priority.heroTag', { defaultValue: 'Priority lead' })}</p>
-          <div className="mt-3 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div className="min-w-0">
-              <p className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-[10.75px] font-semibold text-amber-700"><Flame className="h-3.5 w-3.5" /> {t('dashboard.priority.heroTag', { defaultValue: 'Priority lead' })}</p>
               <h2 className="mt-3 truncate text-[34px] font-bold leading-tight tracking-tight text-[#1a1200]">{priorityLead.company_name}</h2>
               <p className="mt-1 text-[15px] text-slate-600">{priorityLead.contact_name || t('common.contact')} · {priorityLead.contact_role || t('common.contact')}</p>
               <div className="mt-3 grid grid-cols-3 gap-2.5">
@@ -591,12 +587,7 @@ export default function Dashboard() {
               <Button size="sm" variant="outline" disabled={!priorityLead.phone} onClick={() => window.open(`tel:${priorityLead.phone}`, '_self')} className="justify-start gap-1.5"><Phone className="h-3.5 w-3.5" />{t('dashboard.priority.call', { defaultValue: 'Call' })}</Button>
               <Button size="sm" variant="outline" disabled={!priorityLead.contact_email} onClick={() => { window.location.href = `mailto:${priorityLead.contact_email}`; }} className="justify-start gap-1.5"><Mail className="h-3.5 w-3.5" />{t('dashboard.priority.email', { defaultValue: 'Email' })}</Button>
               <Button size="sm" variant="outline" disabled={!(priorityLead.linkedin_url || priorityLead.linkedin)} onClick={() => openLinkedin(priorityLead)} className="justify-start gap-1.5"><Linkedin className="h-3.5 w-3.5" />LinkedIn</Button>
-            <div className="grid w-full max-w-xl grid-cols-3 gap-3">
-              <div className="rounded-xl border border-[#ece9e2] p-3"><p className="text-[11px] uppercase tracking-[0.08em] text-slate-500">Final</p><p className="text-3xl font-bold text-slate-950">{clampScore(priorityLead.final_score ?? priorityLead.icp_score) ?? '—'}<span className="text-base text-slate-400">/100</span></p></div>
-              <div className="rounded-xl border border-[#ece9e2] p-3"><p className="text-[11px] uppercase tracking-[0.08em] text-slate-500">ICP</p><p className="text-3xl font-bold text-slate-950">{clampScore(priorityLead.icp_score) ?? '—'}</p></div>
-              <div className="rounded-xl border border-[#ece9e2] p-3"><p className="text-[11px] uppercase tracking-[0.08em] text-slate-500">AI</p><p className="text-3xl font-bold text-slate-950">{clampScore(priorityLead.ai_score ?? priorityLead?.score_details?.signal_analysis?.ai_score) ?? '—'}</p></div>
-            </div>
-          </div>
+              </div>
         </section>
       ) : null}
 
