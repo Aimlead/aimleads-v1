@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ArrowRight, Circle, Download, Flame, Linkedin, Loader2, Mail, Phone, RefreshCcw, Sparkles, Target, Upload } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Brain, CheckCircle2, Circle, Clock3, CreditCard, Database, Download, Flame, Linkedin, Loader2, Mail, MessageSquare, Phone, RefreshCcw, Sparkles, Target, TrendingUp, Upload, Users, XCircle } from 'lucide-react';
+import { BarChart, Bar, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import LeadSlideOver from '@/components/leads/LeadSlideOver';
@@ -36,6 +38,25 @@ const toSourceListKey = (lead) => {
 const sourceListLabel = (key, t) => {
   if (key === LIST_KEYS.UNLISTED) return t('dashboard.lists.unlisted');
   return key.replace(/_/g, ' ').replace(/\b\d{4}\b.*/g, '').trim().replace(/\b\w/g, c => c.toUpperCase()) || key;
+};
+
+const clampScore = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.max(0, Math.min(100, Math.round(parsed)));
+};
+
+const estimatePriorityScore = (lead) => {
+  const icp = clampScore(lead?.icp_score);
+  const final = clampScore(lead?.final_score);
+  const ai = clampScore(lead?.ai_score);
+  const scoreDetailsAi = clampScore(lead?.score_details?.signal_analysis?.ai_score);
+  const aiScore = ai ?? scoreDetailsAi;
+  const base = final ?? icp ?? 0;
+  const signalWeight = aiScore ? aiScore * 0.25 : 0;
+  const freshnessWeight = lead?.llm_enriched ? 8 : 0;
+  const needsContactBoost = !String(lead?.follow_up_status || '').toLowerCase().includes('contact') ? 12 : 0;
+  return Math.round(base + signalWeight + freshnessWeight + needsContactBoost);
 };
 
 const clampScore = (value) => {
@@ -432,6 +453,44 @@ export default function Dashboard() {
     avgScore,
   } = visibleStats;
 
+  const hasAnalyzedLead = activationState.hasAnalyzedLead;
+  const selectedListLabel = selectedSourceList === LIST_KEYS.ALL
+    ? t('dashboard.lists.all')
+    : sourceListOptions.find((option) => option.key === selectedSourceList)?.label || sourceListLabel(selectedSourceList, t);
+  const showActivationChecklist = !activationState.hasActiveIcp || totalLeads < 10;
+  const creditsBalance = creditsData?.balance ?? null;
+  const creditRunwayDays = creditsData?.usage?.projected_runway_days ?? null;
+  const entitlements = creditsData?.entitlements || {};
+  const planSlug = creditsData?.plan?.plan_slug || 'free';
+  const dashboardLocale = i18n.resolvedLanguage?.startsWith('fr') ? 'fr-FR' : 'en-US';
+  const seatsIncluded = creditsData?.usage?.seats_included ?? entitlements?.seats_included ?? 0;
+  const seatsUsed = creditsData?.usage?.seats_used ?? 0;
+  const crmSlotsIncluded = creditsData?.usage?.crm_slots_included ?? entitlements?.crm_integrations ?? 0;
+  const crmSlotsUsed = creditsData?.usage?.crm_slots_used ?? 0;
+  const topAction = creditsData?.top_actions?.[0] || null;
+
+  const roiInsightModel = useMemo(() => buildDashboardInsightModel({
+    visibleLeads,
+    activeIcp,
+    creditsBalance,
+    seatsIncluded,
+    seatsUsed,
+    crmSlotsIncluded,
+    crmSlotsUsed,
+  }), [activeIcp, creditsBalance, crmSlotsIncluded, crmSlotsUsed, seatsIncluded, seatsUsed, visibleLeads]);
+  const aiActivityModel = useMemo(() => buildAiRunActivityModel(aiRuns), [aiRuns]);
+  const aiTopModel = aiActivityModel.modelMix[0] || null;
+
+  const stats = [
+    { key: 'total', value: totalLeads, label: t('dashboard.stats.total') },
+    { key: 'qualified', value: qualifiedLeads, label: t('dashboard.stats.qualified') },
+    { key: 'avg', value: avgScore, label: t('dashboard.stats.avg') },
+    { key: 'toAnalyze', value: toAnalyze, label: t('dashboard.stats.toAnalyze') },
+  ];
+  const highPriorityCount = visibleLeads.filter((lead) => toNumericScore(lead.final_score ?? lead.icp_score) >= 80).length;
+  const focusLead = visibleLeads
+    .filter((lead) => toNumericScore(lead.final_score ?? lead.icp_score) !== null)
+    .sort((left, right) => toNumericScore(right.final_score ?? right.icp_score) - toNumericScore(left.final_score ?? left.icp_score))[0] || null;
   const rankedPriorityLeads = useMemo(() => {
     return [...visibleLeads]
       .map((lead) => ({
@@ -440,10 +499,11 @@ export default function Dashboard() {
       }))
       .sort((left, right) => right.priorityRankScore - left.priorityRankScore);
   }, [visibleLeads]);
-
   const topPriorityLeads = rankedPriorityLeads.slice(0, 3);
   const nextPriorityLeads = rankedPriorityLeads.slice(3, 11);
   const priorityLead = topPriorityLeads[0] || null;
+  // Leads analyzed more than 30 days ago with no follow-up progression: surfaced so the user
+  // can re-score or re-engage them before the data becomes stale.
   const staleLeadCount = useMemo(() => {
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
     return visibleLeads.filter((lead) => {
@@ -461,6 +521,76 @@ export default function Dashboard() {
     const withProtocol = /^https?:\/\//i.test(linkedinUrl) ? linkedinUrl : `https://${linkedinUrl}`;
     window.open(withProtocol, '_blank', 'noopener,noreferrer');
   };
+
+  const openLinkedin = (lead) => {
+    const linkedinUrl = lead?.linkedin_url || lead?.linkedin || '';
+    if (!linkedinUrl) return;
+    const withProtocol = /^https?:\/\//i.test(linkedinUrl) ? linkedinUrl : `https://${linkedinUrl}`;
+    window.open(withProtocol, '_blank', 'noopener,noreferrer');
+  };
+
+  const activationSteps = [
+    {
+      id: 'icp',
+      icon: Target,
+      title: t('dashboard.activation.icp.title'),
+      description: activeIcp
+        ? t('dashboard.activation.icp.descriptionComplete', { name: activeIcp.name })
+        : t('dashboard.activation.icp.descriptionPending'),
+      complete: activationState.hasActiveIcp,
+      actionLabel: activeIcp ? t('dashboard.activation.icp.reviewAction') : t('dashboard.activation.icp.configureAction'),
+      onAction: () => navigate(ROUTES.icp),
+    },
+    {
+      id: 'import',
+      icon: Upload,
+      title: t('dashboard.activation.import.title'),
+      description: leads.length > 0
+        ? t('dashboard.activation.import.descriptionComplete', { count: leads.length })
+        : t('dashboard.activation.import.descriptionPending'),
+      complete: activationState.hasImportedLeads,
+      actionLabel: leads.length > 0 ? t('dashboard.activation.import.reviewAction') : t('dashboard.activation.import.importAction'),
+      onAction: leads.length > 0 ? scrollToLeadsTable : () => setImportDialogOpen(true),
+    },
+    {
+      id: 'analysis',
+      icon: Sparkles,
+      title: t('dashboard.activation.analysis.title'),
+      description: hasAnalyzedLead
+        ? t('dashboard.activation.analysis.descriptionComplete')
+        : t('dashboard.activation.analysis.descriptionPending'),
+      complete: hasAnalyzedLead,
+      actionLabel:
+        leads.length === 0
+          ? t('dashboard.activation.analysis.importFirst')
+          : !activeIcp
+            ? t('dashboard.activation.analysis.configureFirst')
+            : isReanalyzing
+              ? t('dashboard.activation.analysis.loading')
+              : t('dashboard.activation.analysis.action'),
+      onAction:
+        leads.length === 0
+          ? () => setImportDialogOpen(true)
+          : !activeIcp
+            ? () => navigate(ROUTES.icp)
+            : handleActivationAnalysis,
+      disabled: Boolean(activeIcp) && leads.length > 0 && (isReanalyzing || !activationState.leadToAnalyze),
+    },
+    {
+      id: 'review',
+      icon: MessageSquare,
+      title: t('dashboard.activation.review.title'),
+      description: activationState.hasFollowUpStarted
+        ? t('dashboard.activation.review.descriptionComplete')
+        : t('dashboard.activation.review.descriptionPending'),
+      complete: activationState.hasFollowUpStarted,
+      actionLabel: activationState.leadToReview ? t('dashboard.activation.review.openBestLead') : t('dashboard.activation.review.openPipeline'),
+      onAction: activationState.leadToReview
+        ? () => handleOpenLeadPage(activationState.leadToReview)
+        : () => navigate(ROUTES.pipeline),
+      disabled: !activationState.hasAnalyzedLead,
+    },
+  ];
 
   return (
     <>
