@@ -5,8 +5,10 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/routes';
 import {
+  BarChart3,
   CreditCard,
   Database,
+  Kanban,
   LayoutDashboard,
   LifeBuoy,
   ListOrdered,
