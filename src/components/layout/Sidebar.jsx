@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/routes';
 import {
   BarChart3, Kanban,
-  Database, LayoutDashboard, LifeBuoy, LogOut, Mail, Rows3, ScrollText, Settings, Sparkles, Target, Users,
+  CreditCard, Database, LayoutDashboard, LifeBuoy, LogOut, Mail, Rows3, ScrollText, Settings, Sparkles, Target, Users,
 } from 'lucide-react';
 import BrandLogo from '@/components/brand/BrandLogo';
 
@@ -18,6 +18,7 @@ export const sidebarNavigation = [
   { name: 'Outreach', labelKey: 'nav.outreach', href: ROUTES.outreach, icon: Mail, group: 'main', shortcut: '4' },
   { name: 'ICP Profile', labelKey: 'nav.icp', href: ROUTES.icp, icon: Target, group: 'config' },
   { name: 'Team', labelKey: 'nav.team', href: ROUTES.team, icon: Users, group: 'config' },
+  { name: 'Billing', labelKey: 'nav.billing', href: ROUTES.billing, icon: CreditCard, group: 'config' },
   { name: 'Settings', labelKey: 'nav.settings', href: ROUTES.settings, icon: Settings, group: 'config' },
   { name: 'CRM Integration', labelKey: 'nav.crmIntegration', href: ROUTES.crmIntegration, icon: Database, group: 'config' },
   { name: 'Audit Log', labelKey: 'nav.auditLog', href: ROUTES.auditLog, icon: ScrollText, group: 'config' },
