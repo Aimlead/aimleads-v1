@@ -17,11 +17,22 @@ describe('leadPresentation helpers', () => {
   });
 
   it('returns stable score breakdown values', () => {
-    expect(getLeadScores({ icp_score: 55, ai_score: 66, final_score: 71 })).toEqual({
+    const withSignals = { icp_score: 55, ai_score: 66, final_score: 71, internet_signals: [{ key: 'recent_funding' }] };
+    expect(getLeadScores(withSignals)).toEqual({
       icpScore: 55,
       aiScore: 66,
       finalScore: 71,
       aiBoost: 16,
+      hasSignals: true,
+    });
+
+    const withoutSignals = { icp_score: 55, ai_score: 66, final_score: 71 };
+    expect(getLeadScores(withoutSignals)).toEqual({
+      icpScore: 55,
+      aiScore: null,
+      finalScore: 71,
+      aiBoost: null,
+      hasSignals: false,
     });
   });
 
@@ -36,6 +47,7 @@ describe('leadPresentation helpers', () => {
       final_score: 78,
       icp_score: 61,
       signals: [{ label: 'Recent funding' }],
+      internet_signals: [{ key: 'recent_funding' }],
     };
 
     expect(getLeadWhyItMatters(boostedLead, t)).toContain('improved');

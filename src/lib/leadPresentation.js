@@ -95,17 +95,30 @@ export const getDeterministicIcpSummary = (lead) => {
   return lines.length > 0 ? lines.join('\n') : null;
 };
 
+const hasLeadSignals = (lead) => {
+  if (Array.isArray(lead?.internet_signals) && lead.internet_signals.length > 0) return true;
+  const intent = lead?.intent_signals || lead?.intentSignals || {};
+  const hasArr = (v) => Array.isArray(v) && v.length > 0;
+  return (
+    hasArr(intent.pre_call || intent.preCall) ||
+    hasArr(intent.post_contact || intent.postContact) ||
+    hasArr(intent.negative)
+  );
+};
+
 export const getLeadScores = (lead) => {
   const icpScore = toMetric(lead?.icp_score);
-  const aiScore = toMetric(lead?.ai_score);
   const finalScore = toMetric(lead?.final_score) ?? icpScore;
-  const aiBoost = icpScore !== null && finalScore !== null ? finalScore - icpScore : null;
+  const signals = hasLeadSignals(lead);
+  const aiScore = signals ? toMetric(lead?.ai_score) : null;
+  const aiBoost = signals && icpScore !== null && finalScore !== null ? finalScore - icpScore : null;
 
   return {
     icpScore,
     aiScore,
     finalScore,
     aiBoost,
+    hasSignals: signals,
   };
 };
 

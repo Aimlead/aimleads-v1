@@ -15,6 +15,8 @@ import {
   Sparkles,
   Tag,
   Target,
+  TrendingUp,
+  Zap,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -79,7 +81,6 @@ const getIntentSignalsFromLead = (lead) => {
 const getInternetSignalsFromLead = (lead) => {
   const payload = lead?.internet_signals || lead?.internetSignals || [];
   if (!Array.isArray(payload)) return [];
-
   return payload
     .map((entry) => ({
       key: String(entry?.key || '').trim(),
@@ -95,14 +96,7 @@ const formatDate = (value, locale) => {
   if (!value) return null;
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.toLocaleString(locale);
-};
-
-const signalTypeClass = (type) => {
-  const key = String(type || '').toLowerCase();
-  if (key === 'positive') return 'text-emerald-700 bg-emerald-50 border-emerald-200';
-  if (key === 'negative') return 'text-rose-700 bg-rose-50 border-rose-200';
-  return 'text-slate-700 bg-slate-50 border-slate-200';
+  return parsed.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
 const PROVIDER_STATUS_FR = {
@@ -117,9 +111,7 @@ const buildDiscoverToast = (response, t) => {
   const webResearch = Number(response?.web_research_signals || 0);
   const hunterEmail = response?.hunter_email;
   const providerStatus = response?.provider_status || {};
-
   const total = discovered + news + webResearch + (hunterEmail ? 1 : 0);
-
   if (total === 0) {
     const skipped = Object.entries(providerStatus)
       .filter(([, s]) => s !== 'ok')
@@ -129,13 +121,82 @@ const buildDiscoverToast = (response, t) => {
       ? t('leads.noSignalsFoundWithReasons', { reasons: skipped })
       : t('leads.noNewSignals');
   }
-
   const parts = [];
   if (discovered > 0) parts.push(`Web: ${discovered}`);
   if (news > 0) parts.push(`News: ${news}`);
   if (webResearch > 0) parts.push(`Claude: ${webResearch}`);
   if (hunterEmail) parts.push(`Email: ${hunterEmail}`);
   return t('leads.signalsDetectedSummary', { count: total, details: parts.join(', ') });
+};
+
+const getScoreBarColor = (score) => {
+  if (score === null || score === undefined) return 'bg-slate-200';
+  if (score >= 80) return 'bg-emerald-500';
+  if (score >= 65) return 'bg-sky-500';
+  if (score >= 45) return 'bg-amber-400';
+  return 'bg-rose-400';
+};
+
+const getCategoryBadge = (category) => {
+  switch (String(category || '').toLowerCase()) {
+    case 'excellent': return { label: 'Excellent', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+    case 'strong': return { label: 'Fort', cls: 'bg-sky-50 text-sky-700 border-sky-200' };
+    case 'medium': return { label: 'Moyen', cls: 'bg-amber-50 text-amber-700 border-amber-200' };
+    case 'low': return { label: 'Faible', cls: 'bg-rose-50 text-rose-700 border-rose-200' };
+    case 'excluded': return { label: 'Exclu', cls: 'bg-slate-100 text-slate-500 border-slate-200' };
+    default: return null;
+  }
+};
+
+const MATCH_META = {
+  parfait: { label: 'Parfait', cls: 'bg-emerald-50 text-emerald-700' },
+  partiel: { label: 'Partiel', cls: 'bg-amber-50 text-amber-700' },
+  aucun: { label: 'Aucun', cls: 'bg-slate-100 text-slate-500' },
+  exclu: { label: 'Exclu', cls: 'bg-rose-50 text-rose-700' },
+};
+
+function CriterionRow({ criterion }) {
+  const isPositive = criterion.points > 0;
+  const isZero = criterion.points === 0;
+  const match = MATCH_META[criterion.matchType] || { label: criterion.matchType, cls: 'bg-slate-100 text-slate-500' };
+
+  const barPct = isZero
+    ? 0
+    : isPositive
+      ? Math.min(100, Math.round((criterion.points / Math.max(criterion.maxPoints, 1)) * 100))
+      : Math.min(100, Math.round((Math.abs(criterion.points) / Math.max(Math.abs(criterion.minPoints), 1)) * 100));
+
+  return (
+    <div className="px-3 py-2.5 border-b border-slate-50 last:border-b-0">
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-sm font-medium text-slate-800 truncate">{criterion.label}</span>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${match.cls}`}>
+            {match.label}
+          </span>
+        </div>
+        <span className={`text-sm font-semibold tabular-nums shrink-0 ${isPositive ? 'text-emerald-700' : isZero ? 'text-slate-400' : 'text-rose-600'}`}>
+          {criterion.points > 0 ? '+' : ''}{criterion.points}
+        </span>
+      </div>
+      {criterion.evaluatedValue && criterion.evaluatedValue !== '—' ? (
+        <p className="text-[11px] text-slate-400 mb-1.5">{criterion.evaluatedValue}</p>
+      ) : null}
+      <div className="h-1 rounded-full bg-slate-100 overflow-hidden">
+        <div
+          className={`h-full rounded-full ${isPositive ? 'bg-emerald-400' : isZero ? 'bg-slate-200' : 'bg-rose-400'}`}
+          style={{ width: `${barPct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+const signalTypeClass = (type) => {
+  const key = String(type || '').toLowerCase();
+  if (key === 'positive') return 'text-emerald-700 bg-emerald-50 border-emerald-200';
+  if (key === 'negative') return 'text-rose-700 bg-rose-50 border-rose-200';
+  return 'text-slate-700 bg-slate-50 border-slate-200';
 };
 
 export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated }) {
@@ -205,10 +266,7 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
     },
   });
 
-  const activeCrmTypes = crmIntegrations
-    .filter((i) => i.is_active)
-    .map((i) => i.crm_type);
-
+  const activeCrmTypes = crmIntegrations.filter((i) => i.is_active).map((i) => i.crm_type);
   const initialRef = useRef({ followUpStatus: '', notes: '', intentSignals: {} });
 
   React.useEffect(() => {
@@ -287,7 +345,6 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
 
   const persistLeadEdits = async (extra = {}) => {
     if (!lead) return;
-
     await dataClient.leads.update(lead.id, {
       follow_up_status: followUpStatus,
       notes,
@@ -299,7 +356,6 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
 
   const handleSave = async () => {
     if (!lead) return;
-
     setSaving(true);
     try {
       await persistLeadEdits();
@@ -331,7 +387,6 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
 
   const handleSaveAndAnalyze = async () => {
     if (!lead) return;
-
     setSavingAndAnalyzing(true);
     try {
       const response = await runSignalDiscovery({ reanalyze: true });
@@ -381,7 +436,7 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
 
   if (!lead) return null;
 
-  const { finalScore, icpScore, aiScore, aiBoost } = getLeadScores(lead);
+  const { finalScore, icpScore, aiScore, aiBoost, hasSignals } = getLeadScores(lead);
   const scoreDetails = lead?.score_details && typeof lead.score_details === 'object' ? lead.score_details : {};
   const signalAnalysis = lead?.score_details?.signal_analysis && typeof lead.score_details.signal_analysis === 'object'
     ? lead.score_details.signal_analysis
@@ -390,21 +445,28 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
     (scoreDetails?.criteria_breakdown && typeof scoreDetails.criteria_breakdown === 'object' && scoreDetails.criteria_breakdown)
     || (scoreDetails?.icp_criteria && typeof scoreDetails.icp_criteria === 'object' && scoreDetails.icp_criteria)
     || scoreDetails;
+
   const groupedSignals = {
     positive: (lead.signals || []).filter((signal) => String(signal?.type || '').toLowerCase() === 'positive'),
     negative: (lead.signals || []).filter((signal) => String(signal?.type || '').toLowerCase() === 'negative'),
     neutral: (lead.signals || []).filter((signal) => String(signal?.type || '').toLowerCase() === 'neutral'),
   };
+
   const importantIcpCriteria = Object.entries(icpCriteriaSource)
     .filter(([key, value]) => IMPORTANT_ICP_KEYS.includes(key) && value && typeof value === 'object')
     .map(([key, value]) => ({
       key,
       label: t(`leads.icpCriteria.${key}`, { defaultValue: key.replace(/_/g, ' ') }),
-      match: value.match || value.evaluated_value || '—',
+      matchType: value.match || 'aucun',
+      evaluatedValue: value.evaluated_value || null,
       points: Number(value.points),
+      maxPoints: Number(value.weights?.parfait ?? Math.max(Number(value.points) || 0, 15)),
+      minPoints: Number(value.weights?.aucun ?? Math.min(Number(value.points) || 0, -10)),
     }))
     .filter((item) => Number.isFinite(item.points))
     .sort((a, b) => b.points - a.points);
+
+  const criteriaRawSum = importantIcpCriteria.reduce((sum, c) => sum + c.points, 0);
 
   const openFullLeadPage = () => {
     onOpenChange(false);
@@ -420,6 +482,15 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
   const isJobActive = currentJob && !['completed', 'failed'].includes(currentJob.status);
 
   const intentSignalTotal = intentSignals.pre_call.length + intentSignals.post_contact.length + intentSignals.negative.length;
+  const categoryBadge = getCategoryStyle(lead.final_category || lead.category);
+  const barColor = getScoreBarColor(finalScore);
+
+  const finalRecommendedAction = lead.final_recommended_action || lead.recommended_action || null;
+
+  function getCategoryStyle(category) {
+    const badge = getCategoryBadge(category);
+    return badge ? { label: badge.label, cls: `border ${badge.cls}` } : null;
+  }
 
   return (
     <>
@@ -439,228 +510,336 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
       </AlertDialog>
 
       <Sheet open={open} onOpenChange={handleOpenChange}>
-        <SheetContent className="w-full sm:max-w-[500px] p-0 flex flex-col overflow-hidden bg-slate-50/60">
-          <SheetHeader className="border-b border-slate-200 px-5 py-4 bg-white">
+        <SheetContent className="w-full sm:max-w-[520px] p-0 flex flex-col overflow-hidden" style={{ background: '#f8f7f5' }}>
+          {/* Header */}
+          <SheetHeader className="border-b px-5 py-4 bg-white" style={{ borderColor: '#e8e5df' }}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <SheetTitle className="text-lg truncate">{lead.company_name}</SheetTitle>
+                  <SheetTitle className="text-lg truncate" style={{ color: '#1a1200' }}>{lead.company_name}</SheetTitle>
                   <StatusBadge status={lead.status || 'To Analyze'} />
                 </div>
-                <p className="text-xs text-slate-500 truncate mt-1">
-                  {[lead.contact_name, lead.contact_role].filter(Boolean).join(' • ') || t('common.contact')}
+                <p className="text-xs text-slate-500 truncate mt-0.5">
+                  {[lead.contact_name, lead.contact_role].filter(Boolean).join(' · ') || t('common.contact')}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {lead.source_list ? (
-                    <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 text-sky-700 border border-sky-100 px-2 py-0.5 text-[11px] font-medium">
+                    <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 text-[11px] font-medium">
                       <Tag className="w-3 h-3" />
                       {lead.source_list}
                     </span>
                   ) : null}
-                  {lead.industry ? <span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-600">{lead.industry}</span> : null}
-                  {lead.country ? <span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-600">{lead.country}</span> : null}
+                  {lead.industry ? <span className="rounded-md border px-2 py-0.5 text-[11px] text-slate-600 bg-white" style={{ borderColor: '#e8e5df' }}>{lead.industry}</span> : null}
+                  {lead.country ? <span className="rounded-md border px-2 py-0.5 text-[11px] text-slate-600 bg-white" style={{ borderColor: '#e8e5df' }}>{lead.country}</span> : null}
                 </div>
               </div>
-              <Button variant="outline" size="sm" onClick={openFullLeadPage} className="shrink-0">
-                {t('leads.openFullPage')}
+              <Button variant="outline" size="sm" onClick={openFullLeadPage} className="shrink-0 text-xs">
+                <ExternalLink className="w-3.5 h-3.5 mr-1" />
+                Détail
               </Button>
             </div>
           </SheetHeader>
 
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-            <section className="rounded-xl border border-slate-200 bg-white p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.12em] text-slate-500">{t('leads.finalScoreLabel', { defaultValue: 'Final score' })}</p>
-                  <p className="text-4xl font-bold leading-none tracking-tight text-slate-900">{finalScore ?? '—'}</p>
-                </div>
-                <div className="text-right text-xs text-slate-500">
-                  {formatDate(lead.last_analyzed_at, i18n.language)
-                    ? `${t('leads.lastAnalyzedLabel')}: ${formatDate(lead.last_analyzed_at, i18n.language)}`
-                    : t('leads.noAnalysisSummaryYet')}
-                </div>
-              </div>
-              <div className="mt-3 h-2 rounded-full bg-slate-100 overflow-hidden">
-                <div className="h-full rounded-full bg-slate-900" style={{ width: `${scorePercent}%` }} />
-              </div>
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2">
-                  <p className="text-[10px] uppercase tracking-wide text-slate-500">ICP</p>
-                  <p className="text-sm font-semibold text-slate-800">{icpScore ?? '—'}</p>
-                </div>
-                <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2">
-                  <p className="text-[10px] uppercase tracking-wide text-slate-500">AI</p>
-                  <p className="text-sm font-semibold text-slate-800">{aiScore ?? '—'}</p>
-                </div>
-                <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2">
-                  <p className="text-[10px] uppercase tracking-wide text-slate-500">Boost</p>
-                  <p className="text-sm font-semibold text-slate-800">{aiBoost ?? '—'}</p>
-                </div>
-              </div>
-            </section>
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
 
-            <section className="rounded-xl border border-slate-200 bg-white p-3">
-              <p className="text-xs font-semibold text-slate-700 mb-2">{t('leads.nextActionTitle', { defaultValue: 'Next action' })}</p>
-              <div className="grid grid-cols-5 gap-2">
-                <Button size="sm" variant="outline" disabled={!contactPhone} onClick={() => window.open(`tel:${contactPhone}`)} className="gap-1 px-2">
-                  <Phone className="w-3.5 h-3.5" />
-                  <span className="text-[11px]">Call</span>
+            {/* ── Score Hero ─────────────────────────────────────── */}
+            <section className="rounded-xl border bg-white overflow-hidden" style={{ borderColor: '#e8e5df' }}>
+              <div className="px-4 pt-4 pb-3">
+                {/* Score + category row */}
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-widest text-slate-400 mb-0.5">Score final</p>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-5xl font-bold tabular-nums leading-none" style={{ color: '#1a1200' }}>
+                        {finalScore ?? '—'}
+                      </span>
+                      <span className="text-slate-400 text-sm">/100</span>
+                    </div>
+                  </div>
+                  <div className="text-right space-y-1.5 pt-0.5">
+                    {categoryBadge ? (
+                      <span className={`inline-block text-[11px] font-semibold px-2 py-0.5 rounded-md ${categoryBadge.cls}`}>
+                        {categoryBadge.label}
+                      </span>
+                    ) : null}
+                    {lead.saas_grade ? (
+                      <p className="text-xs text-slate-400">{lead.saas_grade}</p>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="mt-3 h-1.5 rounded-full overflow-hidden" style={{ background: '#f0ede8' }}>
+                  <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${scorePercent}%` }} />
+                </div>
+
+                {/* Score decomposition */}
+                <div className="mt-3 flex items-center gap-2 text-sm">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-slate-400 text-xs">ICP</span>
+                    <span className="font-semibold text-slate-800 tabular-nums">{icpScore ?? '—'}</span>
+                  </div>
+                  {aiBoost !== null ? (
+                    <>
+                      <span className="text-slate-300 text-xs">+</span>
+                      <div className="flex items-center gap-1 rounded-md px-1.5 py-0.5" style={{ background: aiBoost >= 0 ? '#f0fdf4' : '#fff1f2', border: `1px solid ${aiBoost >= 0 ? '#bbf7d0' : '#fecdd3'}` }}>
+                        <Zap className="w-3 h-3" style={{ color: aiBoost >= 0 ? '#16a34a' : '#e11d48' }} />
+                        <span className="text-xs font-semibold tabular-nums" style={{ color: aiBoost >= 0 ? '#15803d' : '#be123c' }}>
+                          {aiBoost >= 0 ? '+' : ''}{aiBoost}
+                        </span>
+                        <span className="text-[10px]" style={{ color: aiBoost >= 0 ? '#16a34a' : '#e11d48' }}>signaux</span>
+                      </div>
+                      <span className="text-slate-300 text-xs">=</span>
+                      <span className="font-bold text-slate-900 tabular-nums">{finalScore}</span>
+                    </>
+                  ) : (
+                    <span className="text-[10px] text-slate-400 italic">— aucun signal d'intention analysé</span>
+                  )}
+                </div>
+
+                {/* Recommended action */}
+                {finalRecommendedAction ? (
+                  <div className="mt-2.5 flex items-center gap-1.5 text-xs font-medium" style={{ color: '#92400e' }}>
+                    <TrendingUp className="w-3.5 h-3.5 shrink-0" />
+                    <span>{finalRecommendedAction}</span>
+                  </div>
+                ) : null}
+
+                {/* Last analyzed */}
+                {formatDate(lead.last_analyzed_at, i18n.language) ? (
+                  <p className="text-[10px] text-slate-400 mt-2">
+                    Analysé le {formatDate(lead.last_analyzed_at, i18n.language)}
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-slate-400 mt-2 italic">Pas encore analysé</p>
+                )}
+              </div>
+
+              {/* Quick actions */}
+              <div className="border-t px-4 py-2.5 flex items-center gap-1.5" style={{ borderColor: '#f0ede8', background: '#faf9f7' }}>
+                <Button size="sm" variant="outline" disabled={!contactPhone} onClick={() => window.open(`tel:${contactPhone}`)} className="h-8 gap-1 px-2 text-[11px]">
+                  <Phone className="w-3.5 h-3.5" />Call
                 </Button>
-                <Button size="sm" variant="outline" disabled={!contactEmail} onClick={() => window.location.href = `mailto:${contactEmail}`} className="gap-1 px-2">
-                  <Mail className="w-3.5 h-3.5" />
-                  <span className="text-[11px]">Email</span>
+                <Button size="sm" variant="outline" disabled={!contactEmail} onClick={() => { window.location.href = `mailto:${contactEmail}`; }} className="h-8 gap-1 px-2 text-[11px]">
+                  <Mail className="w-3.5 h-3.5" />Email
                 </Button>
-                <Button size="sm" variant="outline" disabled={!linkedinUrl} onClick={() => window.open(linkedinUrl, '_blank', 'noopener,noreferrer')} className="gap-1 px-2">
-                  <Linkedin className="w-3.5 h-3.5" />
-                  <span className="text-[11px]">LinkedIn</span>
+                <Button size="sm" variant="outline" disabled={!linkedinUrl} onClick={() => window.open(linkedinUrl, '_blank', 'noopener,noreferrer')} className="h-8 gap-1 px-2 text-[11px]">
+                  <Linkedin className="w-3.5 h-3.5" />LinkedIn
                 </Button>
-                <Button size="sm" variant="outline" onClick={openFullLeadPage} className="gap-1 px-2">
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span className="text-[11px]">Open</span>
-                </Button>
-                <Button size="sm" onClick={handleSaveAndAnalyze} disabled={savingAndAnalyzing || isJobActive} className="gap-1 px-2 bg-slate-900 hover:bg-slate-800 text-white">
+                <div className="flex-1" />
+                <Button
+                  size="sm"
+                  onClick={handleSaveAndAnalyze}
+                  disabled={savingAndAnalyzing || isJobActive}
+                  className="h-8 gap-1.5 px-3 text-[11px] font-semibold text-white"
+                  style={{ background: '#1a1200' }}
+                >
                   {savingAndAnalyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                  <span className="text-[11px]">Analyze</span>
+                  Analyser
                 </Button>
               </div>
-              {(!contactPhone || !contactEmail || !linkedinUrl) ? (
-                <p className="text-[11px] text-slate-500 mt-2">TODO: Missing contact channel data keeps related action disabled.</p>
-              ) : null}
             </section>
 
+            {/* No score alert */}
             {finalScore === null && !isJobActive ? (
-              <div className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-sky-500 mt-0.5" />
-                <p className="text-xs text-sky-800">{t('leads.noScoreYetBody', { defaultValue: 'Click Analyze to run AI scoring and get an ICP fit score for this lead.' })}</p>
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                <p className="text-xs text-amber-900">Cliquez sur <strong>Analyser</strong> pour obtenir le score ICP et les signaux d'intention pour ce lead.</p>
               </div>
             ) : null}
 
+            {/* Job progress */}
             {currentJob ? (
-              <section className="rounded-xl border border-brand-sky/20 bg-brand-sky/5 p-3">
+              <section className="rounded-xl border border-sky-200 bg-sky-50/60 p-3">
                 <div className="flex items-center justify-between gap-3 text-sm">
                   <div>
-                    <p className="font-semibold text-slate-800">{activeJob?.label || t('leads.asyncJobRunning', { defaultValue: 'Background job running' })}</p>
-                    <p className="text-slate-600 text-xs">{currentJob.message || t('leads.asyncJobQueued', { defaultValue: 'Background job queued.' })}</p>
+                    <p className="font-semibold text-slate-800">{activeJob?.label || 'Analyse en cours'}</p>
+                    <p className="text-slate-600 text-xs">{currentJob.message || 'Traitement en arrière-plan...'}</p>
                   </div>
-                  <span className="rounded-md border border-brand-sky/20 bg-white px-2 py-1 text-xs font-medium text-brand-sky">
+                  <span className="rounded-md border border-sky-200 bg-white px-2 py-1 text-xs font-medium text-sky-700">
                     {Math.max(0, Math.min(100, Number(currentJob.progress || 0)))}%
                   </span>
                 </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/80">
-                  <div className="h-full rounded-full bg-gradient-to-r from-brand-sky to-brand-sky-2 transition-all" style={{ width: `${Math.max(8, Math.min(100, Number(currentJob.progress || 0)))}%` }} />
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/80">
+                  <div className="h-full rounded-full bg-sky-400 transition-all" style={{ width: `${Math.max(8, Math.min(100, Number(currentJob.progress || 0)))}%` }} />
                 </div>
               </section>
             ) : null}
 
+            {/* Tabs */}
             <Tabs defaultValue="overview" className="space-y-3">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="scorecard">Scorecard</TabsTrigger>
-                <TabsTrigger value="signals">Signals</TabsTrigger>
-                <TabsTrigger value="actions">Outreach</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-4 h-9">
+                <TabsTrigger value="overview" className="text-xs">Infos</TabsTrigger>
+                <TabsTrigger value="scorecard" className="text-xs">Score ICP</TabsTrigger>
+                <TabsTrigger value="signals" className="text-xs">Signaux</TabsTrigger>
+                <TabsTrigger value="actions" className="text-xs">Actions</TabsTrigger>
               </TabsList>
 
+              {/* ── Overview Tab ────────────────────────────────────── */}
               <TabsContent value="overview" className="space-y-3 m-0">
-                <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm space-y-1.5">
+                <div className="rounded-xl border bg-white p-3 text-sm space-y-2" style={{ borderColor: '#e8e5df' }}>
                   {[
-                    [t('common.contact'), lead.contact_name || 'N/A'],
-                    [t('common.role'), lead.contact_role || 'N/A'],
-                    [t('common.size'), lead.company_size ? `${lead.company_size} ${i18n.language === 'fr' ? 'employés' : 'employees'}` : '—'],
+                    [t('common.contact'), lead.contact_name || '—'],
+                    [t('common.role'), lead.contact_role || '—'],
+                    [t('common.size'), lead.company_size ? `${lead.company_size} emp.` : '—'],
                     [t('leads.clientType'), lead.client_type || '—'],
                   ].map(([label, value]) => (
                     <div key={label} className="flex items-center justify-between gap-2">
-                      <span className="text-slate-500">{label}</span>
-                      <span className="font-medium text-slate-800 text-right">{value}</span>
+                      <span className="text-slate-500 text-xs">{label}</span>
+                      <span className="font-medium text-slate-800 text-xs text-right">{value}</span>
                     </div>
                   ))}
                   {websiteUrl ? (
-                    <a href={websiteUrl} target="_blank" rel="noopener noreferrer" className="pt-2 inline-flex items-center gap-1 text-sky-700 hover:underline text-xs">
-                      <Globe className="w-3.5 h-3.5" />
-                      {lead.website_url}
+                    <a href={websiteUrl} target="_blank" rel="noopener noreferrer" className="pt-1 inline-flex items-center gap-1 text-sky-600 hover:underline text-xs">
+                      <Globe className="w-3.5 h-3.5" />{lead.website_url}
                     </a>
                   ) : null}
                 </div>
 
-                <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <div className="rounded-xl border bg-white p-3" style={{ borderColor: '#e8e5df' }}>
                   <p className="text-xs font-semibold text-slate-700 mb-2">{t('leads.followUp')}</p>
                   <Select value={followUpStatus} onValueChange={setFollowUpStatus}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {FOLLOW_UP_STATUS_LIST.map((status) => (
-                        <SelectItem key={status} value={status}>{status}</SelectItem>
+                        <SelectItem key={status} value={status} className="text-xs">{status}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <Textarea placeholder={t('common.notes')} value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} className="mt-2" />
+                  <Textarea placeholder={t('common.notes')} value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="mt-2 text-sm" />
                 </div>
               </TabsContent>
 
+              {/* ── Scorecard Tab ────────────────────────────────────── */}
               <TabsContent value="scorecard" className="space-y-3 m-0">
-                <div className="rounded-xl border border-brand-sky/20 bg-brand-sky/5 p-3">
-                  <p className="text-xs font-semibold text-brand-sky mb-1.5 flex items-center gap-1.5">
-                    <Target className="w-3.5 h-3.5" />
-                    ICP Analysis
-                  </p>
-                  <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{icpSummary || t('leads.noAnalysisSummaryYet')}</p>
-                </div>
+                {icpSummary ? (
+                  <div className="rounded-xl border bg-white p-3" style={{ borderColor: '#e8e5df' }}>
+                    <p className="text-xs font-semibold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                      <Target className="w-3.5 h-3.5 text-slate-400" />
+                      Analyse ICP
+                    </p>
+                    <p className="text-xs text-slate-600 whitespace-pre-wrap leading-relaxed">{icpSummary}</p>
+                  </div>
+                ) : null}
 
-                <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
-                  <p className="text-xs font-semibold text-slate-700">{t('leads.importantIcpCriteria', { defaultValue: 'Important ICP criteria' })}</p>
-                  {importantIcpCriteria.length > 0 ? importantIcpCriteria.map((criterion) => (
-                    <div key={criterion.key} className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0">
-                      <div>
-                        <p className="text-sm font-medium text-slate-800">{criterion.label}</p>
-                        <p className="text-xs text-slate-500">{criterion.match}</p>
-                      </div>
-                      <span className={`text-xs font-semibold px-2 py-1 rounded-md ${criterion.points >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                        {criterion.points > 0 ? '+' : ''}
-                        {criterion.points}
-                      </span>
-                    </div>
-                  )) : <p className="text-sm text-slate-500">{t('leads.noSignalsYet')}</p>}
-                </div>
+                {/* Criteria breakdown */}
+                <div className="rounded-xl border bg-white overflow-hidden" style={{ borderColor: '#e8e5df' }}>
+                  <div className="px-3 py-2 border-b flex items-center justify-between" style={{ borderColor: '#f0ede8', background: '#faf9f7' }}>
+                    <p className="text-[11px] font-semibold text-slate-700 uppercase tracking-wide">Critères ICP</p>
+                    {lead.icp_raw_score != null ? (
+                      <span className="text-[10px] text-slate-400">Brut : {lead.icp_raw_score}/110</span>
+                    ) : importantIcpCriteria.length > 0 ? (
+                      <span className="text-[10px] text-slate-400">Brut : {criteriaRawSum}/110</span>
+                    ) : null}
+                  </div>
 
-              </TabsContent>
-
-              <TabsContent value="signals" className="space-y-3 m-0">
-                <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-                  <p className="text-xs font-semibold text-violet-700">AI Signal Analysis</p>
-                  {signalAnalysis ? (
+                  {importantIcpCriteria.length > 0 ? (
                     <>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="rounded-lg border border-slate-200 bg-white p-2"><p className="text-[11px] text-slate-500">AI Score</p><p className="text-sm font-semibold">{signalAnalysis.ai_score ?? aiScore ?? '—'}</p></div>
-                        <div className="rounded-lg border border-slate-200 bg-white p-2"><p className="text-[11px] text-slate-500">AI Boost</p><p className="text-sm font-semibold">{signalAnalysis.ai_boost ?? aiBoost ?? '—'}</p></div>
-                        <div className="rounded-lg border border-slate-200 bg-white p-2"><p className="text-[11px] text-slate-500">{t('leads.confidenceShort', { defaultValue: 'Confidence' })}</p><p className="text-sm font-semibold">{signalAnalysis.confidence ?? lead.ai_confidence ?? '—'}</p></div>
+                      {importantIcpCriteria.map((criterion) => (
+                        <CriterionRow key={criterion.key} criterion={criterion} />
+                      ))}
+                      <div className="px-3 py-2 border-t flex items-center justify-between" style={{ borderColor: '#f0ede8', background: '#faf9f7' }}>
+                        <span className="text-[10px] text-slate-500">
+                          Somme brute : <strong className="text-slate-700">{criteriaRawSum} pts</strong>
+                          <span className="text-slate-400"> (max 110)</span>
+                        </span>
+                        <span className="text-[10px] font-semibold text-slate-700">
+                          Score ICP : {icpScore ?? '—'}/100
+                        </span>
                       </div>
-                      <div className="space-y-2 text-sm text-slate-700">
-                        {signalAnalysis?.suggested_action || signalAnalysis?.action ? (
-                          <p><span className="font-semibold">Suggested action:</span> {signalAnalysis.suggested_action || signalAnalysis.action}</p>
-                        ) : null}
-                        {Array.isArray(signalAnalysis?.positives) && signalAnalysis.positives.length > 0 ? (
-                          <p><span className="font-semibold">Positives:</span> {signalAnalysis.positives.join(', ')}</p>
-                        ) : null}
-                        {Array.isArray(signalAnalysis?.negatives) && signalAnalysis.negatives.length > 0 ? (
-                          <p><span className="font-semibold">Negatives:</span> {signalAnalysis.negatives.join(', ')}</p>
-                        ) : null}
-                        {Array.isArray(signalAnalysis?.neutrals) && signalAnalysis.neutrals.length > 0 ? (
-                          <p><span className="font-semibold">Neutrals:</span> {signalAnalysis.neutrals.join(', ')}</p>
-                        ) : null}
-                        {signalAnalysis?.icebreaker ? (
-                          <p><span className="font-semibold">Icebreaker:</span> {signalAnalysis.icebreaker}</p>
-                        ) : null}
-                        {Array.isArray(signalAnalysis?.sources) && signalAnalysis.sources.length > 0 ? (
-                          <p><span className="font-semibold">Sources:</span> {signalAnalysis.sources.join(', ')}</p>
-                        ) : null}
-                        {signalAnalysis?.website ? (
-                          <p><span className="font-semibold">Website:</span> {signalAnalysis.website}</p>
-                        ) : null}
+                      <div className="px-3 py-1.5 border-t" style={{ borderColor: '#f0ede8' }}>
+                        <p className="text-[10px] text-slate-400 italic">
+                          Le score brut est normalisé sur 100 (base : 110 points maximum)
+                        </p>
                       </div>
                     </>
-                  ) : <p className="text-sm text-slate-600">No AI buying signals detected yet</p>}
+                  ) : (
+                    <div className="p-4 text-center">
+                      <p className="text-xs text-slate-400">Aucun critère ICP calculé — lancez une analyse pour obtenir le détail.</p>
+                    </div>
+                  )}
                 </div>
 
+                {/* Signal boost recap (only if signals) */}
+                {hasSignals && aiBoost !== null ? (
+                  <div className="rounded-xl border overflow-hidden" style={{ borderColor: '#e8e5df', background: aiBoost >= 0 ? '#f0fdf4' : '#fff1f2' }}>
+                    <div className="px-3 py-2 border-b" style={{ borderColor: aiBoost >= 0 ? '#bbf7d0' : '#fecdd3' }}>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: aiBoost >= 0 ? '#15803d' : '#be123c' }}>
+                        Ajustement signaux
+                      </p>
+                    </div>
+                    <div className="px-3 py-2.5 space-y-1 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Score ICP (base)</span>
+                        <span className="font-semibold text-slate-800">{icpScore ?? '—'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Boost signaux</span>
+                        <span className="font-semibold" style={{ color: aiBoost >= 0 ? '#15803d' : '#be123c' }}>
+                          {aiBoost >= 0 ? '+' : ''}{aiBoost}
+                        </span>
+                      </div>
+                      <div className="flex justify-between border-t pt-1" style={{ borderColor: aiBoost >= 0 ? '#bbf7d0' : '#fecdd3' }}>
+                        <span className="font-semibold text-slate-700">Score final</span>
+                        <span className="font-bold text-slate-900">{finalScore ?? '—'}/100</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </TabsContent>
+
+              {/* ── Signals Tab ────────────────────────────────────── */}
+              <TabsContent value="signals" className="space-y-3 m-0">
+                {/* AI signal analysis — only if signals exist */}
+                {hasSignals && signalAnalysis ? (
+                  <div className="rounded-xl border bg-white overflow-hidden" style={{ borderColor: '#e8e5df' }}>
+                    <div className="px-3 py-2 border-b flex items-center gap-1.5" style={{ borderColor: '#f0ede8', background: '#faf9f7' }}>
+                      <Sparkles className="w-3.5 h-3.5 text-violet-500" />
+                      <p className="text-[11px] font-semibold text-slate-700 uppercase tracking-wide">Analyse signaux IA</p>
+                    </div>
+                    <div className="p-3 space-y-2.5 text-xs text-slate-700">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="rounded-lg border p-2" style={{ borderColor: '#e8e5df' }}>
+                          <p className="text-[10px] text-slate-400 uppercase mb-0.5">Score signaux</p>
+                          <p className="font-semibold text-sm">{aiScore ?? '—'}/100</p>
+                        </div>
+                        <div className="rounded-lg border p-2" style={{ borderColor: '#e8e5df' }}>
+                          <p className="text-[10px] text-slate-400 uppercase mb-0.5">Confiance</p>
+                          <p className="font-semibold text-sm">{signalAnalysis.confidence ?? lead.ai_confidence ?? '—'}%</p>
+                        </div>
+                      </div>
+                      {signalAnalysis?.suggested_action || signalAnalysis?.action ? (
+                        <div className="flex items-start gap-1.5 rounded-lg border px-2.5 py-2" style={{ borderColor: '#e8e5df', background: '#faf9f7' }}>
+                          <TrendingUp className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                          <p><span className="font-semibold">Action :</span> {signalAnalysis.suggested_action || signalAnalysis.action}</p>
+                        </div>
+                      ) : null}
+                      {Array.isArray(signalAnalysis?.positives) && signalAnalysis.positives.length > 0 ? (
+                        <p><span className="font-semibold text-emerald-700">Positifs :</span> {signalAnalysis.positives.join(', ')}</p>
+                      ) : null}
+                      {Array.isArray(signalAnalysis?.negatives) && signalAnalysis.negatives.length > 0 ? (
+                        <p><span className="font-semibold text-rose-600">Négatifs :</span> {signalAnalysis.negatives.join(', ')}</p>
+                      ) : null}
+                      {signalAnalysis?.icebreaker ? (
+                        <p className="italic text-slate-500">{signalAnalysis.icebreaker}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : !hasSignals ? (
+                  <div className="rounded-xl border border-dashed bg-white p-4 text-center space-y-2" style={{ borderColor: '#e8e5df' }}>
+                    <Sparkles className="w-6 h-6 text-slate-300 mx-auto" />
+                    <p className="text-xs text-slate-500">Aucun signal d'intention analysé pour ce lead.</p>
+                    <p className="text-[11px] text-slate-400">Cliquez sur <strong>Analyser</strong> pour lancer la découverte de signaux internet et l'analyse IA.</p>
+                    <Button size="sm" onClick={handleSaveAndAnalyze} disabled={savingAndAnalyzing || isJobActive} className="mt-1 gap-1.5">
+                      {savingAndAnalyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      Analyser maintenant
+                    </Button>
+                  </div>
+                ) : null}
+
+                {/* Signals badges */}
                 {lead.signals?.length > 0 ? (
                   ['positive', 'negative', 'neutral'].map((type) => {
                     const items = groupedSignals[type] || [];
@@ -668,59 +847,64 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
                     const title = type === 'positive' ? t('leads.positiveSignals') : type === 'negative' ? t('leads.negativeSignals') : t('leads.neutralSignals');
                     return (
                       <div key={type} className={`rounded-lg border px-3 py-2 ${signalTypeClass(type)}`}>
-                        <p className="text-xs font-semibold mb-1">{title} ({items.length})</p>
-                        <div className="flex flex-wrap gap-2">
+                        <p className="text-xs font-semibold mb-1.5">{title} ({items.length})</p>
+                        <div className="flex flex-wrap gap-1.5">
                           {items.map((signal, index) => <SignalBadge key={`${type}-${index}`} signal={signal} />)}
                         </div>
                       </div>
                     );
                   })
-                ) : (
-                  <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-500">{t('leads.noSignalsYet')}</div>
-                )}
+                ) : null}
 
-                <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-600 space-y-1">
-                  <div className="flex items-center justify-between"><span>Intent signals</span><span className="font-semibold text-slate-800">{intentSignalTotal}</span></div>
-                  <div className="flex items-center justify-between"><span>Internet signals</span><span className="font-semibold text-slate-800">{internetSignals.length}</span></div>
+                {/* Signal counts */}
+                <div className="rounded-lg border bg-white px-3 py-2.5 text-xs text-slate-600 space-y-1.5" style={{ borderColor: '#e8e5df' }}>
+                  <div className="flex items-center justify-between">
+                    <span>Signaux d'intention (manuel)</span>
+                    <span className="font-semibold text-slate-800">{intentSignalTotal}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Signaux internet</span>
+                    <span className="font-semibold text-slate-800">{internetSignals.length}</span>
+                  </div>
                 </div>
               </TabsContent>
 
+              {/* ── Actions Tab ────────────────────────────────────── */}
               <TabsContent value="actions" className="space-y-3 m-0">
-                <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
-                  <p className="text-xs font-semibold text-slate-700">{t('leads.actions', { defaultValue: 'Actions' })}</p>
+                <div className="rounded-xl border bg-white p-3 space-y-2" style={{ borderColor: '#e8e5df' }}>
+                  <p className="text-xs font-semibold text-slate-700">Actions d'analyse</p>
                   <div className="grid grid-cols-2 gap-2">
-                    <Button variant="outline" onClick={handleScoreIcp} disabled={scoringIcp || isJobActive}>
+                    <Button variant="outline" size="sm" onClick={handleScoreIcp} disabled={scoringIcp || isJobActive} className="text-xs">
                       {scoringIcp ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : null}
                       {t('leads.scoreIcpButton', { defaultValue: 'Score ICP' })}
                     </Button>
-                    <Button variant="outline" onClick={handleSaveAndAnalyze} disabled={savingAndAnalyzing || isJobActive}>
+                    <Button variant="outline" size="sm" onClick={handleSaveAndAnalyze} disabled={savingAndAnalyzing || isJobActive} className="text-xs">
                       {savingAndAnalyzing ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />}
-                      {t('leads.saveAndReanalyze', { defaultValue: 'Save and reanalyze' })}
+                      {t('leads.saveAndReanalyze', { defaultValue: 'Réanalyser' })}
                     </Button>
                   </div>
                 </div>
 
                 {activeCrmTypes.length === 0 && finalScore !== null ? (
-                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3">
+                  <div className="rounded-xl border border-dashed p-3" style={{ borderColor: '#e8e5df', background: '#faf9f7' }}>
                     <div className="flex items-start gap-3">
                       <Database className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-800">{t('leads.crmEmptyTitle', { defaultValue: 'Envoyer ce lead dans votre CRM' })}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{t('leads.crmEmptyBody', { defaultValue: 'Connectez HubSpot ou Salesforce pour synchroniser les leads scorés en un clic.' })}</p>
+                        <p className="text-sm font-semibold text-slate-800">{t('leads.crmEmptyTitle', { defaultValue: 'Envoyer dans votre CRM' })}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{t('leads.crmEmptyBody', { defaultValue: 'Connectez HubSpot ou Salesforce.' })}</p>
                       </div>
-                      <Button size="sm" variant="outline" onClick={() => {
-                        onOpenChange(false);
-                        navigate(ROUTES.crmIntegration);
-                      }} className="shrink-0 h-7 text-xs">
-                        {t('leads.crmEmptyCta', { defaultValue: 'Configurer' })}
+                      <Button size="sm" variant="outline" onClick={() => { onOpenChange(false); navigate(ROUTES.crmIntegration); }} className="shrink-0 h-7 text-xs">
+                        Configurer
                       </Button>
                     </div>
                   </div>
                 ) : null}
 
                 {activeCrmTypes.length > 0 ? (
-                  <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
-                    <p className="text-xs font-semibold text-slate-700 flex items-center gap-1.5"><Database className="w-4 h-4 text-slate-400" />CRM</p>
+                  <div className="rounded-xl border bg-white p-3 space-y-2" style={{ borderColor: '#e8e5df' }}>
+                    <p className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                      <Database className="w-4 h-4 text-slate-400" />CRM
+                    </p>
                     <div className="flex flex-wrap gap-2">
                       {activeCrmTypes.map((crmType) => {
                         const lastSync = crmSyncRecords.filter((r) => r.crm_type === crmType && r.status === 'success').at(0);
@@ -728,14 +912,13 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
                         const isSyncing = crmSyncMutation.isPending && crmSyncMutation.variables?.crmType === crmType;
                         return (
                           <div key={crmType} className="flex items-center gap-2">
-                            <Button size="sm" variant="outline" onClick={() => crmSyncMutation.mutate({ leadId: lead.id, crmType })} disabled={crmSyncMutation.isPending}>
+                            <Button size="sm" variant="outline" onClick={() => crmSyncMutation.mutate({ leadId: lead.id, crmType })} disabled={crmSyncMutation.isPending} className="text-xs">
                               {isSyncing ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Database className="w-3.5 h-3.5 mr-1.5" />}
                               {t('leads.pushToCrm', { crm: label })}
                             </Button>
                             {lastSync?.crm_object_url ? (
-                              <a href={lastSync.crm_object_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline flex items-center gap-0.5">
-                                {t('leads.viewInCrm', { crm: label })}
-                                <ExternalLink className="w-3 h-3" />
+                              <a href={lastSync.crm_object_url} target="_blank" rel="noopener noreferrer" className="text-xs text-sky-600 hover:underline flex items-center gap-0.5">
+                                Voir <ExternalLink className="w-3 h-3" />
                               </a>
                             ) : null}
                           </div>
@@ -748,12 +931,13 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
             </Tabs>
           </div>
 
-          <div className="border-t border-slate-200 bg-white px-5 py-3 flex gap-2">
-            <Button variant="outline" onClick={handleSaveAndAnalyze} disabled={savingAndAnalyzing || isJobActive} className="flex-1">
+          {/* Footer */}
+          <div className="border-t bg-white px-4 py-3 flex gap-2" style={{ borderColor: '#e8e5df' }}>
+            <Button variant="outline" onClick={handleSaveAndAnalyze} disabled={savingAndAnalyzing || isJobActive} className="flex-1 text-xs">
               {savingAndAnalyzing ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />}
-              {t('leads.analyzeNow', { defaultValue: 'Analyze now' })}
+              {t('leads.analyzeNow', { defaultValue: 'Analyser' })}
             </Button>
-            <Button onClick={handleSave} disabled={saving || savingAndAnalyzing || isJobActive} className="flex-1">
+            <Button onClick={handleSave} disabled={saving || savingAndAnalyzing || isJobActive} className="flex-1 text-xs">
               {saving ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : null}
               {isDirty ? t('leads.saveChangesCta') : t('common.save')}
             </Button>

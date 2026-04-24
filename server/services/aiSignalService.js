@@ -1,9 +1,9 @@
 import { ICP_CATEGORY, DEFAULT_CATEGORY_THRESHOLDS, clamp, normalizeText, resolveCategoryThresholds } from '../lib/serviceUtils.js';
 
-const DEFAULT_BLEND_WEIGHTS = { icp: 0.6, ai: 0.4 };
+const DEFAULT_BLEND_WEIGHTS = { icp: 0.75, ai: 0.25 };
 const BASELINE_AI_SCORE = 12;
-const MAX_AI_BOOST = 30;
-const MIN_AI_BOOST = -35;
+const MAX_AI_BOOST = 15;
+const MIN_AI_BOOST = -20;
 
 const HARD_STOP_NEGATIVE_KEYS = new Set(['liquidation_or_bankruptcy', 'closed_or_dead']);
 const PRIORITY_BLOCK_KEYS = new Set([
@@ -620,7 +620,7 @@ export function scoreAiSignals({ lead, icpScore = 0, scoreDetails = {}, blendWei
   const hasHardStopNegative = internet.hardStopCount > 0;
 
   const aiInfluenceScale = clamp(resolvedBlend.ai / DEFAULT_BLEND_WEIGHTS.ai, 0.35, 1.8);
-  let aiBoost = clamp(Math.round((aiScore - BASELINE_AI_SCORE) * 0.5 * aiInfluenceScale), MIN_AI_BOOST, MAX_AI_BOOST);
+  let aiBoost = clamp(Math.round((aiScore - BASELINE_AI_SCORE) * 0.35 * aiInfluenceScale), MIN_AI_BOOST, MAX_AI_BOOST);
 
   if (totalIntentSignals === 0) {
     aiBoost = 0;
@@ -631,15 +631,15 @@ export function scoreAiSignals({ lead, icpScore = 0, scoreDetails = {}, blendWei
   }
 
   if (hasHardStopNegative) {
-    aiBoost = Math.min(aiBoost, -35);
+    aiBoost = Math.min(aiBoost, -20);
   } else if (hasPriorityBlockSignal) {
-    aiBoost = Math.min(aiBoost, -22);
+    aiBoost = Math.min(aiBoost, -15);
   }
 
   let finalScore = hasIcpExclusion ? 0 : clamp(Math.round(icpScore + aiBoost), 0, 100);
 
   if (!hasIcpExclusion && hasHardStopNegative) {
-    finalScore = Math.min(finalScore, 10);
+    finalScore = Math.min(finalScore, 15);
   } else if (!hasIcpExclusion && hasPriorityBlockSignal) {
     finalScore = Math.min(finalScore, 49);
   }
