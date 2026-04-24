@@ -138,6 +138,13 @@ const buildDiscoverToast = (response, t) => {
   return t('leads.signalsDetectedSummary', { count: total, details: parts.join(', ') });
 };
 
+const getIcpSummaryText = (lead, scoreDetails) =>
+  lead?.icp_summary
+  || scoreDetails?.icp_analysis
+  || scoreDetails?.icp_analysis_text
+  || (scoreDetails?.signal_analysis ? null : lead?.analysis_summary)
+  || null;
+
 export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -150,7 +157,7 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
   const [saving, setSaving] = useState(false);
   const [savingAndAnalyzing, setSavingAndAnalyzing] = useState(false);
   const [scoringIcp, setScoringIcp] = useState(false);
-  const [icpSummary, setIcpSummary] = useState(lead?.icp_summary || null);
+  const [icpSummary, setIcpSummary] = useState(getIcpSummaryText(lead, lead?.score_details || {}));
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [activeJob, setActiveJob] = useState(null);
   const [handledJobId, setHandledJobId] = useState(null);
@@ -221,7 +228,7 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
       setNotes(n);
       setIntentSignals(is);
       setInternetSignals(nets);
-      setIcpSummary(lead.icp_summary || null);
+      setIcpSummary(getIcpSummaryText(lead, lead.score_details || {}));
       initialRef.current = { followUpStatus: fs, notes: n, intentSignals: is };
     }
   }, [lead]);
@@ -386,12 +393,16 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
   const signalAnalysis = lead?.score_details?.signal_analysis && typeof lead.score_details.signal_analysis === 'object'
     ? lead.score_details.signal_analysis
     : null;
+  const icpCriteriaSource =
+    (scoreDetails?.criteria_breakdown && typeof scoreDetails.criteria_breakdown === 'object' && scoreDetails.criteria_breakdown)
+    || (scoreDetails?.icp_criteria && typeof scoreDetails.icp_criteria === 'object' && scoreDetails.icp_criteria)
+    || scoreDetails;
   const groupedSignals = {
     positive: (lead.signals || []).filter((signal) => String(signal?.type || '').toLowerCase() === 'positive'),
     negative: (lead.signals || []).filter((signal) => String(signal?.type || '').toLowerCase() === 'negative'),
     neutral: (lead.signals || []).filter((signal) => String(signal?.type || '').toLowerCase() === 'neutral'),
   };
-  const importantIcpCriteria = Object.entries(scoreDetails)
+  const importantIcpCriteria = Object.entries(icpCriteriaSource)
     .filter(([key, value]) => IMPORTANT_ICP_KEYS.includes(key) && value && typeof value === 'object')
     .map(([key, value]) => ({
       key,
@@ -627,9 +638,31 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
                         <div className="rounded-lg border border-slate-200 bg-white p-2"><p className="text-[11px] text-slate-500">AI Boost</p><p className="text-sm font-semibold">{signalAnalysis.ai_boost ?? '—'}</p></div>
                         <div className="rounded-lg border border-slate-200 bg-white p-2"><p className="text-[11px] text-slate-500">{t('leads.confidenceShort', { defaultValue: 'Confidence' })}</p><p className="text-sm font-semibold">{signalAnalysis.confidence ?? '—'}</p></div>
                       </div>
-                      <p className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">{lead.analysis_summary || t('leads.noAnalysisSummaryYet')}</p>
+                      <div className="space-y-2 text-sm text-slate-700">
+                        {signalAnalysis?.suggested_action || signalAnalysis?.action ? (
+                          <p><span className="font-semibold">Suggested action:</span> {signalAnalysis.suggested_action || signalAnalysis.action}</p>
+                        ) : null}
+                        {Array.isArray(signalAnalysis?.positives) && signalAnalysis.positives.length > 0 ? (
+                          <p><span className="font-semibold">Positives:</span> {signalAnalysis.positives.join(', ')}</p>
+                        ) : null}
+                        {Array.isArray(signalAnalysis?.negatives) && signalAnalysis.negatives.length > 0 ? (
+                          <p><span className="font-semibold">Negatives:</span> {signalAnalysis.negatives.join(', ')}</p>
+                        ) : null}
+                        {Array.isArray(signalAnalysis?.neutrals) && signalAnalysis.neutrals.length > 0 ? (
+                          <p><span className="font-semibold">Neutrals:</span> {signalAnalysis.neutrals.join(', ')}</p>
+                        ) : null}
+                        {signalAnalysis?.icebreaker ? (
+                          <p><span className="font-semibold">Icebreaker:</span> {signalAnalysis.icebreaker}</p>
+                        ) : null}
+                        {Array.isArray(signalAnalysis?.sources) && signalAnalysis.sources.length > 0 ? (
+                          <p><span className="font-semibold">Sources:</span> {signalAnalysis.sources.join(', ')}</p>
+                        ) : null}
+                        {signalAnalysis?.website ? (
+                          <p><span className="font-semibold">Website:</span> {signalAnalysis.website}</p>
+                        ) : null}
+                      </div>
                     </>
-                  ) : <p className="text-sm text-slate-600">{t('leads.noAnalysisSummaryYet')}</p>}
+                  ) : <p className="text-sm text-slate-600">No AI buying signals detected yet</p>}
                 </div>
               </TabsContent>
 

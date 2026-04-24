@@ -155,6 +155,77 @@ const sanitizeSpreadsheetCell = (value) => {
   return /^[\t\r ]*[=+\-@]/.test(str) ? `'${str}` : str;
 };
 
+const parseObjectCandidate = (value) => {
+  if (!value) return {};
+  if (typeof value === 'object' && !Array.isArray(value)) return value;
+  if (typeof value !== 'string') return {};
+
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
+const toArray = (value) => {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === 'string' && value.trim()) return [value.trim()];
+  return [];
+};
+
+const mergeSignals = (existingSignals, additions = []) => {
+  const current = Array.isArray(existingSignals) ? existingSignals : [];
+  const normalizedAdditions = additions.filter((item) => item && typeof item === 'object');
+  const seen = new Set();
+  const merged = [];
+
+  for (const signal of [...current, ...normalizedAdditions]) {
+    const dedupeKey = `${String(signal?.source || '').toLowerCase()}|${String(signal?.type || '').toLowerCase()}|${String(signal?.label || '').toLowerCase()}`;
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+    merged.push(signal);
+  }
+
+  return merged;
+};
+
+export const mergeScoreDetailsWithSignalAnalysis = (existingScoreDetails, signalResult, lead) => {
+  const safeExisting = parseObjectCandidate(existingScoreDetails);
+  const previousSignalAnalysis = parseObjectCandidate(safeExisting.signal_analysis);
+  const normalizedSignalAnalysis = {
+    ...previousSignalAnalysis,
+    ai_score: signalResult.ai_score,
+    boost: signalResult.ai_boost,
+    ai_boost: signalResult.ai_boost,
+    confidence: signalResult.confidence,
+    signals: toArray(signalResult.signals),
+    positives: toArray(signalResult.positives),
+    negatives: toArray(signalResult.negatives),
+    neutrals: toArray(signalResult.neutrals),
+    suggested_action: signalResult.suggested_action || signalResult.action || null,
+    action: signalResult.action || signalResult.suggested_action || null,
+    icebreakers: {
+      ...(parseObjectCandidate(previousSignalAnalysis.icebreakers)),
+      email: signalResult.icebreaker || previousSignalAnalysis?.icebreakers?.email || null,
+    },
+    icebreaker: signalResult.icebreaker || null,
+    sources: toArray(signalResult.sources),
+    provider_metadata: {
+      ...(parseObjectCandidate(previousSignalAnalysis.provider_metadata)),
+      model: signalResult?._meta?.model || previousSignalAnalysis?.provider_metadata?.model || null,
+      usage: signalResult?._meta?.usage || previousSignalAnalysis?.provider_metadata?.usage || null,
+    },
+    website: lead?.website_url || null,
+    analyzed_at: new Date().toISOString(),
+  };
+
+  return {
+    ...safeExisting,
+    signal_analysis: normalizedSignalAnalysis,
+  };
+};
+
 const applyAnalysisIfPossible = async ({ user, leadId, lead, internetSignals, shouldReanalyze = true, skipLlm = false }) => {
   if (!shouldReanalyze) {
     return {
@@ -755,34 +826,27 @@ router.post('/:leadId/analyze-signals', analyzeSignalsLimiter, requireCredits('a
   }
 
   const finalScore = Math.max(0, Math.min(100, Math.round(icpBaseScore + signalResult.ai_boost)));
-  const scoreDetails = {
-    ...(lead?.score_details && typeof lead.score_details === 'object' ? lead.score_details : {}),
-    signal_analysis: {
-      ai_score: signalResult.ai_score,
-      ai_boost: signalResult.ai_boost,
-      confidence: signalResult.confidence,
-      positives: signalResult.positives,
-      negatives: signalResult.negatives,
-      action: signalResult.action,
-      signals: signalResult.signals,
-      icebreaker: signalResult.icebreaker,
-      model: signalResult?._meta?.model || null,
-      analyzed_at: new Date().toISOString(),
-    },
-  };
+  const existingScoreDetails = parseObjectCandidate(lead?.score_details);
+  const scoreDetails = mergeScoreDetailsWithSignalAnalysis(existingScoreDetails, signalResult, lead);
 
   const updatePayload = {
     icp_score: Math.round(icpBaseScore),
     ai_score: signalResult.ai_score,
     ai_confidence: signalResult.confidence,
     final_score: finalScore,
-    recommended_action: signalResult.action,
+    suggested_action: signalResult.action,
     final_recommended_action: signalResult.action,
-    analysis_summary: [
-      ...signalResult.positives.map((item) => `+ ${item}`),
-      ...signalResult.negatives.map((item) => `- ${item}`),
-    ].join('\n') || lead.analysis_summary || null,
-    signals: signalResult.signals.map((label) => ({ source: 'signal_analysis', type: 'neutral', points: 0, label })),
+    analysis_summary: lead.analysis_summary || null,
+    signals: mergeSignals(lead.signals, [
+      ...toArray(signalResult.positives).map((label) => ({ source: 'signal_analysis', type: 'positive', points: 0, label })),
+      ...toArray(signalResult.negatives).map((label) => ({ source: 'signal_analysis', type: 'negative', points: 0, label })),
+      ...toArray(signalResult.neutrals || signalResult.signals).map((label) => ({
+        source: 'signal_analysis',
+        type: 'neutral',
+        points: 0,
+        label,
+      })),
+    ]),
     generated_icebreaker: signalResult.icebreaker,
     generated_icebreakers: {
       ...(lead.generated_icebreakers && typeof lead.generated_icebreakers === 'object' ? lead.generated_icebreakers : {}),
