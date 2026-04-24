@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ArrowRight, Circle, Download, Flame, Linkedin, Loader2, Mail, Phone, RefreshCcw, Sparkles, Target, Upload } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Circle, Copy, Download, Flame, Linkedin, Loader2, Mail, Phone, RefreshCcw, Sparkles, Target, Upload } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import LeadSlideOver from '@/components/leads/LeadSlideOver';
@@ -481,16 +481,69 @@ export default function Dashboard() {
     window.open(withProtocol, '_blank', 'noopener,noreferrer');
   };
 
+  const getLeadHookCopy = (lead) => {
+    if (!lead) return '';
+    const candidates = [
+      lead.generated_icebreakers?.email,
+      lead.generated_icebreaker,
+      lead.generated_icebreakers?.linkedin,
+      lead.generated_icebreakers?.call,
+    ];
+    return candidates.find((value) => typeof value === 'string' && value.trim()) || '';
+  };
+
+  const handleCopyHook = async (lead) => {
+    const hookCopy = getLeadHookCopy(lead);
+    if (!hookCopy) return;
+    try {
+      await navigator.clipboard.writeText(hookCopy);
+      toast.success(t('dashboard.toasts.hookCopied', { defaultValue: 'Hook copied to clipboard.' }));
+    } catch (error) {
+      console.warn('Failed to copy hook', error);
+      toast.error(t('dashboard.toasts.failedCopyHook', { defaultValue: 'Could not copy hook.' }));
+    }
+  };
+
   return (
     <>
       <div className="mb-4 rounded-xl border border-[#e6e4df] bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex flex-col gap-3">
           <div>
             <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">{t('dashboard.priority.eyebrow', { defaultValue: 'Today · Priority' })}</p>
             <h1 className="mt-1 text-[30px] font-bold tracking-tight text-[#1a1200]">{t('dashboard.priority.title', { defaultValue: 'Who to contact now' })}</h1>
             <p className="mt-1 text-sm text-slate-500">{t('dashboard.priority.subtitle', { defaultValue: 'A focused view built from your real leads, ICP scoring, and AI signals.' })}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-1.5">
+
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
+            <div>
+              <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">{t('dashboard.selectors.list')}</p>
+              <div className="mt-2 flex items-center gap-2">
+                <Select value={selectedSourceList} onValueChange={setSelectedSourceList}>
+                  <SelectTrigger className="h-9 border-[#e6e4df] text-sm">
+                    <SelectValue placeholder={t('dashboard.placeholders.selectLeadList')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={LIST_KEYS.ALL}>{t('dashboard.lists.all')} ({leads.length})</SelectItem>
+                    {sourceListOptions.map((option) => (
+                      <SelectItem key={option.key} value={option.key}>
+                        {option.label} ({option.count})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="ghost" size="sm" onClick={() => navigate(ROUTES.lists)} className="h-9 px-3 text-xs">{t('dashboard.selectors.manageLists', { defaultValue: 'Manage lists' })}</Button>
+              </div>
+            </div>
+            <div>
+              <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">ICP</p>
+              <Select value={activeIcp?.id || ''} onValueChange={handleSwitchIcp} disabled={isSwitchingIcp || icpProfiles.length === 0}>
+                <SelectTrigger className="mt-2 h-9 border-[#e6e4df] text-sm"><SelectValue placeholder={t('dashboard.placeholders.selectActiveIcp')} /></SelectTrigger>
+                <SelectContent>{icpProfiles.map((profile) => <SelectItem key={profile.id} value={profile.id}>{profile.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
             <Button variant="outline" size="sm" onClick={handleScoreIcpVisible} disabled={isScoringIcpVisible || isReanalyzing || isAnalyzingSignalsVisible} className="h-8 gap-1.5 rounded-md border-[#e8e5de] text-[11.5px]">
               {isScoringIcpVisible ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Target className="h-3.5 w-3.5" />}
               {t('dashboard.actions.analyzeIcp', { defaultValue: 'Analyze ICP' })}
@@ -516,35 +569,6 @@ export default function Dashboard() {
               {t('dashboard.actions.researchLead', { defaultValue: 'Research lead' })}
             </Button>
           </div>
-        </div>
-      </div>
-
-      <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_280px]">
-        <div className="rounded-xl border border-[#e6e4df] bg-white p-4 shadow-sm">
-          <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">{t('dashboard.selectors.list')}</p>
-          <div className="mt-2 flex items-center gap-2">
-            <Select value={selectedSourceList} onValueChange={setSelectedSourceList}>
-              <SelectTrigger className="h-9 border-[#e6e4df] text-sm">
-                <SelectValue placeholder={t('dashboard.placeholders.selectLeadList')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={LIST_KEYS.ALL}>{t('dashboard.lists.all')} ({leads.length})</SelectItem>
-                {sourceListOptions.map((option) => (
-                  <SelectItem key={option.key} value={option.key}>
-                    {option.label} ({option.count})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button variant="ghost" size="sm" onClick={() => navigate(ROUTES.lists)} className="h-9 px-3 text-xs">{t('dashboard.selectors.manageLists', { defaultValue: 'Manage lists' })}</Button>
-          </div>
-        </div>
-        <div className="rounded-xl border border-[#e6e4df] bg-white p-4 shadow-sm">
-          <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">ICP</p>
-          <Select value={activeIcp?.id || ''} onValueChange={handleSwitchIcp} disabled={isSwitchingIcp || icpProfiles.length === 0}>
-            <SelectTrigger className="mt-2 h-9 border-[#e6e4df] text-sm"><SelectValue placeholder={t('dashboard.placeholders.selectActiveIcp')} /></SelectTrigger>
-            <SelectContent>{icpProfiles.map((profile) => <SelectItem key={profile.id} value={profile.id}>{profile.name}</SelectItem>)}</SelectContent>
-          </Select>
         </div>
       </div>
 
@@ -604,6 +628,9 @@ export default function Dashboard() {
               <Button size="sm" variant="outline" onClick={() => handleOpenLeadPage(priorityLead)} className="justify-start gap-1.5"><ArrowRight className="h-3.5 w-3.5" />{t('dashboard.priority.openLead', { defaultValue: 'Open lead page' })}</Button>
               <Button size="sm" variant="outline" disabled={!priorityLead.phone} onClick={() => window.open(`tel:${priorityLead.phone}`, '_self')} className="justify-start gap-1.5"><Phone className="h-3.5 w-3.5" />{t('dashboard.priority.call', { defaultValue: 'Call' })}</Button>
               <Button size="sm" variant="outline" disabled={!priorityLead.contact_email} onClick={() => { window.location.href = `mailto:${priorityLead.contact_email}`; }} className="justify-start gap-1.5"><Mail className="h-3.5 w-3.5" />{t('dashboard.priority.email', { defaultValue: 'Email' })}</Button>
+              <Button size="sm" variant="outline" disabled={!getLeadHookCopy(priorityLead)} onClick={() => handleCopyHook(priorityLead)} className="justify-start gap-1.5"><Copy className="h-3.5 w-3.5" />{t('dashboard.priority.copyHook', { defaultValue: 'Copy hook' })}</Button>
+              {/* TODO: wire this to real sequence generation workflow when Dashboard-level handler is available. */}
+              <Button size="sm" variant="outline" disabled className="justify-start gap-1.5"><Sparkles className="h-3.5 w-3.5" />{t('dashboard.priority.generateSequence', { defaultValue: 'Generate sequence' })}</Button>
               <Button size="sm" variant="outline" disabled={!(priorityLead.linkedin_url || priorityLead.linkedin)} onClick={() => openLinkedin(priorityLead)} className="justify-start gap-1.5"><Linkedin className="h-3.5 w-3.5" />LinkedIn</Button>
               </div>
         </section>
@@ -626,9 +653,10 @@ export default function Dashboard() {
               const finalScore = clampScore(lead.final_score ?? lead.icp_score);
               const icpScore = clampScore(lead.icp_score);
               const aiScore = clampScore(lead.ai_score ?? lead?.score_details?.signal_analysis?.ai_score);
+              const heatTier = getHeatTier(lead);
               return (
-                <button key={lead.id} type="button" onClick={() => handleSelectLead(lead)} className="rounded-xl border border-[#e6e4df] bg-white p-4 text-left shadow-sm transition hover:border-[#d9d5cb]">
-                  <div className="flex items-start justify-between gap-2"><div><p className="text-2xl font-semibold text-slate-950">{lead.company_name}</p><p className="text-sm text-slate-500">{lead.contact_role || t('common.contact')}</p></div><span className="rounded-full bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-700">P{index + 1}</span></div>
+                <button key={lead.id} type="button" onClick={() => handleSelectLead(lead)} className="group rounded-xl border border-[#e6e4df] bg-white p-4 text-left shadow-sm transition hover:border-[#d9d5cb]">
+                  <div className="flex items-start justify-between gap-2"><div><p className="text-2xl font-semibold text-slate-950">{lead.company_name}</p><p className="text-sm text-slate-500">{lead.contact_role || t('common.contact')}</p></div><div className="flex items-center gap-1.5"><span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold leading-tight text-rose-700 ring-1 ring-rose-200 transition-colors group-hover:bg-rose-100">P{index + 1}</span><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold leading-tight ring-1 transition-colors ${HEAT_TIER_BADGE_STYLES[heatTier]}`}>{heatTier}</span></div></div>
                   <p className="mt-3 text-5xl font-bold leading-none text-slate-950">{finalScore ?? '—'}<span className="text-xl text-slate-300">/100</span></p>
                   <div className="mt-3 space-y-2">
                     <div><div className="mb-1 flex justify-between text-xs text-slate-500"><span>ICP</span><span>{icpScore ?? '—'}</span></div><div className="h-1.5 rounded-full bg-slate-100"><div className="h-full rounded-full bg-slate-900" style={{ width: `${icpScore ?? 0}%` }} /></div></div>
