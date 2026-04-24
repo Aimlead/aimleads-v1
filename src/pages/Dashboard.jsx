@@ -547,44 +547,71 @@ export default function Dashboard() {
 
       {!isLoading && totalLeads > 0 && priorityLead ? (
         <section className="mb-4 rounded-xl border border-[#e6e4df] bg-white p-5 shadow-sm">
+          <div className="grid gap-5 xl:grid-cols-[140px_1fr_auto] xl:items-center">
+            <div className="relative h-[132px] w-[132px]">
+              <div
+                className="h-full w-full rounded-full"
+                style={{
+                  background: `conic-gradient(#f0a63b ${(clampScore(priorityLead.final_score ?? priorityLead.icp_score) ?? 0) * 3.6}deg, #efece6 0deg)`,
+                }}
+              />
+              <div className="absolute inset-[8px] flex flex-col items-center justify-center rounded-full bg-white">
+                <p className="text-[42px] font-bold leading-none tracking-tight text-[#1a1200]">{clampScore(priorityLead.final_score ?? priorityLead.icp_score) ?? '—'}</p>
+                <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Final score</p>
+              </div>
+            </div>
           <p className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-[10.75px] font-semibold text-amber-700"><Flame className="h-3.5 w-3.5" /> {t('dashboard.priority.heroTag', { defaultValue: 'Priority lead' })}</p>
           <div className="mt-3 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div className="min-w-0">
-              <h2 className="truncate text-4xl font-bold tracking-tight text-slate-950">{priorityLead.company_name}</h2>
-              <p className="mt-1 text-lg text-slate-600">{priorityLead.contact_role || t('common.contact')} {priorityLead.contact_name ? `· ${priorityLead.contact_name}` : ''}</p>
+              <p className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-[10.75px] font-semibold text-amber-700"><Flame className="h-3.5 w-3.5" /> {t('dashboard.priority.heroTag', { defaultValue: 'Priority lead' })}</p>
+              <h2 className="mt-3 truncate text-[34px] font-bold leading-tight tracking-tight text-[#1a1200]">{priorityLead.company_name}</h2>
+              <p className="mt-1 text-[15px] text-slate-600">{priorityLead.contact_name || t('common.contact')} · {priorityLead.contact_role || t('common.contact')}</p>
+              <div className="mt-3 grid grid-cols-3 gap-2.5">
+                <div className="rounded-lg border border-[#ece9e2] bg-[#fcfbf9] p-2.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Final</p>
+                  <p className="mt-1 text-xl font-bold text-[#1a1200]">{clampScore(priorityLead.final_score ?? priorityLead.icp_score) ?? '—'}</p>
+                </div>
+                <div className="rounded-lg border border-[#ece9e2] bg-[#fcfbf9] p-2.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">ICP</p>
+                  <p className="mt-1 text-xl font-bold text-[#1a1200]">{clampScore(priorityLead.icp_score) ?? '—'}</p>
+                </div>
+                <div className="rounded-lg border border-[#ece9e2] bg-[#fcfbf9] p-2.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">AI</p>
+                  <p className="mt-1 text-xl font-bold text-[#1a1200]">{clampScore(priorityLead.ai_score ?? priorityLead?.score_details?.signal_analysis?.ai_score) ?? '—'}</p>
+                </div>
+              </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 {priorityLead.source_list ? <span className="rounded-md bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700">{priorityLead.source_list}</span> : null}
                 {priorityLead.industry ? <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600">{priorityLead.industry}</span> : null}
               </div>
             </div>
+            <div className="flex flex-col gap-2 xl:min-w-[190px]">
+              <Button size="sm" onClick={() => handleSelectLead(priorityLead)} className="justify-start gap-1.5 bg-[#1a1200] text-white hover:bg-[#2a1f07]">{t('dashboard.priority.openSlideOver', { defaultValue: 'Open slide-over' })}</Button>
+              <Button size="sm" variant="outline" onClick={() => handleOpenLeadPage(priorityLead)} className="justify-start gap-1.5"><ArrowRight className="h-3.5 w-3.5" />{t('dashboard.priority.openLead', { defaultValue: 'Open lead page' })}</Button>
+              <Button size="sm" variant="outline" disabled={!priorityLead.phone} onClick={() => window.open(`tel:${priorityLead.phone}`, '_self')} className="justify-start gap-1.5"><Phone className="h-3.5 w-3.5" />{t('dashboard.priority.call', { defaultValue: 'Call' })}</Button>
+              <Button size="sm" variant="outline" disabled={!priorityLead.contact_email} onClick={() => { window.location.href = `mailto:${priorityLead.contact_email}`; }} className="justify-start gap-1.5"><Mail className="h-3.5 w-3.5" />{t('dashboard.priority.email', { defaultValue: 'Email' })}</Button>
+              <Button size="sm" variant="outline" disabled={!(priorityLead.linkedin_url || priorityLead.linkedin)} onClick={() => openLinkedin(priorityLead)} className="justify-start gap-1.5"><Linkedin className="h-3.5 w-3.5" />LinkedIn</Button>
             <div className="grid w-full max-w-xl grid-cols-3 gap-3">
               <div className="rounded-xl border border-[#ece9e2] p-3"><p className="text-[11px] uppercase tracking-[0.08em] text-slate-500">Final</p><p className="text-3xl font-bold text-slate-950">{clampScore(priorityLead.final_score ?? priorityLead.icp_score) ?? '—'}<span className="text-base text-slate-400">/100</span></p></div>
               <div className="rounded-xl border border-[#ece9e2] p-3"><p className="text-[11px] uppercase tracking-[0.08em] text-slate-500">ICP</p><p className="text-3xl font-bold text-slate-950">{clampScore(priorityLead.icp_score) ?? '—'}</p></div>
               <div className="rounded-xl border border-[#ece9e2] p-3"><p className="text-[11px] uppercase tracking-[0.08em] text-slate-500">AI</p><p className="text-3xl font-bold text-slate-950">{clampScore(priorityLead.ai_score ?? priorityLead?.score_details?.signal_analysis?.ai_score) ?? '—'}</p></div>
             </div>
           </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={() => handleSelectLead(priorityLead)}>{t('dashboard.priority.openSlideOver', { defaultValue: 'Open slide-over' })}</Button>
-            <Button size="sm" variant="outline" onClick={() => handleOpenLeadPage(priorityLead)} className="gap-1.5"><ArrowRight className="h-3.5 w-3.5" />{t('dashboard.priority.openLead', { defaultValue: 'Open lead page' })}</Button>
-            <Button size="sm" variant="outline" disabled={!priorityLead.phone} onClick={() => window.open(`tel:${priorityLead.phone}`, '_self')} className="gap-1.5"><Phone className="h-3.5 w-3.5" />{t('dashboard.priority.call', { defaultValue: 'Call' })}</Button>
-            <Button size="sm" variant="outline" disabled={!priorityLead.contact_email} onClick={() => { window.location.href = `mailto:${priorityLead.contact_email}`; }} className="gap-1.5"><Mail className="h-3.5 w-3.5" />{t('dashboard.priority.email', { defaultValue: 'Email' })}</Button>
-            <Button size="sm" variant="outline" disabled={!(priorityLead.linkedin_url || priorityLead.linkedin)} onClick={() => openLinkedin(priorityLead)} className="gap-1.5"><Linkedin className="h-3.5 w-3.5" />LinkedIn</Button>
-          </div>
         </section>
       ) : null}
 
       {!isLoading && totalLeads > 0 && (
         <section className="mb-4 grid overflow-hidden rounded-xl border border-[#e6e4df] bg-white shadow-sm sm:grid-cols-4">
-          <div className="border-b border-r border-[#f0eee9] p-4 sm:border-b-0"><p className="text-[10.75px] uppercase tracking-[0.1em] text-slate-500">{t('dashboard.stats.total', { defaultValue: 'Total leads' })}</p><p className="mt-1 text-3xl font-bold text-slate-900">{totalLeads}</p></div>
-          <div className="border-b border-r border-[#f0eee9] p-4 sm:border-b-0"><p className="text-[10.75px] uppercase tracking-[0.1em] text-slate-500">{t('dashboard.stats.qualified', { defaultValue: 'Qualified' })}</p><p className="mt-1 text-3xl font-bold text-slate-900">{qualifiedLeads}</p></div>
-          <div className="border-b border-r border-[#f0eee9] p-4 sm:border-b-0"><p className="text-[10.75px] uppercase tracking-[0.1em] text-slate-500">{t('dashboard.stats.toAnalyze', { defaultValue: 'To analyze' })}</p><p className="mt-1 text-3xl font-bold text-slate-900">{toAnalyze}</p></div>
-          <div className="p-4"><p className="text-[10.75px] uppercase tracking-[0.1em] text-slate-500">{t('dashboard.banner.staleLabel', { defaultValue: 'Stale >30d' })}</p><p className="mt-1 text-3xl font-bold text-amber-700">{staleLeadCount}</p></div>
+          <div className="border-b border-r border-[#ece9e2] p-4 sm:border-b-0"><p className="text-[10.75px] font-semibold uppercase tracking-[0.1em] text-slate-500">{t('dashboard.stats.total', { defaultValue: 'Total leads' })}</p><p className="mt-1 text-[31px] font-bold leading-none text-[#1a1200]">{totalLeads}</p><p className="mt-1 text-[11px] text-slate-500">In selected list</p></div>
+          <div className="border-b border-r border-[#ece9e2] p-4 sm:border-b-0"><p className="text-[10.75px] font-semibold uppercase tracking-[0.1em] text-slate-500">{t('dashboard.stats.qualified', { defaultValue: 'Qualified' })}</p><p className="mt-1 text-[31px] font-bold leading-none text-[#1a1200]">{qualifiedLeads}</p><p className="mt-1 text-[11px] text-slate-500">Status = qualified</p></div>
+          <div className="border-b border-r border-[#ece9e2] p-4 sm:border-b-0"><p className="text-[10.75px] font-semibold uppercase tracking-[0.1em] text-slate-500">{t('dashboard.stats.avg', { defaultValue: 'Avg score' })}</p><p className="mt-1 text-[31px] font-bold leading-none text-[#1a1200]">{avgScore}</p><p className="mt-1 text-[11px] text-slate-500">Across scored leads</p></div>
+          <div className="p-4"><p className="text-[10.75px] font-semibold uppercase tracking-[0.1em] text-slate-500">{t('dashboard.banner.staleLabel', { defaultValue: 'Stale >30d' })}</p><p className="mt-1 text-[31px] font-bold leading-none text-amber-700">{staleLeadCount}</p><p className="mt-1 text-[11px] text-slate-500">{t('dashboard.stats.toAnalyze', { defaultValue: 'To analyze' })}: {toAnalyze}</p></div>
         </section>
       )}
 
       {!isLoading && topPriorityLeads.length > 0 && (
         <section className="mb-4">
-          <h3 className="mb-3 text-2xl font-semibold tracking-tight text-[#1a1200]">{t('dashboard.priority.topLeads', { defaultValue: 'Top 3 hot leads' })}</h3>
+          <h3 className="mb-3 text-[24px] font-semibold tracking-tight text-[#1a1200]">{t('dashboard.priority.topLeads', { defaultValue: 'Top 3 hot leads' })}</h3>
           <div className="grid gap-3 xl:grid-cols-3">
             {topPriorityLeads.map((lead, index) => {
               const finalScore = clampScore(lead.final_score ?? lead.icp_score);
@@ -593,11 +620,12 @@ export default function Dashboard() {
               return (
                 <button key={lead.id} type="button" onClick={() => handleSelectLead(lead)} className="rounded-xl border border-[#e6e4df] bg-white p-4 text-left shadow-sm transition hover:border-[#d9d5cb]">
                   <div className="flex items-start justify-between gap-2"><div><p className="text-2xl font-semibold text-slate-950">{lead.company_name}</p><p className="text-sm text-slate-500">{lead.contact_role || t('common.contact')}</p></div><span className="rounded-full bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-700">P{index + 1}</span></div>
-                  <p className="mt-3 text-6xl font-bold leading-none text-slate-950">{finalScore ?? '—'}<span className="text-2xl text-slate-300">/100</span></p>
+                  <p className="mt-3 text-5xl font-bold leading-none text-slate-950">{finalScore ?? '—'}<span className="text-xl text-slate-300">/100</span></p>
                   <div className="mt-3 space-y-2">
                     <div><div className="mb-1 flex justify-between text-xs text-slate-500"><span>ICP</span><span>{icpScore ?? '—'}</span></div><div className="h-1.5 rounded-full bg-slate-100"><div className="h-full rounded-full bg-slate-900" style={{ width: `${icpScore ?? 0}%` }} /></div></div>
                     <div><div className="mb-1 flex justify-between text-xs text-slate-500"><span>AI</span><span>{aiScore ?? '—'}</span></div><div className="h-1.5 rounded-full bg-slate-100"><div className="h-full rounded-full bg-amber-500" style={{ width: `${aiScore ?? 0}%` }} /></div></div>
                   </div>
+                  <div className="mt-3 border-t border-dashed border-[#ece9e2] pt-2 text-xs text-slate-500">{lead.follow_up_status || t('dashboard.priority.toContact', { defaultValue: 'To contact' })}</div>
                 </button>
               );
             })}
