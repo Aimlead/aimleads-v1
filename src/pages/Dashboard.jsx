@@ -56,17 +56,22 @@ const estimatePriorityScore = (lead) => {
   return Math.round(base + signalWeight + freshnessWeight + needsContactBoost);
 };
 
-const getHeatTier = (lead) => {
+const deriveNextAction = (lead) => {
+  const followUpStatus = String(lead?.follow_up_status || '').toLowerCase();
+  const hasEmail = Boolean(String(lead?.email || lead?.contact_email || '').trim());
+  const hasPhone = Boolean(String(lead?.phone || lead?.contact_phone || '').trim());
+  const hasLinkedin = Boolean(String(lead?.linkedin_url || '').trim());
   const score = clampScore(lead?.final_score ?? lead?.icp_score) ?? 0;
-  if (score >= 80) return 'Hot';
-  if (score >= 65) return 'Warm';
-  return 'Cold';
-};
+  const highScore = score >= 80;
 
-const HEAT_TIER_BADGE_STYLES = {
-  Hot: 'bg-rose-50 text-rose-700 ring-rose-200',
-  Warm: 'bg-amber-50 text-amber-700 ring-amber-200',
-  Cold: 'bg-slate-100 text-slate-700 ring-slate-200',
+  if (!hasEmail && !hasPhone && !hasLinkedin) return 'Enrich contact';
+  if (followUpStatus.includes('replied') || followUpStatus.includes('meeting')) return 'Prep follow-up';
+  if (followUpStatus.includes('called') || followUpStatus.includes('voicemail')) return 'Send recap email';
+  if (highScore && !followUpStatus.includes('contact') && hasPhone) return 'Call now';
+  if (hasEmail) return 'Send email';
+  if (hasPhone) return 'Call lead';
+  if (hasLinkedin) return 'Connect on LinkedIn';
+  return 'Review lead';
 };
 
 
@@ -671,25 +676,42 @@ export default function Dashboard() {
             <h3 className="text-2xl font-semibold tracking-tight text-[#1a1200]">{t('dashboard.priority.nextInLine', { defaultValue: 'Next in line' })}</h3>
             <Button variant="ghost" size="sm" onClick={() => navigate(ROUTES.pipeline)}>{t('dashboard.priority.openPipeline', { defaultValue: 'Open pipeline' })}</Button>
           </div>
-          <div className="grid grid-cols-[90px_minmax(160px,1.6fr)_minmax(140px,1fr)_minmax(120px,0.8fr)_minmax(140px,1fr)_130px] items-center gap-3 bg-[#faf9f7] px-4 py-2 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+          <div className="grid grid-cols-[90px_minmax(160px,1.5fr)_minmax(140px,1fr)_minmax(120px,0.8fr)_minmax(120px,0.8fr)_minmax(120px,0.8fr)_170px] items-center gap-3 bg-[#faf9f7] px-4 py-2 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">
             <span>{t('dashboard.priority.score', { defaultValue: 'Score' })}</span>
             <span>{t('dashboard.priority.lead', { defaultValue: 'Lead' })}</span>
             <span>{t('dashboard.priority.company', { defaultValue: 'Company' })}</span>
             <span>{t('dashboard.priority.status', { defaultValue: 'Status' })}</span>
             <span>{t('dashboard.priority.list', { defaultValue: 'List' })}</span>
+            <span>{t('dashboard.priority.nextAction', { defaultValue: 'Next action' })}</span>
             <span className="text-right">{t('dashboard.priority.actions', { defaultValue: 'Actions' })}</span>
           </div>
           <div className="divide-y divide-[#eeece7]">
             {nextPriorityLeads.slice(0, 8).map((lead) => {
               const score = clampScore(lead.final_score ?? lead.icp_score) ?? 0;
+              const nextAction = deriveNextAction(lead);
+              const emailAddress = String(lead.email || lead.contact_email || '').trim();
+              const phoneNumber = String(lead.phone || lead.contact_phone || '').trim();
               return (
-                <button key={lead.id} type="button" onClick={() => handleSelectLead(lead)} className="grid w-full grid-cols-[90px_minmax(160px,1.6fr)_minmax(140px,1fr)_minmax(120px,0.8fr)_minmax(140px,1fr)_130px] items-center gap-3 px-4 py-3 text-left hover:bg-[#fbfaf8]">
+                <button key={lead.id} type="button" onClick={() => handleSelectLead(lead)} className="grid w-full grid-cols-[90px_minmax(160px,1.5fr)_minmax(140px,1fr)_minmax(120px,0.8fr)_minmax(120px,0.8fr)_minmax(120px,0.8fr)_170px] items-center gap-3 px-4 py-3 text-left hover:bg-[#fbfaf8]">
                   <div className="flex items-center gap-2"><Circle className={`h-2.5 w-2.5 ${score >= 80 ? 'fill-rose-500 text-rose-500' : score >= 65 ? 'fill-amber-500 text-amber-500' : 'fill-slate-400 text-slate-400'}`} /><span className="text-3xl font-semibold text-slate-900">{score}</span></div>
                   <div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-900">{lead.contact_name || t('common.contact')}</p><p className="truncate text-[11.5px] text-slate-500">{lead.contact_role || t('common.contact')}</p></div>
                   <div className="truncate text-[12.75px] font-medium text-slate-700">{lead.company_name}</div>
                   <div className="truncate text-sm text-slate-600">{lead.follow_up_status || t('dashboard.priority.toContact', { defaultValue: 'To contact' })}</div>
                   <div className="truncate text-sm text-slate-500">{lead.source_list || t('dashboard.lists.unlisted')}</div>
-                  <div className="text-right text-sm text-slate-500">
+                  <div className="truncate text-sm text-slate-600">{nextAction}</div>
+                  <div className="flex items-center justify-end gap-1.5 text-sm text-slate-500">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-1 h-7 px-2 text-xs"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        handleSelectLead(lead);
+                      }}
+                    >
+                      {t('dashboard.priority.openPanel', { defaultValue: 'Open panel' })}
+                    </Button>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -702,6 +724,34 @@ export default function Dashboard() {
                     >
                       {t('dashboard.priority.openLead', { defaultValue: 'Open lead' })}
                     </Button>
+                    {emailAddress && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mt-1 h-7 px-2 text-xs"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          window.location.href = `mailto:${emailAddress}`;
+                        }}
+                      >
+                        {t('dashboard.priority.email', { defaultValue: 'Email' })}
+                      </Button>
+                    )}
+                    {!emailAddress && phoneNumber && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mt-1 h-7 px-2 text-xs"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          window.location.href = `tel:${phoneNumber}`;
+                        }}
+                      >
+                        {t('dashboard.priority.call', { defaultValue: 'Call' })}
+                      </Button>
+                    )}
                   </div>
                 </button>
               );
