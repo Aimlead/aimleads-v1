@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, Brain, CheckCircle2, Clock3, CreditCard, Database, Download, Loader2, MessageSquare, RefreshCcw, Sparkles, Target, TrendingUp, Upload, Users, XCircle } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Brain, CheckCircle2, Circle, Clock3, CreditCard, Database, Download, Flame, Linkedin, Loader2, Mail, MessageSquare, Phone, RefreshCcw, Sparkles, Target, TrendingUp, Upload, Users, XCircle } from 'lucide-react';
 import { BarChart, Bar, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -75,6 +75,25 @@ const sourceListLabel = (key, t) => {
 const getBillingActionLabel = (action, t) => {
   const key = BILLING_ACTION_LABELS[action];
   return key ? t(key) : String(action || 'unknown');
+};
+
+const clampScore = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.max(0, Math.min(100, Math.round(parsed)));
+};
+
+const estimatePriorityScore = (lead) => {
+  const icp = clampScore(lead?.icp_score);
+  const final = clampScore(lead?.final_score);
+  const ai = clampScore(lead?.ai_score);
+  const scoreDetailsAi = clampScore(lead?.score_details?.signal_analysis?.ai_score);
+  const aiScore = ai ?? scoreDetailsAi;
+  const base = final ?? icp ?? 0;
+  const signalWeight = aiScore ? aiScore * 0.25 : 0;
+  const freshnessWeight = lead?.llm_enriched ? 8 : 0;
+  const needsContactBoost = !String(lead?.follow_up_status || '').toLowerCase().includes('contact') ? 12 : 0;
+  return Math.round(base + signalWeight + freshnessWeight + needsContactBoost);
 };
 
 export default function Dashboard() {
@@ -541,6 +560,17 @@ export default function Dashboard() {
   const focusLead = visibleLeads
     .filter((lead) => toNumericScore(lead.final_score ?? lead.icp_score) !== null)
     .sort((left, right) => toNumericScore(right.final_score ?? right.icp_score) - toNumericScore(left.final_score ?? left.icp_score))[0] || null;
+  const rankedPriorityLeads = useMemo(() => {
+    return [...visibleLeads]
+      .map((lead) => ({
+        ...lead,
+        priorityRankScore: estimatePriorityScore(lead),
+      }))
+      .sort((left, right) => right.priorityRankScore - left.priorityRankScore);
+  }, [visibleLeads]);
+  const topPriorityLeads = rankedPriorityLeads.slice(0, 3);
+  const nextPriorityLeads = rankedPriorityLeads.slice(3, 11);
+  const priorityLead = topPriorityLeads[0] || null;
   // Leads analyzed more than 30 days ago with no follow-up progression: surfaced so the user
   // can re-score or re-engage them before the data becomes stale.
   const staleLeadCount = useMemo(() => {
@@ -573,6 +603,13 @@ export default function Dashboard() {
         setSlideOverOpen(true);
       }
     }
+  };
+
+  const openLinkedin = (lead) => {
+    const linkedinUrl = lead?.linkedin_url || lead?.linkedin || '';
+    if (!linkedinUrl) return;
+    const withProtocol = /^https?:\/\//i.test(linkedinUrl) ? linkedinUrl : `https://${linkedinUrl}`;
+    window.open(withProtocol, '_blank', 'noopener,noreferrer');
   };
 
   const activationSteps = [
@@ -811,6 +848,167 @@ export default function Dashboard() {
       </div>
 
       {showActivationChecklist ? <ActivationChecklist steps={activationSteps} /> : null}
+
+      {!isLoading && totalLeads > 0 && (
+        <div className="mb-5 space-y-4">
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700/80">
+                  <span className="inline-flex items-center gap-1">
+                    <Flame className="h-3.5 w-3.5" />
+                    {t('dashboard.priority.eyebrow', { defaultValue: 'Priority · Today' })}
+                  </span>
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+                  {t('dashboard.priority.title', { defaultValue: 'Who to contact now' })}
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  {t('dashboard.priority.subtitle', {
+                    defaultValue: '{{count}} leads selected from your real pipeline using ICP fit + AI signals.',
+                    count: Math.min(rankedPriorityLeads.length, 10),
+                  })}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                  {t('dashboard.priority.hotCount', { defaultValue: 'Hot: {{count}}', count: rankedPriorityLeads.filter((lead) => (clampScore(lead.final_score ?? lead.icp_score) ?? 0) >= 80).length })}
+                </span>
+                <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                  {t('dashboard.priority.warmCount', { defaultValue: 'Warm: {{count}}', count: rankedPriorityLeads.filter((lead) => {
+                    const score = clampScore(lead.final_score ?? lead.icp_score) ?? 0;
+                    return score >= 65 && score < 80;
+                  }).length })}
+                </span>
+                <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                  {t('dashboard.priority.coolCount', { defaultValue: 'Cold: {{count}}', count: rankedPriorityLeads.filter((lead) => (clampScore(lead.final_score ?? lead.icp_score) ?? 0) < 65).length })}
+                </span>
+              </div>
+            </div>
+
+            {priorityLead ? (
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-xs uppercase tracking-[0.16em] text-slate-400">{t('dashboard.priority.bestLead', { defaultValue: 'Best lead now' })}</p>
+                    <h3 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">{priorityLead.company_name}</h3>
+                    <p className="text-sm text-slate-500">{priorityLead.contact_role || t('common.contact')} {priorityLead.contact_name ? `· ${priorityLead.contact_name}` : ''}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {priorityLead.source_list && <span className="rounded-md border border-brand-sky/20 bg-brand-sky/5 px-2 py-0.5 text-xs text-brand-sky">{priorityLead.source_list}</span>}
+                      {priorityLead.industry && <span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-600">{priorityLead.industry}</span>}
+                    </div>
+                  </div>
+
+                  <div className="grid w-full max-w-xl grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                      <p className="text-[11px] uppercase tracking-[0.14em] text-slate-400">Score</p>
+                      <p className="text-3xl font-bold text-slate-950">{clampScore(priorityLead.final_score ?? priorityLead.icp_score) ?? '—'}<span className="text-lg text-slate-400">/100</span></p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                      <p className="text-[11px] uppercase tracking-[0.14em] text-slate-400">ICP</p>
+                      <p className="text-2xl font-semibold text-slate-900">{clampScore(priorityLead.icp_score) ?? '—'}</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                      <p className="text-[11px] uppercase tracking-[0.14em] text-slate-400">AI</p>
+                      <p className="text-2xl font-semibold text-slate-900">{clampScore(priorityLead.ai_score ?? priorityLead?.score_details?.signal_analysis?.ai_score) ?? '—'}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" className="gap-1.5" onClick={() => handleSelectLead(priorityLead)}>
+                    {t('dashboard.priority.openSlideOver', { defaultValue: 'Open slide-over' })}
+                  </Button>
+                  <Button size="sm" variant="outline" className="gap-1.5" onClick={() => handleOpenLeadPage(priorityLead)}>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                    {t('dashboard.priority.openLead', { defaultValue: 'Open lead page' })}
+                  </Button>
+                  <Button size="sm" variant="outline" className="gap-1.5" disabled={!priorityLead.phone} onClick={() => window.open(`tel:${priorityLead.phone}`, '_self')}>
+                    <Phone className="h-3.5 w-3.5" />
+                    {t('dashboard.priority.call', { defaultValue: 'Call' })}
+                  </Button>
+                  <Button size="sm" variant="outline" className="gap-1.5" disabled={!priorityLead.contact_email} onClick={() => window.location.href = `mailto:${priorityLead.contact_email}`}>
+                    <Mail className="h-3.5 w-3.5" />
+                    {t('dashboard.priority.email', { defaultValue: 'Email' })}
+                  </Button>
+                  <Button size="sm" variant="outline" className="gap-1.5" disabled={!(priorityLead.linkedin_url || priorityLead.linkedin)} onClick={() => openLinkedin(priorityLead)}>
+                    <Linkedin className="h-3.5 w-3.5" />
+                    LinkedIn
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </section>
+
+          {topPriorityLeads.length > 0 && (
+            <section className="grid gap-3 xl:grid-cols-3">
+              {topPriorityLeads.map((lead, index) => {
+                const finalScore = clampScore(lead.final_score ?? lead.icp_score);
+                const icpScore = clampScore(lead.icp_score);
+                const aiScore = clampScore(lead.ai_score ?? lead?.score_details?.signal_analysis?.ai_score);
+                return (
+                  <button
+                    key={lead.id}
+                    type="button"
+                    onClick={() => handleSelectLead(lead)}
+                    className="rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-xl font-semibold text-slate-950">{lead.company_name}</p>
+                        <p className="truncate text-sm text-slate-500">{lead.contact_role || t('common.contact')}</p>
+                      </div>
+                      <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-700">P{index + 1}</span>
+                    </div>
+                    <div className="mt-3 flex items-end gap-3">
+                      <p className="text-5xl font-bold tracking-tight text-slate-950">{finalScore ?? '—'}<span className="text-2xl text-slate-300">/100</span></p>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <div>
+                        <div className="mb-1 flex items-center justify-between text-xs text-slate-500"><span>ICP</span><span>{icpScore ?? '—'}</span></div>
+                        <div className="h-1.5 rounded-full bg-slate-100"><div className="h-full rounded-full bg-slate-900" style={{ width: `${icpScore ?? 0}%` }} /></div>
+                      </div>
+                      <div>
+                        <div className="mb-1 flex items-center justify-between text-xs text-slate-500"><span>AI</span><span>{aiScore ?? '—'}</span></div>
+                        <div className="h-1.5 rounded-full bg-slate-100"><div className="h-full rounded-full bg-amber-500" style={{ width: `${aiScore ?? 0}%` }} /></div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </section>
+          )}
+
+          {nextPriorityLeads.length > 0 && (
+            <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                <p className="text-lg font-semibold text-slate-900">{t('dashboard.priority.nextInLine', { defaultValue: 'Next in line' })}</p>
+                <Button variant="ghost" size="sm" onClick={() => scrollToLeadsTable()} className="text-xs">{t('dashboard.priority.openFullTable', { defaultValue: 'Open full table' })}</Button>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {nextPriorityLeads.slice(0, 6).map((lead) => {
+                  const score = clampScore(lead.final_score ?? lead.icp_score) ?? 0;
+                  return (
+                    <button key={lead.id} type="button" onClick={() => handleSelectLead(lead)} className="grid w-full grid-cols-[110px_minmax(0,1fr)_140px] items-center gap-3 px-4 py-3 text-left hover:bg-slate-50">
+                      <div className="flex items-center gap-2">
+                        <Circle className={`h-2.5 w-2.5 ${score >= 80 ? 'fill-rose-500 text-rose-500' : score >= 65 ? 'fill-amber-500 text-amber-500' : 'fill-slate-400 text-slate-400'}`} />
+                        <span className="text-3xl font-semibold tracking-tight text-slate-900">{score}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-semibold text-slate-900">{lead.company_name}</p>
+                        <p className="truncate text-sm text-slate-500">{lead.contact_role || t('common.contact')}</p>
+                      </div>
+                      <div className="text-right text-sm text-slate-500">
+                        <p className="font-semibold text-slate-700">{lead.follow_up_status || t('dashboard.priority.toContact', { defaultValue: 'To contact' })}</p>
+                        <p>{lead.source_list || t('dashboard.lists.unlisted')}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+        </div>
+      )}
 
       {!isLoading && totalLeads > 0 && (
         <div className="mb-5 rounded-2xl border border-brand-sky/15 bg-gradient-to-r from-brand-sky/5 to-sky-50 px-4 py-3 shadow-sm">
