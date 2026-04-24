@@ -399,6 +399,7 @@ export default function Dashboard() {
 
   const visibleStats = useMemo(() => {
     let qualified = 0;
+    let toAnalyze = 0;
     const scored = [];
 
     for (const lead of visibleLeads) {
@@ -406,6 +407,9 @@ export default function Dashboard() {
       if (score !== null) scored.push(score);
       if (String(lead.status || '').toLowerCase() === 'qualified') {
         qualified += 1;
+      }
+      if (String(lead.status || '').toLowerCase() === 'to analyze') {
+        toAnalyze += 1;
       }
     }
 
@@ -416,6 +420,7 @@ export default function Dashboard() {
     return {
       totalLeads: visibleLeads.length,
       qualified,
+      toAnalyze,
       avgScore,
     };
   }, [visibleLeads, getLeadScore]);
@@ -423,6 +428,7 @@ export default function Dashboard() {
   const {
     totalLeads,
     qualified: qualifiedLeads,
+    toAnalyze,
     avgScore,
   } = visibleStats;
 
@@ -485,6 +491,10 @@ export default function Dashboard() {
             <Button id="import-csv-trigger" onClick={() => setImportDialogOpen(true)} size="sm" className="gap-1.5 h-8 text-xs">
               <Upload className="h-3.5 w-3.5" />
               {t('dashboard.actions.importCsv')}
+            </Button>
+            <Button id="research-lead-trigger" onClick={() => setResearchDialogOpen(true)} size="sm" variant="outline" className="gap-1.5 h-8 text-xs">
+              <Sparkles className="h-3.5 w-3.5" />
+              {t('dashboard.actions.researchLead', { defaultValue: 'Research lead' })}
             </Button>
           </div>
         </div>
@@ -566,7 +576,7 @@ export default function Dashboard() {
         <section className="mb-5 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-4">
           <div><p className="text-xs uppercase tracking-[0.14em] text-slate-400">{t('dashboard.stats.total', { defaultValue: 'Total leads' })}</p><p className="mt-1 text-3xl font-bold text-slate-900">{totalLeads}</p></div>
           <div><p className="text-xs uppercase tracking-[0.14em] text-slate-400">{t('dashboard.stats.qualified', { defaultValue: 'Qualified' })}</p><p className="mt-1 text-3xl font-bold text-slate-900">{qualifiedLeads}</p></div>
-          <div><p className="text-xs uppercase tracking-[0.14em] text-slate-400">{t('dashboard.stats.avg', { defaultValue: 'Avg score' })}</p><p className="mt-1 text-3xl font-bold text-slate-900">{avgScore}</p></div>
+          <div><p className="text-xs uppercase tracking-[0.14em] text-slate-400">{t('dashboard.stats.toAnalyze', { defaultValue: 'To analyze' })}</p><p className="mt-1 text-3xl font-bold text-slate-900">{toAnalyze}</p></div>
           <div><p className="text-xs uppercase tracking-[0.14em] text-slate-400">{t('dashboard.banner.staleLabel', { defaultValue: 'Stale >30d' })}</p><p className="mt-1 text-3xl font-bold text-amber-700">{staleLeadCount}</p></div>
         </section>
       )}
@@ -607,7 +617,22 @@ export default function Dashboard() {
                 <button key={lead.id} type="button" onClick={() => handleSelectLead(lead)} className="grid w-full grid-cols-[120px_minmax(0,1fr)_160px] items-center gap-3 px-4 py-3 text-left hover:bg-slate-50">
                   <div className="flex items-center gap-2"><Circle className={`h-2.5 w-2.5 ${score >= 80 ? 'fill-rose-500 text-rose-500' : score >= 65 ? 'fill-amber-500 text-amber-500' : 'fill-slate-400 text-slate-400'}`} /><span className="text-3xl font-semibold text-slate-900">{score}</span></div>
                   <div className="min-w-0"><p className="truncate text-lg font-semibold text-slate-900">{lead.company_name}</p><p className="truncate text-sm text-slate-500">{lead.contact_role || t('common.contact')}</p></div>
-                  <div className="text-right text-sm text-slate-500"><p className="font-medium text-slate-700">{lead.follow_up_status || t('dashboard.priority.toContact', { defaultValue: 'To contact' })}</p><p>{lead.source_list || t('dashboard.lists.unlisted')}</p></div>
+                  <div className="text-right text-sm text-slate-500">
+                    <p className="font-medium text-slate-700">{lead.follow_up_status || t('dashboard.priority.toContact', { defaultValue: 'To contact' })}</p>
+                    <p>{lead.source_list || t('dashboard.lists.unlisted')}</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-1 h-7 px-2 text-xs"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        handleOpenLeadPage(lead);
+                      }}
+                    >
+                      {t('dashboard.priority.openLead', { defaultValue: 'Open lead' })}
+                    </Button>
+                  </div>
                 </button>
               );
             })}
