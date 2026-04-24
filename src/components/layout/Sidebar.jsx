@@ -5,10 +5,19 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/routes';
 import {
-  BarChart3, Kanban,
+  CreditCard,
+  Database,
+  LayoutDashboard,
+  LifeBuoy,
   ListOrdered,
-  Database, LayoutDashboard, LifeBuoy, LogOut, Mail, Rows3, ScrollText, Settings, Sparkles, Target, Users,
-  CreditCard, Database, LayoutDashboard, LifeBuoy, LogOut, Mail, Rows3, ScrollText, Settings, Sparkles, Target, Users,
+  LogOut,
+  Mail,
+  Rows3,
+  ScrollText,
+  Settings,
+  Sparkles,
+  Target,
+  Users,
 } from 'lucide-react';
 import BrandLogo from '@/components/brand/BrandLogo';
 
