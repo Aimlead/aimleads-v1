@@ -608,17 +608,17 @@ export default function Dashboard() {
         )}
 
         {!isLoading && totalLeads > 0 && priorityLead && (
-          <section className="max-w-[1040px] rounded-xl border border-[#e6e4df] bg-white p-5 shadow-sm">
-            <div className="grid gap-5 xl:grid-cols-[150px_minmax(0,1fr)_auto] xl:items-center">
-              <div className="relative h-[130px] w-[130px]">
+          <section className="max-w-[1040px] rounded-xl border border-[#e6e4df] bg-white px-6 py-5 shadow-sm">
+            <div className="grid gap-6 xl:grid-cols-[136px_minmax(0,1fr)_auto] xl:items-center">
+              <div className="relative h-[118px] w-[118px]">
                 <div
                   className="h-full w-full rounded-full"
                   style={{
                     background: `conic-gradient(#f0a63b ${(clampScore(priorityLead.final_score ?? priorityLead.icp_score) ?? 0) * 3.6}deg, #efece6 0deg)`,
                   }}
                 />
-                <div className="absolute inset-[8px] flex flex-col items-center justify-center rounded-full bg-white">
-                  <p className="text-[42px] font-bold leading-none tracking-tight text-[#1a1200]">{clampScore(priorityLead.final_score ?? priorityLead.icp_score) ?? '—'}</p>
+                <div className="absolute inset-[7px] flex flex-col items-center justify-center rounded-full bg-white">
+                  <p className="text-[38px] font-bold leading-none tracking-tight text-[#1a1200]">{clampScore(priorityLead.final_score ?? priorityLead.icp_score) ?? '—'}</p>
                   <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Final score</p>
                 </div>
               </div>
@@ -627,23 +627,23 @@ export default function Dashboard() {
                 <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-amber-700">
                   Priority today
                 </span>
-                <h2 className="mt-2 truncate text-[32px] font-bold leading-tight tracking-tight text-[#1a1200]">{priorityLead.company_name}</h2>
+                <h2 className="mt-1.5 truncate text-[30px] font-bold leading-tight tracking-tight text-[#1a1200]">{priorityLead.company_name}</h2>
                 <p className="mt-1 truncate text-sm text-slate-600">{priorityLead.contact_name || t('common.contact')} · {priorityLead.contact_role || t('common.contact')}</p>
 
-                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-slate-600">
+                <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-slate-600">
                   <span><strong className="text-slate-900">ICP:</strong> {clampScore(priorityLead.icp_score) ?? '—'}</span>
                   <span><strong className="text-slate-900">AI:</strong> {clampScore(priorityLead.ai_score ?? priorityLead?.score_details?.signal_analysis?.ai_score) ?? '—'}</span>
                   <span><strong className="text-slate-900">Best time:</strong> Morning</span>
                   <span><strong className="text-slate-900">Path:</strong> {deriveNextAction(priorityLead)}</span>
                 </div>
 
-                <div className="mt-3 flex flex-wrap gap-1.5">
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
                   {priorityLead.source_list ? <span className="rounded-md bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700">{priorityLead.source_list}</span> : null}
                   {priorityLead.industry ? <span className="rounded-md border border-[#ece9e2] bg-[#fcfbf9] px-2 py-1 text-xs text-slate-600">{priorityLead.industry}</span> : null}
                 </div>
               </div>
 
-              <div className="z-[1] flex flex-wrap items-center gap-1.5 xl:justify-end">
+              <div className="z-[1] flex flex-wrap items-center gap-1.5 xl:justify-end xl:gap-1">
                 <Button
                   size="sm"
                   variant="outline"
@@ -662,8 +662,8 @@ export default function Dashboard() {
                 <Button size="icon" variant="outline" disabled className="h-8 w-8 rounded-md border-[#dcd8cd]">
                   <Ellipsis className="h-4 w-4" />
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => handleSelectLead(priorityLead)} className="h-8 px-2.5 text-xs">Open panel</Button>
-                <Button size="sm" variant="ghost" onClick={() => handleOpenLeadPage(priorityLead)} className="h-8 px-2.5 text-xs">Open lead</Button>
+                <Button size="sm" variant="ghost" onClick={() => handleSelectLead(priorityLead)} className="h-8 px-2 text-xs">Open panel</Button>
+                <Button size="sm" variant="ghost" onClick={() => handleOpenLeadPage(priorityLead)} className="h-8 px-2 text-xs">Open lead</Button>
               </div>
             </div>
           </section>
@@ -671,24 +671,24 @@ export default function Dashboard() {
 
         {!isLoading && totalLeads > 0 && (
           <section className="grid overflow-hidden rounded-xl border border-[#e6e4df] bg-white shadow-sm sm:grid-cols-4">
-            <div className="border-b border-r border-[#ece9e2] p-4 sm:border-b-0">
+            <div className="border-b border-r border-[#ece9e2] px-4 py-3.5 sm:border-b-0">
               <p className="text-[10.75px] font-semibold uppercase tracking-[0.1em] text-slate-500">Focus list</p>
-              <p className="mt-1 text-[29px] font-bold leading-none text-[#1a1200]">{totalLeads}</p>
+              <p className="mt-0.5 text-[27px] font-bold leading-none text-[#1a1200]">{totalLeads}</p>
               <p className="mt-1 text-[11px] text-slate-500">{sourceListLabel(selectedSourceList === LIST_KEYS.ALL ? LIST_KEYS.ALL : selectedSourceList, t)}</p>
             </div>
-            <div className="border-b border-r border-[#ece9e2] p-4 sm:border-b-0">
+            <div className="border-b border-r border-[#ece9e2] px-4 py-3.5 sm:border-b-0">
               <p className="text-[10.75px] font-semibold uppercase tracking-[0.1em] text-slate-500">High priority</p>
-              <p className="mt-1 text-[29px] font-bold leading-none text-[#1a1200]">{highPriority}</p>
+              <p className="mt-0.5 text-[27px] font-bold leading-none text-[#1a1200]">{highPriority}</p>
               <p className="mt-1 text-[11px] text-slate-500">Score 80+</p>
             </div>
-            <div className="border-b border-r border-[#ece9e2] p-4 sm:border-b-0">
+            <div className="border-b border-r border-[#ece9e2] px-4 py-3.5 sm:border-b-0">
               <p className="text-[10.75px] font-semibold uppercase tracking-[0.1em] text-slate-500">Pipeline ready</p>
-              <p className="mt-1 text-[29px] font-bold leading-none text-[#1a1200]">{qualifiedLeads}</p>
+              <p className="mt-0.5 text-[27px] font-bold leading-none text-[#1a1200]">{qualifiedLeads}</p>
               <p className="mt-1 text-[11px] text-slate-500">Qualified leads</p>
             </div>
-            <div className="p-4">
+            <div className="px-4 py-3.5">
               <p className="text-[10.75px] font-semibold uppercase tracking-[0.1em] text-slate-500">Updated / avg score</p>
-              <p className="mt-1 text-[29px] font-bold leading-none text-[#1a1200]">{avgScore}</p>
+              <p className="mt-0.5 text-[27px] font-bold leading-none text-[#1a1200]">{avgScore}</p>
               <p className="mt-1 text-[11px] text-slate-500">{staleLeadCount} stale · {toAnalyze} to analyze</p>
             </div>
           </section>
@@ -699,13 +699,13 @@ export default function Dashboard() {
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-[24px] font-semibold tracking-tight text-[#1a1200]">{t('dashboard.priority.topLeads', { defaultValue: 'Top 3 hot leads' })}</h3>
             </div>
-            <div className="grid gap-3 xl:grid-cols-3">
+            <div className="grid gap-3.5 xl:grid-cols-3">
               {topPriorityLeads.map((lead, index) => {
                 const finalScore = clampScore(lead.final_score ?? lead.icp_score);
                 const icpScore = clampScore(lead.icp_score) ?? 0;
                 const aiScore = clampScore(lead.ai_score ?? lead?.score_details?.signal_analysis?.ai_score) ?? 0;
                 return (
-                  <article key={lead.id} className="rounded-xl border border-[#e6e4df] bg-white p-4 shadow-sm transition hover:border-[#d9d5cb]">
+                  <article key={lead.id} className="rounded-xl border border-[#e6e4df] bg-white p-[18px] shadow-sm transition hover:border-[#d9d5cb]">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="truncate text-base font-semibold text-slate-950">{lead.company_name}</p>
@@ -719,9 +719,9 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    <div className="mt-3 grid grid-cols-[86px_1fr] gap-3">
+                    <div className="mt-3 grid grid-cols-[86px_1fr] gap-2.5">
                       <p className="text-[52px] font-bold leading-none tracking-tight text-slate-950">{finalScore ?? '—'}</p>
-                      <div className="space-y-2 pt-1">
+                      <div className="space-y-1.5 pt-1">
                         <div>
                           <div className="mb-1 flex justify-between text-[11px] text-slate-500"><span>ICP</span><span>{icpScore}</span></div>
                           <div className="h-1.5 rounded-full bg-slate-100"><div className="h-full rounded-full bg-slate-900" style={{ width: `${icpScore}%` }} /></div>
@@ -733,13 +733,13 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {lead.industry ? <span className="rounded-md bg-slate-100 px-2 py-1 text-[11px] text-slate-700">{lead.industry}</span> : null}
-                      {lead.company_size ? <span className="rounded-md bg-slate-100 px-2 py-1 text-[11px] text-slate-700">{lead.company_size}</span> : null}
-                      {lead.source_list ? <span className="rounded-md bg-sky-50 px-2 py-1 text-[11px] text-sky-700">{lead.source_list}</span> : null}
+                    <div className="mt-2.5 flex flex-wrap gap-1.5">
+                      {lead.industry ? <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[10.5px] font-medium text-slate-600">{lead.industry}</span> : null}
+                      {lead.company_size ? <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[10.5px] font-medium text-slate-600">{lead.company_size}</span> : null}
+                      {lead.source_list ? <span className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-[10.5px] font-medium text-sky-700">{lead.source_list}</span> : null}
                     </div>
 
-                    <div className="mt-3 flex items-center gap-1.5 border-t border-dashed border-[#ece9e2] pt-2.5">
+                    <div className="mt-3 flex items-center gap-1.5 border-t border-dashed border-[#ece9e2] pt-2">
                       <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleSelectLead(lead)}><ArrowRight className="h-3.5 w-3.5" /></Button>
                       <Button size="icon" variant="ghost" className="h-7 w-7" disabled={!lead.contact_email} onClick={() => { if (lead.contact_email) window.location.href = `mailto:${lead.contact_email}`; }}><Mail className="h-3.5 w-3.5" /></Button>
                       <Button size="icon" variant="ghost" className="h-7 w-7" disabled={!(lead.phone || lead.contact_phone)} onClick={() => { const phone = lead.phone || lead.contact_phone; if (phone) window.location.href = `tel:${phone}`; }}><Phone className="h-3.5 w-3.5" /></Button>
@@ -758,11 +758,11 @@ export default function Dashboard() {
 
         {!isLoading && nextPriorityLeads.length > 0 && (
           <section id="dashboard-leads-table" className="overflow-hidden rounded-xl border border-[#e6e4df] bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-[#ece9e2] px-4 py-3">
-              <h3 className="text-2xl font-semibold tracking-tight text-[#1a1200]">{t('dashboard.priority.nextInLine', { defaultValue: 'Next in line' })}</h3>
+            <div className="flex items-center justify-between border-b border-[#ece9e2] px-4 py-2.5">
+              <h3 className="text-[23px] font-semibold tracking-tight text-[#1a1200]">{t('dashboard.priority.nextInLine', { defaultValue: 'Next in line' })}</h3>
               <Button variant="ghost" size="sm" onClick={() => navigate(ROUTES.pipeline)}>{t('dashboard.priority.openPipeline', { defaultValue: 'Open pipeline' })}</Button>
             </div>
-            <div className="grid grid-cols-[92px_minmax(170px,1.8fr)_minmax(140px,1fr)_minmax(140px,0.9fr)_minmax(160px,1fr)_190px] items-center gap-3 bg-[#faf9f7] px-4 py-2 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+            <div className="grid grid-cols-[82px_minmax(190px,1.9fr)_minmax(150px,1fr)_minmax(140px,0.9fr)_minmax(180px,1fr)_172px] items-center gap-4 bg-[#faf9f7] px-4 py-2 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">
               <span>{t('dashboard.priority.score', { defaultValue: 'Score' })}</span>
               <span>{t('dashboard.priority.lead', { defaultValue: 'Lead' })}</span>
               <span>{t('dashboard.priority.company', { defaultValue: 'Company' })}</span>
@@ -777,13 +777,13 @@ export default function Dashboard() {
                 const emailAddress = String(lead.email || lead.contact_email || '').trim();
                 const phoneNumber = String(lead.phone || lead.contact_phone || '').trim();
                 return (
-                  <button key={lead.id} type="button" onClick={() => handleSelectLead(lead)} className="grid w-full grid-cols-[92px_minmax(170px,1.8fr)_minmax(140px,1fr)_minmax(140px,0.9fr)_minmax(160px,1fr)_190px] items-center gap-3 px-4 py-3 text-left hover:bg-[#fbfaf8]">
-                    <div className="flex items-center gap-2">
+                  <button key={lead.id} type="button" onClick={() => handleSelectLead(lead)} className="grid w-full grid-cols-[82px_minmax(190px,1.9fr)_minmax(150px,1fr)_minmax(140px,0.9fr)_minmax(180px,1fr)_172px] items-center gap-4 px-4 py-2.5 text-left hover:bg-[#fbfaf8]">
+                    <div className="flex items-center gap-1.5">
                       <Circle className={`h-2.5 w-2.5 ${score >= 80 ? 'fill-rose-500 text-rose-500' : score >= 65 ? 'fill-amber-500 text-amber-500' : 'fill-slate-400 text-slate-400'}`} />
-                      <span className="text-3xl font-semibold leading-none text-slate-900">{score}</span>
+                      <span className="text-[28px] font-semibold leading-none text-slate-900">{score}</span>
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-900">{lead.contact_name || t('common.contact')}</p>
+                      <p className="truncate text-[13.5px] font-semibold text-slate-900">{lead.contact_name || t('common.contact')}</p>
                       <p className="truncate text-[11.5px] text-slate-500">{lead.contact_role || t('common.contact')}</p>
                     </div>
                     <div className="truncate text-[12.75px] font-medium text-slate-700">{lead.company_name}</div>
@@ -792,7 +792,7 @@ export default function Dashboard() {
                         {lead.follow_up_status || t('dashboard.priority.toContact', { defaultValue: 'To contact' })}
                       </span>
                     </div>
-                    <div className="truncate text-sm text-slate-600">{nextAction}</div>
+                    <div className="truncate text-[13px] text-slate-600">{nextAction}</div>
                     <div className="flex items-center justify-end gap-1.5">
                       <Button
                         variant="ghost"
