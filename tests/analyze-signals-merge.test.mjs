@@ -42,3 +42,39 @@ test('mergeScoreDetailsWithSignalAnalysis preserves deterministic ICP sections',
   assert.deepEqual(merged.signal_analysis.sources, ['https://example.com/news']);
   assert.equal(merged.signal_analysis.website, 'example.com');
 });
+
+test('mergeScoreDetailsWithSignalAnalysis keeps ICP-only text untouched and stores signal summary under signal_analysis', () => {
+  const existing = {
+    icp_summary: 'Deterministic ICP summary that must never be replaced.',
+    icp_analysis: 'ICP score (deterministic): 74/100',
+    criteria_breakdown: {
+      industry: { points: 20, evaluated_value: 'SaaS' },
+    },
+  };
+
+  const signalResult = {
+    ai_score: 77,
+    ai_boost: 3,
+    confidence: 69,
+    summary: 'AI signal score: 77, confidence: 69, contact soon.',
+    signals: ['Leadership change'],
+    positives: ['Leadership change'],
+    negatives: [],
+    action: 'contact_soon',
+    icebreaker: 'Congrats on your new leadership hire.',
+    sources: ['https://example.com/signal'],
+  };
+
+  const merged = mergeScoreDetailsWithSignalAnalysis(existing, signalResult, { website_url: 'example.com' });
+
+  assert.equal(merged.icp_summary, existing.icp_summary);
+  assert.equal(merged.icp_analysis, existing.icp_analysis);
+  assert.deepEqual(merged.criteria_breakdown, existing.criteria_breakdown);
+
+  assert.equal(merged.signal_analysis.summary, signalResult.summary);
+  assert.equal(merged.signal_analysis.ai_score, 77);
+  assert.equal(merged.signal_analysis.confidence, 69);
+  assert.deepEqual(merged.signal_analysis.signals, ['Leadership change']);
+  assert.match(merged.icp_analysis, /deterministic/i);
+  assert.doesNotMatch(merged.icp_analysis, /ai signal score|confidence|boost/i);
+});
