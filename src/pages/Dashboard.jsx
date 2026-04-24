@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ArrowRight, Circle, Download, Flame, Linkedin, Loader2, Mail, Phone, RefreshCcw, Sparkles, Target, Upload } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Circle, Copy, Download, Flame, Linkedin, Loader2, Mail, Phone, RefreshCcw, Sparkles, Target, Upload } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import LeadSlideOver from '@/components/leads/LeadSlideOver';
@@ -463,6 +463,29 @@ export default function Dashboard() {
     window.open(withProtocol, '_blank', 'noopener,noreferrer');
   };
 
+  const getLeadHookCopy = (lead) => {
+    if (!lead) return '';
+    const candidates = [
+      lead.generated_icebreakers?.email,
+      lead.generated_icebreaker,
+      lead.generated_icebreakers?.linkedin,
+      lead.generated_icebreakers?.call,
+    ];
+    return candidates.find((value) => typeof value === 'string' && value.trim()) || '';
+  };
+
+  const handleCopyHook = async (lead) => {
+    const hookCopy = getLeadHookCopy(lead);
+    if (!hookCopy) return;
+    try {
+      await navigator.clipboard.writeText(hookCopy);
+      toast.success(t('dashboard.toasts.hookCopied', { defaultValue: 'Hook copied to clipboard.' }));
+    } catch (error) {
+      console.warn('Failed to copy hook', error);
+      toast.error(t('dashboard.toasts.failedCopyHook', { defaultValue: 'Could not copy hook.' }));
+    }
+  };
+
   return (
     <>
       <div className="mb-4 rounded-xl border border-[#e6e4df] bg-white p-4 shadow-sm">
@@ -586,6 +609,9 @@ export default function Dashboard() {
               <Button size="sm" variant="outline" onClick={() => handleOpenLeadPage(priorityLead)} className="justify-start gap-1.5"><ArrowRight className="h-3.5 w-3.5" />{t('dashboard.priority.openLead', { defaultValue: 'Open lead page' })}</Button>
               <Button size="sm" variant="outline" disabled={!priorityLead.phone} onClick={() => window.open(`tel:${priorityLead.phone}`, '_self')} className="justify-start gap-1.5"><Phone className="h-3.5 w-3.5" />{t('dashboard.priority.call', { defaultValue: 'Call' })}</Button>
               <Button size="sm" variant="outline" disabled={!priorityLead.contact_email} onClick={() => { window.location.href = `mailto:${priorityLead.contact_email}`; }} className="justify-start gap-1.5"><Mail className="h-3.5 w-3.5" />{t('dashboard.priority.email', { defaultValue: 'Email' })}</Button>
+              <Button size="sm" variant="outline" disabled={!getLeadHookCopy(priorityLead)} onClick={() => handleCopyHook(priorityLead)} className="justify-start gap-1.5"><Copy className="h-3.5 w-3.5" />{t('dashboard.priority.copyHook', { defaultValue: 'Copy hook' })}</Button>
+              {/* TODO: wire this to real sequence generation workflow when Dashboard-level handler is available. */}
+              <Button size="sm" variant="outline" disabled className="justify-start gap-1.5"><Sparkles className="h-3.5 w-3.5" />{t('dashboard.priority.generateSequence', { defaultValue: 'Generate sequence' })}</Button>
               <Button size="sm" variant="outline" disabled={!(priorityLead.linkedin_url || priorityLead.linkedin)} onClick={() => openLinkedin(priorityLead)} className="justify-start gap-1.5"><Linkedin className="h-3.5 w-3.5" />LinkedIn</Button>
               </div>
         </section>
