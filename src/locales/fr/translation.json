@@ -33,7 +33,9 @@
       "lowCreditsTitle": "Le solde commence à devenir serré: {{count}} crédits restants.",
       "planHealthy": "{{plan}} · {{count}} cr",
       "planHealthyTitle": "{{plan}} actif avec {{count}} crédits restants."
-    }
+    },
+    "lists": "Listes",
+    "priorityList": "Liste prioritaire"
   },
   "common": {
     "save": "Enregistrer",
@@ -2175,5 +2177,9 @@
         ]
       }
     }
+  },
+  "priorityList": {
+    "title": "Liste prioritaire",
+    "subtitle": "File classée des leads à traiter en priorité."
   }
 }
