@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/routes';
 import {
   BarChart3, Kanban,
+  ListOrdered,
   Database, LayoutDashboard, LifeBuoy, LogOut, Mail, Rows3, ScrollText, Settings, Sparkles, Target, Users,
 } from 'lucide-react';
 import BrandLogo from '@/components/brand/BrandLogo';
@@ -14,6 +15,7 @@ export const sidebarNavigation = [
   { name: 'Dashboard', labelKey: 'nav.dashboard', href: ROUTES.dashboard, icon: LayoutDashboard, group: 'main', shortcut: '1' },
   { name: 'Pipeline', labelKey: 'nav.pipeline', href: ROUTES.pipeline, icon: Kanban, group: 'main', shortcut: '2' },
   { name: 'Lists', labelKey: 'nav.lists', href: ROUTES.lists, icon: Rows3, group: 'main', shortcut: '5' },
+  { name: 'Priority List', labelKey: 'nav.priorityList', href: ROUTES.priorities, icon: ListOrdered, group: 'main', shortcut: '6' },
   { name: 'Analytics', labelKey: 'nav.analytics', href: ROUTES.analytics, icon: BarChart3, group: 'main', shortcut: '3' },
   { name: 'Outreach', labelKey: 'nav.outreach', href: ROUTES.outreach, icon: Mail, group: 'main', shortcut: '4' },
   { name: 'ICP Profile', labelKey: 'nav.icp', href: ROUTES.icp, icon: Target, group: 'config' },

@@ -102,7 +102,9 @@
       "lowCreditsTitle": "The balance is getting tight: {{count}} credits remaining.",
       "planHealthy": "{{plan}} · {{count}} cr",
       "planHealthyTitle": "{{plan}} is active with {{count}} credits remaining."
-    }
+    },
+    "lists": "Lists",
+    "priorityList": "Priority List"
   },
   "auth": {
     "signupTitle": "Create your account",
@@ -2041,5 +2043,9 @@
         ]
       }
     }
+  },
+  "priorityList": {
+    "title": "Priority List",
+    "subtitle": "Ranked lead queue to focus on the highest-impact outreach next."
   }
 }
