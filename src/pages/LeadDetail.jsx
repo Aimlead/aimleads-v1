@@ -29,7 +29,7 @@ import { ROUTES } from '@/constants/routes';
 import ScoreBreakdown from '@/components/leads/ScoreBreakdown';
 import { dataClient } from '@/services/dataClient';
 import SignalBadge from '@/components/leads/SignalBadge';
-import { getLeadScores } from '@/lib/leadPresentation';
+import { getDeterministicIcpSummary, getLeadScores } from '@/lib/leadPresentation';
 
 const toMetric = (value) => (Number.isFinite(Number(value)) ? Number(value) : null);
 
@@ -50,13 +50,6 @@ const inferSignalTypeFromKey = (value) => {
 
 const getScoreDetails = (lead) =>
   lead?.score_details && typeof lead.score_details === 'object' ? lead.score_details : {};
-
-const getIcpAnalysisText = (lead, scoreDetails) =>
-  lead?.icp_summary
-  || scoreDetails?.icp_analysis
-  || scoreDetails?.icp_analysis_text
-  || (scoreDetails?.signal_analysis ? null : lead?.analysis_summary)
-  || null;
 
 const getNumericScoreDetail = (details, key) => {
   const entry = details?.[key];
@@ -463,7 +456,7 @@ export default function LeadDetail() {
       ? lead.score_details.signal_analysis
       : null;
   const displaySignals = getDisplaySignals(lead);
-  const icpAnalysisText = getIcpAnalysisText(lead, scoreDetails);
+  const icpAnalysisText = getDeterministicIcpSummary(lead);
   const icpCriteriaSource =
     (scoreDetails?.criteria_breakdown && typeof scoreDetails.criteria_breakdown === 'object' && scoreDetails.criteria_breakdown)
     || (scoreDetails?.icp_criteria && typeof scoreDetails.icp_criteria === 'object' && scoreDetails.icp_criteria)

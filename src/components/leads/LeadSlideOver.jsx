@@ -35,7 +35,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { FOLLOW_UP_STATUS_LIST } from '@/constants/leads';
-import { getLeadScores } from '@/lib/leadPresentation';
+import { getDeterministicIcpSummary, getLeadScores } from '@/lib/leadPresentation';
 import { dataClient } from '@/services/dataClient';
 import SignalBadge from './SignalBadge';
 import StatusBadge from './StatusBadge';
@@ -138,13 +138,6 @@ const buildDiscoverToast = (response, t) => {
   return t('leads.signalsDetectedSummary', { count: total, details: parts.join(', ') });
 };
 
-const getIcpSummaryText = (lead, scoreDetails) =>
-  lead?.icp_summary
-  || scoreDetails?.icp_analysis
-  || scoreDetails?.icp_analysis_text
-  || (scoreDetails?.signal_analysis ? null : lead?.analysis_summary)
-  || null;
-
 export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -157,7 +150,7 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
   const [saving, setSaving] = useState(false);
   const [savingAndAnalyzing, setSavingAndAnalyzing] = useState(false);
   const [scoringIcp, setScoringIcp] = useState(false);
-  const [icpSummary, setIcpSummary] = useState(getIcpSummaryText(lead, lead?.score_details || {}));
+  const [icpSummary, setIcpSummary] = useState(getDeterministicIcpSummary(lead));
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [activeJob, setActiveJob] = useState(null);
   const [handledJobId, setHandledJobId] = useState(null);
@@ -228,7 +221,7 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
       setNotes(n);
       setIntentSignals(is);
       setInternetSignals(nets);
-      setIcpSummary(getIcpSummaryText(lead, lead.score_details || {}));
+      setIcpSummary(getDeterministicIcpSummary(lead));
       initialRef.current = { followUpStatus: fs, notes: n, intentSignals: is };
     }
   }, [lead]);
@@ -629,14 +622,17 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
                   )) : <p className="text-sm text-slate-500">{t('leads.noSignalsYet')}</p>}
                 </div>
 
+              </TabsContent>
+
+              <TabsContent value="signals" className="space-y-3 m-0">
                 <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-3 space-y-2">
                   <p className="text-xs font-semibold text-violet-700">AI Signal Analysis</p>
                   {signalAnalysis ? (
                     <>
                       <div className="grid grid-cols-3 gap-2">
-                        <div className="rounded-lg border border-slate-200 bg-white p-2"><p className="text-[11px] text-slate-500">AI Score</p><p className="text-sm font-semibold">{signalAnalysis.ai_score ?? '—'}</p></div>
-                        <div className="rounded-lg border border-slate-200 bg-white p-2"><p className="text-[11px] text-slate-500">AI Boost</p><p className="text-sm font-semibold">{signalAnalysis.ai_boost ?? '—'}</p></div>
-                        <div className="rounded-lg border border-slate-200 bg-white p-2"><p className="text-[11px] text-slate-500">{t('leads.confidenceShort', { defaultValue: 'Confidence' })}</p><p className="text-sm font-semibold">{signalAnalysis.confidence ?? '—'}</p></div>
+                        <div className="rounded-lg border border-slate-200 bg-white p-2"><p className="text-[11px] text-slate-500">AI Score</p><p className="text-sm font-semibold">{signalAnalysis.ai_score ?? aiScore ?? '—'}</p></div>
+                        <div className="rounded-lg border border-slate-200 bg-white p-2"><p className="text-[11px] text-slate-500">AI Boost</p><p className="text-sm font-semibold">{signalAnalysis.ai_boost ?? aiBoost ?? '—'}</p></div>
+                        <div className="rounded-lg border border-slate-200 bg-white p-2"><p className="text-[11px] text-slate-500">{t('leads.confidenceShort', { defaultValue: 'Confidence' })}</p><p className="text-sm font-semibold">{signalAnalysis.confidence ?? lead.ai_confidence ?? '—'}</p></div>
                       </div>
                       <div className="space-y-2 text-sm text-slate-700">
                         {signalAnalysis?.suggested_action || signalAnalysis?.action ? (
@@ -664,9 +660,7 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
                     </>
                   ) : <p className="text-sm text-slate-600">No AI buying signals detected yet</p>}
                 </div>
-              </TabsContent>
 
-              <TabsContent value="signals" className="space-y-3 m-0">
                 {lead.signals?.length > 0 ? (
                   ['positive', 'negative', 'neutral'].map((type) => {
                     const items = groupedSignals[type] || [];

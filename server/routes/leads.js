@@ -199,6 +199,7 @@ export const mergeScoreDetailsWithSignalAnalysis = (existingScoreDetails, signal
     boost: signalResult.ai_boost,
     ai_boost: signalResult.ai_boost,
     confidence: signalResult.confidence,
+    summary: signalResult.summary || previousSignalAnalysis.summary || null,
     signals: toArray(signalResult.signals),
     positives: toArray(signalResult.positives),
     negatives: toArray(signalResult.negatives),
@@ -836,7 +837,6 @@ router.post('/:leadId/analyze-signals', analyzeSignalsLimiter, requireCredits('a
     final_score: finalScore,
     suggested_action: signalResult.action,
     final_recommended_action: signalResult.action,
-    analysis_summary: lead.analysis_summary || null,
     signals: mergeSignals(lead.signals, [
       ...toArray(signalResult.positives).map((label) => ({ source: 'signal_analysis', type: 'positive', points: 0, label })),
       ...toArray(signalResult.negatives).map((label) => ({ source: 'signal_analysis', type: 'negative', points: 0, label })),

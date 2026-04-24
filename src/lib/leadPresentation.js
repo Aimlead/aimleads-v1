@@ -9,6 +9,92 @@ const normalizeSignalLabel = (signal) => {
   return String(signal.label || signal.key || signal.signal || '').trim();
 };
 
+const ICP_MIXED_CONTENT_PATTERNS = [
+  /ai signal score/i,
+  /ai confidence/i,
+  /ai boost/i,
+  /final prioritization score/i,
+  /final category suggestion/i,
+  /signal analysis/i,
+  /final score/i,
+];
+
+const stripMixedIcpContent = (value) => {
+  const text = String(value || '').trim();
+  if (!text) return null;
+
+  const filtered = text
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .filter((line) => line.trim() && !ICP_MIXED_CONTENT_PATTERNS.some((pattern) => pattern.test(line)));
+
+  return filtered.length > 0 ? filtered.join('\n') : null;
+};
+
+const getNumeric = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const getScoreDetailMetric = (scoreDetails, key) => {
+  const entry = scoreDetails?.[key];
+  if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
+    return getNumeric(entry.points ?? entry.score ?? entry.value);
+  }
+  return getNumeric(entry);
+};
+
+export const getDeterministicIcpSummary = (lead) => {
+  const scoreDetails = lead?.score_details && typeof lead.score_details === 'object' ? lead.score_details : {};
+  const preferredSummary = stripMixedIcpContent(
+    lead?.icp_summary
+      || scoreDetails?.icp_summary
+      || scoreDetails?.icp_analysis
+      || scoreDetails?.icp_analysis_text
+      || lead?.analysis_summary
+  );
+
+  if (preferredSummary) return preferredSummary;
+
+  const icpProfile = String(
+    scoreDetails?.icp_profile_name
+      || scoreDetails?.icp_profile
+      || lead?.icp_profile_name
+      || ''
+  ).trim();
+  const rawScore = getNumeric(lead?.icp_raw_score) ?? getScoreDetailMetric(scoreDetails, 'icp_raw_score');
+  const normalizedScore = getNumeric(lead?.icp_score) ?? getScoreDetailMetric(scoreDetails, 'deterministic_score');
+  const category = String(
+    scoreDetails?.icp_category
+      || lead?.icp_category
+      || lead?.category
+      || ''
+  ).trim();
+  const priority = String(
+    scoreDetails?.icp_priority
+      || lead?.icp_priority
+      || lead?.priority
+      || ''
+  ).trim();
+  const recommendedAction = String(
+    scoreDetails?.icp_recommended_action
+      || lead?.icp_recommended_action
+      || lead?.recommended_action
+      || ''
+  ).trim();
+
+  const lines = [
+    icpProfile ? `ICP profile: ${icpProfile}` : null,
+    rawScore !== null ? `Raw ICP score: ${rawScore}` : null,
+    normalizedScore !== null ? `ICP score (normalized): ${normalizedScore}` : null,
+    category ? `ICP category: ${category}` : null,
+    priority ? `ICP priority: ${priority}` : null,
+    recommendedAction ? `Recommended action: ${recommendedAction}` : null,
+  ].filter(Boolean);
+
+  return lines.length > 0 ? lines.join('\n') : null;
+};
+
 export const getLeadScores = (lead) => {
   const icpScore = toMetric(lead?.icp_score);
   const aiScore = toMetric(lead?.ai_score);
