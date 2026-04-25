@@ -531,65 +531,78 @@ export default function LeadDetail() {
   const nextAction = signalAnalysis?.action || lead?.follow_up_status || '—';
 
   return (
-    <div className="space-y-5">
-      <div className="sticky top-20 z-10 -mx-6 border-b border-slate-100 bg-white/95 px-6 py-2.5 backdrop-blur">
-        <div className="flex items-center justify-between gap-3">
-          <Button variant="ghost" size="sm" className="gap-2" onClick={() => navigate(-1)}>
+    <div className="space-y-6">
+      <div className="sticky top-20 z-10 -mx-6 border-b border-slate-100 bg-white/95 px-6 py-3 backdrop-blur">
+        <div className="flex items-center justify-between gap-4">
+          <Button variant="ghost" size="sm" className="gap-2 h-9" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4" />
             {t('common.back')}
           </Button>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span>{t('leads.lastAnalyzedLabel')}</span>
-            <span className="font-medium text-slate-700">{formatDate(lead.last_analyzed_at, i18n.language) || '—'}</span>
+          <div className="flex items-center gap-4 text-xs text-slate-500">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200">
+              <span>{t('leads.lastAnalyzedLabel')}</span>
+              <span className="font-semibold text-slate-700">{formatDate(lead.last_analyzed_at, i18n.language) || '—'}</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <section className="rounded-2xl border border-slate-900/80 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 p-6 text-white shadow-sm">
-        <div className="grid gap-6 lg:grid-cols-[auto,1fr]">
-          <ScoreRing value={finalScore || 0} label={t('common.score', { defaultValue: 'Score' })} />
+      {/* ──── Main score header ─────────────────────────────── */}
+      <section className="rounded-3xl border border-slate-900/10 bg-gradient-to-br from-slate-900 via-slate-900/95 to-slate-800 p-8 shadow-lg">
+        <div className="grid gap-8 lg:grid-cols-[120px,1fr]">
+          <div className="flex justify-center lg:justify-start">
+            <ScoreRing value={finalScore || 0} label={t('common.score', { defaultValue: 'Score' })} />
+          </div>
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-300">{t('leads.scorecard', { defaultValue: 'Lead scorecard' })}</p>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight">{lead.company_name}</h1>
-              {lead.final_category ? (
-                <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${categoryStyle(lead.final_category)}`}>
-                  {lead.final_category}
-                </span>
-              ) : null}
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-300/80 mb-2">{t('leads.scorecard', { defaultValue: 'Lead scorecard' })}</p>
+                <div className="flex flex-wrap items-center gap-3 mb-3">
+                  <h1 className="text-3xl font-bold tracking-tight text-white">{lead.company_name}</h1>
+                  {lead.final_category ? (
+                    <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${categoryStyle(lead.final_category)}`}>
+                      {lead.final_category}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-sm text-slate-300/90 font-medium">
+                  {lead.contact_name
+                    ? lead.contact_role
+                      ? `${lead.contact_name} · ${lead.contact_role}`
+                      : lead.contact_name
+                    : t('common.notAvailable', { defaultValue: 'N/A' })}
+                </p>
+              </div>
               {lead.llm_enriched ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-2 py-1 text-[11px] font-semibold text-amber-200">
-                  <Brain className="h-3 w-3" />
-                  {t('leads.aiSignalsActive')}
-                </span>
+                <div className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-1.5 flex-shrink-0">
+                  <Brain className="h-4 w-4 text-amber-300" />
+                  <span className="text-xs font-semibold text-amber-200">{t('leads.aiSignalsActive')}</span>
+                </div>
               ) : null}
             </div>
-            <p className="mt-1 text-sm text-slate-300">
-              {lead.contact_name || t('common.notAvailable', { defaultValue: 'N/A' })}
-              {lead.contact_role ? ` · ${lead.contact_role}` : ''}
-            </p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
+
+            <div className="flex flex-wrap gap-2 mb-6">
               {[lead.industry, lead.country, lead.client_type, lead.company_size ? `${lead.company_size} emp.` : null]
                 .filter(Boolean)
                 .map((item) => (
-                  <span key={item} className="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] text-slate-200">
+                  <span key={item} className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-slate-200">
                     {item}
                   </span>
                 ))}
             </div>
 
-            <div className="mt-4 grid gap-2 sm:grid-cols-3">
-              <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                <p className="text-[10px] uppercase tracking-[0.11em] text-slate-300">ICP</p>
-                <p className="mt-1 text-2xl font-semibold">{icpScore ?? '—'}</p>
+            <div className="grid gap-3 sm:grid-cols-3 lg:gap-4">
+              <div className="rounded-xl border border-white/15 bg-white/8 backdrop-blur-sm p-4">
+                <p className="text-xs uppercase tracking-[0.12em] text-slate-300/70 font-semibold mb-2">ICP Score</p>
+                <p className="text-3xl font-bold text-white">{icpScore ?? '—'}</p>
               </div>
-              <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                <p className="text-[10px] uppercase tracking-[0.11em] text-slate-300">AI</p>
-                <p className="mt-1 text-2xl font-semibold">{aiScore ?? '—'}</p>
+              <div className="rounded-xl border border-white/15 bg-white/8 backdrop-blur-sm p-4">
+                <p className="text-xs uppercase tracking-[0.12em] text-slate-300/70 font-semibold mb-2">AI Score</p>
+                <p className="text-3xl font-bold text-white">{aiScore ?? '—'}</p>
               </div>
-              <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                <p className="text-[10px] uppercase tracking-[0.11em] text-slate-300">{t('leads.suggestedAction', { defaultValue: 'Suggested action' })}</p>
-                <p className="mt-1 text-sm font-semibold">
+              <div className="rounded-xl border border-white/15 bg-white/8 backdrop-blur-sm p-4">
+                <p className="text-xs uppercase tracking-[0.12em] text-slate-300/70 font-semibold mb-2">{t('leads.suggestedAction', { defaultValue: 'Action' })}</p>
+                <p className="text-sm font-bold text-emerald-300">
                   {signalLanguage === 'fr' ? ACTION_FR_LABELS[nextAction] || nextAction : nextAction}
                 </p>
               </div>
@@ -602,75 +615,77 @@ export default function LeadDetail() {
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-brand-sky/20 bg-brand-sky/5 p-3"
+          className="rounded-xl border border-brand-sky/30 bg-gradient-to-r from-brand-sky/10 to-brand-sky-2/10 p-4 backdrop-blur-sm"
         >
-          <div className="flex items-center justify-between gap-3 text-sm">
+          <div className="flex items-center justify-between gap-4 mb-2">
             <div>
-              <p className="font-semibold text-slate-800">
+              <p className="font-semibold text-slate-800 text-sm">
                 {activeJob?.label || t('leads.asyncJobRunning', { defaultValue: 'Background job running' })}
               </p>
-              <p className="text-slate-600">{currentJob.message || t('leads.asyncJobQueued', { defaultValue: 'Background job queued.' })}</p>
+              <p className="text-slate-600 text-xs mt-0.5">{currentJob.message || t('leads.asyncJobQueued', { defaultValue: 'Background job queued.' })}</p>
             </div>
-            <span className="rounded-md border border-brand-sky/20 bg-white px-2 py-1 text-xs font-medium text-brand-sky">
+            <span className="rounded-lg border border-brand-sky/30 bg-white/70 px-2.5 py-1 text-xs font-semibold text-brand-sky flex-shrink-0">
               {Math.max(0, Math.min(100, Number(currentJob.progress || 0)))}%
             </span>
           </div>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/80">
+          <div className="h-2 overflow-hidden rounded-full bg-slate-200">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-brand-sky to-brand-sky-2 transition-all"
+              className="h-full rounded-full bg-gradient-to-r from-brand-sky to-brand-sky-2 transition-all duration-300"
               style={{ width: `${Math.max(8, Math.min(100, Number(currentJob.progress || 0)))}%` }}
             />
           </div>
         </motion.div>
       ) : null}
 
-      <Card className="shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">{t('common.actions', { defaultValue: 'Actions' })}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={handleScoreIcp} disabled={scoring || isJobActive}>
-            {scoring ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
-            {t('leads.scoreIcpBtn', { defaultValue: 'Analyze ICP' })}
-          </Button>
-          <Button size="sm" variant="outline" onClick={handleAnalyse} disabled={analysing || isJobActive}>
-            {analysing ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
-            {t('leads.analyseSignalsBtn', { defaultValue: 'Analyze signals' })}
-          </Button>
-          <Button
-            size="sm"
-            className="bg-brand-sky hover:bg-brand-sky/90"
-            onClick={() => sequenceMutation.mutate()}
-            disabled={sequenceMutation.isPending || Boolean(sequenceActiveJobId)}
-          >
+      {/* ──── Actions section ─────────────────────────────── */}
+      <div className="rounded-2xl border border-slate-200/60 bg-gradient-to-br from-slate-50/50 to-white p-6">
+        <h2 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+          <Zap className="h-4 w-4 text-brand-sky" />
+          {t('common.actions', { defaultValue: 'Actions' })}
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Primary actions */}
+          <Button size="sm" className="bg-brand-sky hover:bg-brand-sky/90 text-white font-medium h-10 gap-2" onClick={() => sequenceMutation.mutate()} disabled={sequenceMutation.isPending || Boolean(sequenceActiveJobId)}>
             {sequenceMutation.isPending || sequenceActiveJobId ? (
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+              <Sparkles className="h-4 w-4" />
             )}
             {t('outreach.generateSequence')}
           </Button>
-          <Button size="sm" variant="outline" asChild disabled={!lead.contact_email}>
+          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium h-10 gap-2" onClick={handleScoreIcp} disabled={scoring || isJobActive}>
+            {scoring ? <Loader2 className="h-4 w-4 animate-spin" /> : <Target className="h-4 w-4" />}
+            {t('leads.scoreIcpBtn', { defaultValue: 'Analyze ICP' })}
+          </Button>
+          <Button size="sm" className="bg-violet-600 hover:bg-violet-700 text-white font-medium h-10 gap-2" onClick={handleAnalyse} disabled={analysing || isJobActive}>
+            {analysing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4" />}
+            {t('leads.analyseSignalsBtn', { defaultValue: 'Analyze signals' })}
+          </Button>
+
+          {/* Communication actions */}
+          <Button size="sm" variant="outline" className="h-10 gap-2 border-slate-200" asChild disabled={!lead.contact_email}>
             <a href={lead.contact_email ? `mailto:${lead.contact_email}` : undefined}>
-              <Mail className="mr-1.5 h-3.5 w-3.5" />
+              <Mail className="h-4 w-4 text-red-500" />
               Email
             </a>
           </Button>
           <Button
             size="sm"
             variant="outline"
+            className="h-10 gap-2 border-slate-200"
             disabled={!phone}
             onClick={() => {
               if (!phone) return;
               window.location.href = `tel:${phone}`;
             }}
           >
-            <Phone className="mr-1.5 h-3.5 w-3.5" />
+            <Phone className="h-4 w-4 text-amber-600" />
             Call
           </Button>
           <Button
             size="sm"
             variant="outline"
+            className="h-10 gap-2 border-slate-200"
             disabled={!linkedinUrl}
             onClick={() => {
               if (!linkedinUrl) return;
@@ -678,9 +693,11 @@ export default function LeadDetail() {
               window.open(withProtocol, '_blank', 'noopener,noreferrer');
             }}
           >
-            <Linkedin className="mr-1.5 h-3.5 w-3.5" />
+            <Linkedin className="h-4 w-4 text-blue-600" />
             LinkedIn
           </Button>
+
+          {/* CRM actions */}
           {activeCrmTypes.length > 0 ? (
             activeCrmTypes.map((crmType) => {
               const label = crmType === 'hubspot' ? 'HubSpot' : 'Salesforce';
@@ -690,25 +707,26 @@ export default function LeadDetail() {
                   key={crmType}
                   size="sm"
                   variant="outline"
+                  className="h-10 gap-2 border-slate-200"
                   onClick={() => crmSyncMutation.mutate({ leadId: lead.id, crmType })}
                   disabled={crmSyncMutation.isPending}
                 >
-                  {isSyncing ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Database className="mr-1.5 h-3.5 w-3.5" />}
+                  {isSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4 text-orange-600" />}
                   {t('leads.pushToCrm', { crm: label })}
                 </Button>
               );
             })
           ) : (
-            <Button size="sm" variant="outline" onClick={() => navigate(ROUTES.crmIntegration)}>
-              <Database className="mr-1.5 h-3.5 w-3.5" />
+            <Button size="sm" variant="outline" className="h-10 gap-2 border-slate-200" onClick={() => navigate(ROUTES.crmIntegration)}>
+              <Database className="h-4 w-4 text-slate-400" />
               Configure CRM
             </Button>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.05fr,0.95fr]">
-        <div className="space-y-4">
+      <div className="grid gap-6 xl:grid-cols-[1.1fr,0.9fr]">
+        <div className="space-y-5">
           <ScoreBreakdown
             lead={lead}
             finalScore={finalScore}
@@ -718,34 +736,40 @@ export default function LeadDetail() {
             scoreDetails={scoreDetails}
           />
 
-          <Card className="shadow-sm">
+          <Card className="shadow-sm border-slate-200/60">
             <CardHeader>
-              <CardTitle className="text-sm">{t('leads.icpAnalysis', { defaultValue: 'ICP fit' })}</CardTitle>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Target className="h-4 w-4 text-brand-sky" />
+                {t('leads.icpAnalysis', { defaultValue: 'ICP fit' })}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {icpAnalysisText ? (
                 <p className="whitespace-pre-line text-sm leading-relaxed text-slate-700">{icpAnalysisText}</p>
               ) : (
-                <p className="text-sm text-slate-500">{t('leads.noAnalysisSummaryYet')}</p>
+                <p className="text-sm text-slate-500 italic">{t('leads.noAnalysisSummaryYet')}</p>
               )}
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm">
+          <Card className="shadow-sm border-slate-200/60">
             <CardHeader>
-              <CardTitle className="text-sm">{t('leads.importantIcpCriteria', { defaultValue: 'Important ICP criteria' })}</CardTitle>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-emerald-500" />
+                {t('leads.importantIcpCriteria', { defaultValue: 'Important ICP criteria' })}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {importantIcpCriteria.length > 0 ? (
                 importantIcpCriteria.map((criterion) => (
-                  <div key={criterion.key} className="flex items-center justify-between gap-2 rounded-lg border border-slate-100 p-3">
-                    <div>
+                  <div key={criterion.key} className="flex items-center justify-between gap-3 rounded-lg border border-slate-100/80 bg-gradient-to-r from-slate-50/40 to-white p-3 hover:border-slate-200 transition-colors">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium capitalize text-slate-800">{criterion.label}</p>
-                      <p className="text-xs text-slate-500">{criterion.match}</p>
+                      <p className="text-xs text-slate-500 truncate">{criterion.match}</p>
                     </div>
                     <span
-                      className={`rounded-md px-2 py-1 text-xs font-semibold ${
-                        criterion.points >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                      className={`rounded-lg px-2.5 py-1 text-xs font-bold flex-shrink-0 ${
+                        criterion.points >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
                       }`}
                     >
                       {criterion.points > 0 ? '+' : ''}
@@ -754,68 +778,82 @@ export default function LeadDetail() {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-slate-500">{t('leads.noAnalysisSummaryYet')}</p>
+                <p className="text-sm text-slate-500 italic text-center py-2">{t('leads.noAnalysisSummaryYet')}</p>
               )}
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm">
+          <Card className="shadow-sm border-slate-200/60">
             <CardHeader>
-              <CardTitle className="text-sm">{t('leads.crmNotes')}</CardTitle>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Mail className="h-4 w-4 text-red-500" />
+                {t('leads.crmNotes')}
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <Select value={followUpStatus} onValueChange={setFollowUpStatus}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FOLLOW_UP_STATUS_LIST.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {status}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Textarea
-                placeholder={t('leads.internalNotes')}
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                rows={4}
-              />
-              <Button onClick={handleSave} disabled={saving} className="w-full bg-gradient-to-r from-brand-sky to-brand-sky-2">
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t('common.save')}
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-700 uppercase tracking-wide">{t('leads.followUpStatus', { defaultValue: 'Status' })}</label>
+                <Select value={followUpStatus} onValueChange={setFollowUpStatus}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FOLLOW_UP_STATUS_LIST.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-700 uppercase tracking-wide">{t('leads.internalNotes')}</label>
+                <Textarea
+                  placeholder={t('leads.internalNotesPlaceholder', { defaultValue: 'Add internal notes...' })}
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                  rows={5}
+                  className="resize-none"
+                />
+              </div>
+              <Button onClick={handleSave} disabled={saving} className="w-full bg-gradient-to-r from-brand-sky to-brand-sky-2 hover:from-brand-sky/90 hover:to-brand-sky-2/90 font-medium h-10">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+                {t('common.save')}
               </Button>
             </CardContent>
           </Card>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
           {analysing ? (
-            <Card className="border-brand-sky/30 shadow-sm">
-              <CardContent className="flex items-center gap-2 pt-5 text-sm text-slate-600">
-                <Loader2 className="h-4 w-4 animate-spin text-brand-sky" />
+            <Card className="border-brand-sky/30 shadow-sm bg-brand-sky/5">
+              <CardContent className="flex items-center gap-3 pt-5 text-sm text-brand-sky font-medium">
+                <Loader2 className="h-4 w-4 animate-spin" />
                 {t('leads.analyseSignalsBtnLoading', { defaultValue: 'Analyzing signals…' })}
               </CardContent>
             </Card>
           ) : null}
 
           {signalAnalysisError ? (
-            <Card className="border-rose-200 shadow-sm">
-              <CardContent className="pt-5 text-sm text-rose-700">{signalAnalysisError}</CardContent>
+            <Card className="border-rose-200 shadow-sm bg-rose-50">
+              <CardContent className="pt-5 text-sm text-rose-700 font-medium">{signalAnalysisError}</CardContent>
             </Card>
           ) : null}
 
-          <Card className="shadow-sm">
+          <Card className="shadow-sm border-slate-200/60">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between gap-3">
-                <CardTitle className="text-sm">{t('leads.signalAnalysisTitle', { defaultValue: 'AI signal analysis' })}</CardTitle>
-                <div className="inline-flex overflow-hidden rounded-md border border-slate-200">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Brain className="h-4 w-4 text-brand-sky" />
+                  {t('leads.signalAnalysisTitle', { defaultValue: 'AI signal analysis' })}
+                </CardTitle>
+                <div className="inline-flex overflow-hidden rounded-lg border border-slate-200">
                   {['en', 'fr'].map((lang) => (
                     <button
                       key={lang}
                       type="button"
                       onClick={() => setSignalLanguage(lang)}
-                      className={`px-2.5 py-1 text-xs font-semibold ${signalLanguage === lang ? 'bg-slate-900 text-white' : 'bg-white text-slate-600'}`}
+                      className={`px-2.5 py-1 text-xs font-bold transition-colors ${signalLanguage === lang ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
                     >
                       {lang.toUpperCase()}
                     </button>
@@ -823,16 +861,25 @@ export default function LeadDetail() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               <div className="grid gap-2 sm:grid-cols-3">
-                <div className="rounded-lg border border-slate-200 p-2.5"><p className="text-[11px] text-slate-500">AI Score</p><p className="text-sm font-semibold text-slate-800">{signalAnalysis?.ai_score ?? lead.ai_score ?? '—'}</p></div>
-                <div className="rounded-lg border border-slate-200 p-2.5"><p className="text-[11px] text-slate-500">AI Boost</p><p className="text-sm font-semibold text-slate-800">{signalAnalysis?.ai_boost ?? aiBoost ?? '—'}</p></div>
-                <div className="rounded-lg border border-slate-200 p-2.5"><p className="text-[11px] text-slate-500">{t('leads.confidenceShort', { defaultValue: 'Confidence' })}</p><p className="text-sm font-semibold text-slate-800">{signalAnalysis?.confidence ?? lead.ai_confidence ?? '—'}</p></div>
+                <div className="rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3">
+                  <p className="text-[11px] text-slate-500 uppercase font-semibold tracking-wide">AI Score</p>
+                  <p className="text-lg font-bold text-slate-800 mt-1">{signalAnalysis?.ai_score ?? lead.ai_score ?? '—'}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3">
+                  <p className="text-[11px] text-slate-500 uppercase font-semibold tracking-wide">AI Boost</p>
+                  <p className="text-lg font-bold text-slate-800 mt-1">{signalAnalysis?.ai_boost ?? aiBoost ?? '—'}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3">
+                  <p className="text-[11px] text-slate-500 uppercase font-semibold tracking-wide">Confidence</p>
+                  <p className="text-lg font-bold text-slate-800 mt-1">{signalAnalysis?.confidence ?? lead.ai_confidence ?? '—'}</p>
+                </div>
               </div>
 
-              <div className="rounded-lg border border-slate-200 p-3">
-                <p className="text-xs text-slate-500">{t('leads.suggestedAction', { defaultValue: 'Suggested action' })}</p>
-                <p className="text-sm font-semibold text-slate-800">
+              <div className="rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3">
+                <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-1">{t('leads.suggestedAction', { defaultValue: 'Suggested action' })}</p>
+                <p className="text-sm font-bold text-slate-800">
                   {signalLanguage === 'fr'
                     ? ACTION_FR_LABELS[signalAnalysis?.action] || signalAnalysis?.action || '—'
                     : signalAnalysis?.action || '—'}
@@ -840,10 +887,11 @@ export default function LeadDetail() {
               </div>
 
               {signalAnalysis?.icebreaker ? (
-                <div className="rounded-lg border border-slate-200 p-3">
-                  <div className="mb-1 flex items-center justify-between gap-2">
-                    <p className="text-xs text-slate-500">Icebreaker</p>
+                <div className="rounded-lg border border-brand-sky/20 bg-brand-sky/5 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="text-xs font-bold text-brand-sky uppercase tracking-wide">Icebreaker</p>
                     <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => handleCopy(signalAnalysis.icebreaker, 'signal-icebreaker')}>
+                      {copied === 'signal-icebreaker' ? <Check className="h-3 w-3 mr-1 text-emerald-600" /> : <Copy className="h-3 w-3 mr-1" />}
                       {copied === 'signal-icebreaker' ? t('common.copied') : t('common.copy')}
                     </Button>
                   </div>
@@ -856,7 +904,7 @@ export default function LeadDetail() {
                   {Object.entries(providerStatus).map(([provider, status]) => (
                     <span
                       key={provider}
-                      className={`rounded-full border px-2.5 py-1 text-xs ${
+                      className={`rounded-full border px-2.5 py-1 text-xs font-semibold capitalize ${
                         status === 'ok'
                           ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
                           : status === 'skipped'
@@ -880,12 +928,17 @@ export default function LeadDetail() {
                       negative: t('leads.negativeSignals'),
                       neutral: t('leads.neutralSignals'),
                     };
+                    const colors = {
+                      positive: 'border-emerald-200 bg-emerald-50',
+                      negative: 'border-rose-200 bg-rose-50',
+                      neutral: 'border-slate-200 bg-slate-50',
+                    };
                     return (
-                      <div key={type} className="rounded-lg border border-slate-200 p-3">
-                        <p className="mb-2 text-xs font-semibold text-slate-600">
+                      <div key={type} className={`rounded-lg border ${colors[type]} p-3`}>
+                        <p className="mb-2 text-xs font-bold text-slate-600 uppercase tracking-wide">
                           {labels[type]} ({items.length})
                         </p>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-1.5">
                           {items.map((signal, index) => (
                             <SignalBadge key={`${type}-${index}`} signal={{ ...signal, type }} />
                           ))}
@@ -894,28 +947,31 @@ export default function LeadDetail() {
                     );
                   })}
                   {signalAnalysis?.sources?.length > 0 || signalAnalysis?.website ? (
-                    <div className="rounded-lg border border-slate-200 p-3 text-xs text-slate-600">
-                      {signalAnalysis?.sources?.length > 0 ? <p>Sources: {signalAnalysis.sources.join(', ')}</p> : null}
-                      {signalAnalysis?.website ? <p>Website: {signalAnalysis.website}</p> : null}
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 space-y-1">
+                      {signalAnalysis?.sources?.length > 0 ? <p><span className="font-bold">Sources:</span> {signalAnalysis.sources.join(', ')}</p> : null}
+                      {signalAnalysis?.website ? <p><span className="font-bold">Website:</span> {signalAnalysis.website}</p> : null}
                     </div>
                   ) : null}
                 </div>
               ) : (
-                <p className="text-sm text-slate-500">No AI buying signals detected yet</p>
+                <p className="text-sm text-slate-500 italic text-center py-4">No AI buying signals detected yet</p>
               )}
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm">
+          <Card className="shadow-sm border-slate-200/60">
             <CardHeader>
-              <CardTitle className="text-sm">{t('outreach.icebreakers', { defaultValue: 'Outreach / icebreakers' })}</CardTitle>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Mail className="h-4 w-4 text-brand-sky" />
+                {t('outreach.icebreakers', { defaultValue: 'Outreach / icebreakers' })}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {icebreakers.length > 0 ? (
                 icebreakers.map(({ key, label, content }) => (
-                  <div key={key} className="rounded-lg border border-slate-100 p-3">
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+                  <div key={key} className="rounded-lg border border-slate-100 bg-gradient-to-br from-slate-50/40 to-white p-4">
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-600">{label}</p>
                       <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => handleCopy(content, key)}>
                         {copied === key ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
                         {copied === key ? t('common.copied') : t('common.copy')}
@@ -925,26 +981,26 @@ export default function LeadDetail() {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-slate-500">{t('leads.noIcebreakersYet')}</p>
+                <p className="text-sm text-slate-500 italic text-center py-4">{t('leads.noIcebreakersYet')}</p>
               )}
             </CardContent>
           </Card>
 
-          <Card className="shadow-sm">
+          <Card className="shadow-sm border-slate-200/60">
             <CardHeader>
               <CardTitle className="text-sm flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-brand-sky" />
                 {t('outreach.sequence.title')}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex flex-wrap items-end gap-3">
-                <div className="min-w-36 flex-1">
-                  <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-                    {t('outreach.sequence.toneLabel', { defaultValue: 'Sequence tone' })}
-                  </label>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                  {t('outreach.sequence.toneLabel', { defaultValue: 'Sequence tone' })}
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Select value={sequenceTone} onValueChange={setSequenceTone}>
-                    <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-9 text-sm flex-1"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {['consultative', 'direct', 'friendly', 'premium', 'challenger'].map((key) => (
                         <SelectItem key={key} value={key}>
@@ -953,31 +1009,31 @@ export default function LeadDetail() {
                       ))}
                     </SelectContent>
                   </Select>
+                  <Button
+                    size="sm"
+                    className="h-9 gap-2 bg-brand-sky hover:bg-brand-sky/90"
+                    onClick={() => sequenceMutation.mutate()}
+                    disabled={sequenceMutation.isPending || Boolean(sequenceActiveJobId)}
+                  >
+                    {sequenceMutation.isPending || sequenceActiveJobId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                    Generate
+                  </Button>
                 </div>
-                <Button
-                  size="sm"
-                  className="h-9 gap-2 bg-brand-sky hover:bg-brand-sky/90"
-                  onClick={() => sequenceMutation.mutate()}
-                  disabled={sequenceMutation.isPending || Boolean(sequenceActiveJobId)}
-                >
-                  {sequenceMutation.isPending || sequenceActiveJobId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                  {t('outreach.generateSequence')}
-                </Button>
               </div>
 
               {sequenceActiveJobId && sequenceJob && !['completed', 'failed'].includes(sequenceJob.status) ? (
                 <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                  <Loader2 className="mr-1 inline h-3 w-3 animate-spin text-brand-sky" />
+                  <Loader2 className="mr-1.5 inline h-3 w-3 animate-spin text-brand-sky" />
                   {sequenceJob.progress?.message || t('outreach.sequence.writing')}
                 </div>
               ) : null}
 
               {sequence ? (
-                <div className="space-y-3 rounded-xl border border-brand-sky/20 bg-brand-sky/5 p-3">
+                <div className="space-y-3 rounded-xl border border-brand-sky/20 bg-brand-sky/5 p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="text-sm font-semibold text-slate-800">{sequence.sequence_name}</p>
-                      <p className="text-xs text-slate-500">{sequence.objective}</p>
+                      <p className="text-sm font-bold text-slate-800">{sequence.sequence_name}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{sequence.objective}</p>
                     </div>
                     <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setSequence(null)}>✕</Button>
                   </div>
@@ -991,8 +1047,8 @@ export default function LeadDetail() {
                       .join('\n\n');
                     return (
                       <div key={i} className="rounded-lg border border-white bg-white p-3">
-                        <div className="mb-1 flex items-center justify-between gap-2">
-                          <p className="text-xs font-semibold text-slate-500">J{touch.day} · {touch.channel || 'email'}</p>
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <p className="text-xs font-bold text-slate-600 uppercase tracking-wide">J{touch.day} · {touch.channel || 'email'}</p>
                           <button
                             onClick={() => handleCopy(fullText, `seq-${i}`)}
                             className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-700"
@@ -1001,9 +1057,9 @@ export default function LeadDetail() {
                             {copied === `seq-${i}` ? t('common.copied') : t('common.copy')}
                           </button>
                         </div>
-                        {touch.subject ? <p className="text-sm font-semibold text-slate-800">{touch.subject}</p> : null}
-                        <p className="mt-1 whitespace-pre-wrap text-sm text-slate-600">{touch.body}</p>
-                        {touch.cta ? <p className="mt-2 border-t border-slate-100 pt-2 text-xs font-semibold text-brand-sky">→ {touch.cta}</p> : null}
+                        {touch.subject ? <p className="text-sm font-bold text-slate-800 mb-2">{touch.subject}</p> : null}
+                        <p className="whitespace-pre-wrap text-sm text-slate-600">{touch.body}</p>
+                        {touch.cta ? <p className="mt-3 border-t border-slate-100 pt-2 text-xs font-bold text-brand-sky">→ {touch.cta}</p> : null}
                       </div>
                     );
                   })}
@@ -1013,11 +1069,11 @@ export default function LeadDetail() {
           </Card>
 
           {lead.website_url ? (
-            <Card className="shadow-sm">
-              <CardContent className="flex items-center justify-between gap-2 py-4">
-                <div className="flex min-w-0 items-center gap-2 text-sm text-slate-700">
-                  <Globe className="h-4 w-4 text-slate-400" />
-                  <span className="truncate">{lead.website_url}</span>
+            <Card className="shadow-sm border-slate-200/60">
+              <CardContent className="flex items-center justify-between gap-3 py-4 px-6">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Globe className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                  <span className="truncate text-sm text-slate-700 font-medium">{lead.website_url}</span>
                 </div>
                 <Button
                   variant="outline"
@@ -1026,8 +1082,9 @@ export default function LeadDetail() {
                     const href = /^https?:\/\//i.test(lead.website_url) ? lead.website_url : `https://${lead.website_url}`;
                     window.open(href, '_blank', 'noopener,noreferrer');
                   }}
+                  className="h-8 gap-1.5 flex-shrink-0"
                 >
-                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                  <ExternalLink className="h-3.5 w-3.5" />
                   Open
                 </Button>
               </CardContent>

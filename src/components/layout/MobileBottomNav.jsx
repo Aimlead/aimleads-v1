@@ -1,36 +1,40 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import {
   BarChart3, CreditCard, HelpCircle, Kanban, LayoutDashboard, ListOrdered,
   LogOut, Mail, MoreHorizontal, Rows3, ScrollText, Settings, Target, UserCog, Users,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/constants/routes';
 
-const PRIMARY_TABS = [
-  { name: 'Dashboard', href: ROUTES.dashboard, icon: LayoutDashboard },
-  { name: 'Priorités', href: ROUTES.priorities, icon: ListOrdered },
-  { name: 'Pipeline', href: ROUTES.pipeline, icon: Kanban },
-  { name: 'Outreach', href: ROUTES.outreach, icon: Mail },
-];
-
-const MORE_ITEMS = [
-  { name: 'ICP', href: ROUTES.icp, icon: Target },
-  { name: 'Listes', href: ROUTES.lists, icon: Rows3 },
-  { name: 'Analytiques', href: ROUTES.analytics, icon: BarChart3 },
-  { name: 'Team', href: ROUTES.team, icon: Users },
-  { name: 'Facturation', href: ROUTES.billing, icon: CreditCard },
-  { name: 'Aide', href: ROUTES.help, icon: HelpCircle },
-  { name: 'Réglages', href: ROUTES.settings, icon: Settings },
-  { name: 'Audit', href: ROUTES.auditLog, icon: ScrollText },
-  { name: 'Mon compte', href: ROUTES.accountSettings, icon: UserCog },
-];
-
-export default function MobileBottomNav({ onSignOut }) {
+function MobileBottomNav({ onSignOut }) {
   const { pathname } = useLocation();
+  const { t } = useTranslation();
   const [moreOpen, setMoreOpen] = useState(false);
+
+  const PRIMARY_TABS = [
+    { key: 'dashboard', href: ROUTES.dashboard, icon: LayoutDashboard },
+    { key: 'priorities', href: ROUTES.priorities, icon: ListOrdered },
+    { key: 'pipeline', href: ROUTES.pipeline, icon: Kanban },
+    { key: 'outreach', href: ROUTES.outreach, icon: Mail },
+  ];
+
+  const MORE_ITEMS = [
+    { key: 'icp', href: ROUTES.icp, icon: Target },
+    { key: 'lists', href: ROUTES.lists, icon: Rows3 },
+    { key: 'analytics', href: ROUTES.analytics, icon: BarChart3 },
+    { key: 'team', href: ROUTES.team, icon: Users },
+    { key: 'billing', href: ROUTES.billing, icon: CreditCard },
+    { key: 'help', href: ROUTES.help, icon: HelpCircle },
+    { key: 'settings', href: ROUTES.settings, icon: Settings },
+    { key: 'auditLog', href: ROUTES.auditLog, icon: ScrollText },
+    { key: 'accountSettings', href: ROUTES.accountSettings, icon: UserCog },
+  ];
+
 
   const isActive = (href) => {
     if (href === ROUTES.priorities)
@@ -58,10 +62,11 @@ export default function MobileBottomNav({ onSignOut }) {
             const Icon = tab.icon;
             return (
               <Link
-                key={tab.name}
+                key={tab.key}
                 to={tab.href}
                 className="flex-1 flex flex-col items-center justify-center gap-0.5 relative min-w-0 active:opacity-70 transition-opacity"
-                aria-label={tab.name}
+                aria-label={t(`nav.${tab.key}`)}
+                title={t(`nav.${tab.key}`)}
               >
                 <AnimatePresence>
                   {active && (
@@ -83,11 +88,11 @@ export default function MobileBottomNav({ onSignOut }) {
                 />
                 <span
                   className={cn(
-                    'text-[10px] font-medium leading-none transition-colors',
+                    'text-[10px] font-medium leading-none transition-colors line-clamp-1',
                     active ? 'text-brand-sky' : 'text-white/35'
                   )}
                 >
-                  {tab.name}
+                  {t(`nav.${tab.key}`)}
                 </span>
               </Link>
             );
@@ -97,7 +102,8 @@ export default function MobileBottomNav({ onSignOut }) {
           <button
             onClick={() => setMoreOpen(true)}
             className="flex-1 flex flex-col items-center justify-center gap-0.5 relative min-w-0 active:opacity-70 transition-opacity"
-            aria-label="Plus"
+            aria-label={t('nav.more')}
+            title={t('nav.more')}
           >
             {isMoreActive && (
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-brand-sky" />
@@ -110,11 +116,11 @@ export default function MobileBottomNav({ onSignOut }) {
             />
             <span
               className={cn(
-                'text-[10px] font-medium leading-none transition-colors',
+                'text-[10px] font-medium leading-none transition-colors line-clamp-1',
                 isMoreActive ? 'text-brand-sky' : 'text-white/35'
               )}
             >
-              Plus
+              {t('nav.more')}
             </span>
           </button>
         </div>
@@ -128,9 +134,9 @@ export default function MobileBottomNav({ onSignOut }) {
           style={{ background: 'rgba(0,20,55,0.98)' }}
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>Plus d’options AimLeads</SheetTitle>
+            <SheetTitle>{t('nav.more')}</SheetTitle>
             <SheetDescription>
-              Ouvrez les pages secondaires du workspace ou déconnectez-vous.
+              {t('nav.configuration')}
             </SheetDescription>
           </SheetHeader>
           <div
@@ -140,17 +146,27 @@ export default function MobileBottomNav({ onSignOut }) {
             {/* Handle bar */}
             <div className="w-10 h-1 rounded-full bg-white/20 mx-auto mb-5" />
 
+            {/* Language Switcher */}
+            <div className="mb-4 px-3">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-white/40 mb-2">
+                {t('nav.language')}
+              </p>
+              <LanguageSwitcher compact className="w-full justify-center" />
+            </div>
+
+            <div className="h-px bg-white/[0.07] mx-3 mb-3" />
+
             <p className="text-[10px] font-semibold uppercase tracking-widest text-white/25 px-3 mb-2">
-              Configuration
+              {t('nav.configuration')}
             </p>
 
-            <div className="space-y-0.5 mb-4">
+            <div className="space-y-0.5 mb-4 max-h-64 overflow-y-auto">
               {MORE_ITEMS.map((item) => {
                 const active = isActive(item.href);
                 const Icon = item.icon;
                 return (
                   <Link
-                    key={item.name}
+                    key={item.key}
                     to={item.href}
                     onClick={() => setMoreOpen(false)}
                     className={cn(
@@ -166,9 +182,9 @@ export default function MobileBottomNav({ onSignOut }) {
                         active ? 'text-brand-sky' : 'text-white/35'
                       )}
                     />
-                    {item.name}
+                    <span className="flex-1 min-w-0">{t(`nav.${item.key}`)}</span>
                     {active && (
-                      <div className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-sky" />
+                      <div className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-sky flex-shrink-0" />
                     )}
                   </Link>
                 );
@@ -182,7 +198,7 @@ export default function MobileBottomNav({ onSignOut }) {
               className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-white/50 hover:bg-white/[0.05] hover:text-white/80 active:bg-white/10 transition-all"
             >
               <LogOut className="w-5 h-5 text-white/30 flex-shrink-0" />
-              Se déconnecter
+              <span>{t('nav.signOut')}</span>
             </button>
           </div>
         </SheetContent>
@@ -190,3 +206,5 @@ export default function MobileBottomNav({ onSignOut }) {
     </>
   );
 }
+
+export default MobileBottomNav;

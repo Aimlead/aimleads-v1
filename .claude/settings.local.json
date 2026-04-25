@@ -9,7 +9,9 @@
       "Bash(npx vite *)",
       "Bash(echo \"exit:$?\")",
       "Bash(echo \"BUILD_EXIT:$?\")",
-      "Bash(echo \"EXIT:$?\")"
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(xargs grep *)",
+      "Bash(xargs ls *)"
     ]
   }
 }

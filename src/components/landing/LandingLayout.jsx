@@ -203,13 +203,17 @@ export default function LandingLayout() {
         </button>
 
         <div className="landing-mobile-actions">
-          <LanguageSwitcher className="landing-mobile-language" />
+          <LanguageSwitcher className="landing-mobile-language" compact />
           <button
             type="button"
             className="landing-mobile-login"
             onClick={() => setLoginOpen(true)}
           >
-            {t('landing.signIn')}
+            <svg className="landing-mobile-login-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            <span className="landing-mobile-login-label">{t('landing.signIn')}</span>
           </button>
         </div>
       </div>

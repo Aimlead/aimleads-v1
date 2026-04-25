@@ -1,4 +1,10 @@
 {
+  "beta": {
+    "subtitle": "AimLeads is in beta — your feedback helps us improve the product.",
+    "mobile": "In beta",
+    "email": "Contact the team",
+    "contact": "Feedback"
+  },
   "common": {
     "languageSwitcherLabel": "Language selector",
     "backToHome": "Back to home",
@@ -72,17 +78,21 @@
   },
   "nav": {
     "dashboard": "Dashboard",
+    "priorities": "Priorities",
     "pipeline": "Pipeline",
-    "analytics": "Analytics",
     "outreach": "Outreach",
+    "analytics": "Analytics",
     "icp": "ICP profile",
     "team": "Team",
-    "settings": "Settings",
-    "crmIntegration": "CRM integration",
-    "auditLog": "Audit log",
+    "billing": "Billing",
     "help": "Help",
-    "signOut": "Sign out",
+    "settings": "Settings",
+    "auditLog": "Audit log",
     "accountSettings": "Account settings",
+    "signOut": "Sign out",
+    "more": "More",
+    "crmIntegration": "CRM integration",
+    "language": "Language",
     "creditsUnavailable": "Credits unavailable",
     "creditsRemaining": "{{count}} credits remaining",
     "creditsShort": "{{count}} credits",

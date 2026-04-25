@@ -125,9 +125,9 @@ export default function Header({ user, onSignOut, onOpenPalette, bannerOffset = 
 
   return (
     <header className="fixed left-0 md:left-64 right-0 h-16 border-b border-[#e6e4df] z-40" style={{ top: bannerOffset, background: 'rgba(247,247,245,0.92)', backdropFilter: 'blur(16px) saturate(1.2)', WebkitBackdropFilter: 'blur(16px) saturate(1.2)', boxShadow: '0 1px 0 rgba(26,18,0,0.05)' }}>
-      <div className="h-full px-4 md:px-6 flex items-center justify-between gap-3">
+      <div className="h-full px-2 md:px-6 flex items-center justify-between gap-2 md:gap-3">
 
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-1 md:gap-2 min-w-0">
           <button
             onClick={onOpenPalette}
             className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg bg-white hover:bg-[#fbfaf8] border border-[#e6e4df] text-slate-500 text-sm transition-all duration-150 group"
@@ -139,23 +139,23 @@ export default function Header({ user, onSignOut, onOpenPalette, bannerOffset = 
           {/* Mobile: search icon button */}
           <button
             onClick={onOpenPalette}
-            className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl bg-white border border-[#e6e4df] text-slate-500 hover:bg-[#fbfaf8] transition-colors"
+            className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl bg-white border border-[#e6e4df] text-slate-500 hover:bg-[#fbfaf8] transition-colors flex-shrink-0"
             aria-label={t('nav.searchPlaceholder')}
           >
             <Search className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 md:gap-1.5 min-w-0 flex-shrink-0">
           <LanguageSwitcher compact className="hidden sm:inline-flex" />
           <CreditBadge />
-          <span className="text-sm text-slate-400 hidden lg:block mr-2">{user?.email}</span>
-          <Link to={ROUTES.accountSettings}>
+          <span className="text-sm text-slate-400 hidden lg:inline mr-1 truncate">{user?.email}</span>
+          <Link to={ROUTES.accountSettings} className="flex-shrink-0">
             <Button variant="ghost" size="icon" title={t('nav.accountSettings')} aria-label={t('nav.accountSettings')} className="w-9 h-9 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100">
               <UserCog className="w-4 h-4" />
             </Button>
           </Link>
-          <Button variant="outline" size="sm" onClick={onSignOut} className="text-slate-500 border-slate-200/80 hover:border-brand-sky/40 hover:text-brand-sky hover:bg-brand-sky/5 rounded-xl text-xs h-8 hidden sm:inline-flex transition-all">
+          <Button variant="outline" size="sm" onClick={onSignOut} className="text-slate-500 border-slate-200/80 hover:border-brand-sky/40 hover:text-brand-sky hover:bg-brand-sky/5 rounded-xl text-xs h-8 hidden sm:inline-flex transition-all flex-shrink-0">
             {t('nav.signOut')}
           </Button>
         </div>

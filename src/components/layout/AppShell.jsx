@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { X } from 'lucide-react';
 import Header from '@/components/layout/Header';
@@ -15,6 +16,7 @@ const BETA_BANNER_KEY = 'aimleads:beta-banner-dismissed';
 const BANNER_H = 32; // px — matches py-1.5 text-xs strip
 
 function BetaBanner({ onVisibilityChange }) {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(() => {
     try { return !window.localStorage.getItem(BETA_BANNER_KEY); } catch { return true; }
   });
@@ -33,17 +35,22 @@ function BetaBanner({ onVisibilityChange }) {
 
   return (
     <div
-      className="fixed inset-x-0 z-[150] bg-gradient-to-r from-violet-600 via-brand-sky to-sky-500 text-white text-xs font-medium px-3 flex items-center justify-center gap-2 shadow-sm"
-      style={{ top: 0, height: BANNER_H }}
+      className="fixed inset-x-0 z-[150] bg-gradient-to-r from-violet-600 via-brand-sky to-sky-500 text-white text-xs font-medium px-3 py-2 md:py-1.5 flex items-center justify-between gap-2 shadow-sm flex-wrap"
+      style={{ top: 0, minHeight: BANNER_H }}
     >
-      <span className="inline-flex items-center gap-1.5 min-w-0">
+      <span className="inline-flex items-center gap-1.5 min-w-0 flex-wrap">
         <span className="bg-white/20 rounded px-1.5 py-0.5 font-bold text-[10px] tracking-wide flex-shrink-0">BÊTA</span>
-        <span className="hidden sm:inline truncate">AimLeads est en bêta — vos retours nous aident à améliorer le produit.</span>
-        <a href="mailto:beta@aimlead.io" className="underline underline-offset-2 hover:opacity-80 whitespace-nowrap flex-shrink-0">Écrire à l&apos;équipe</a>
+        <span className="hidden sm:inline truncate text-xs md:text-xs">{t('beta.subtitle', 'AimLeads est en bêta — vos retours nous aident à améliorer le produit.')}</span>
+        <span className="sm:hidden text-[11px]">{t('beta.mobile', 'En version bêta')}</span>
       </span>
-      <button onClick={dismiss} className="ml-1 opacity-70 hover:opacity-100 transition-opacity flex-shrink-0" aria-label="Fermer">
-        <X className="w-3.5 h-3.5" />
-      </button>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <a href="mailto:beta@aimlead.io" className="underline underline-offset-2 hover:opacity-80 whitespace-nowrap flex-shrink-0 text-xs" title={t('beta.email', 'Contactez l\'équipe')}>
+          {t('beta.contact', 'Feedback')}
+        </a>
+        <button onClick={dismiss} className="opacity-70 hover:opacity-100 transition-opacity flex-shrink-0" aria-label={t('common.close', 'Fermer')}>
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
     </div>
   );
 }

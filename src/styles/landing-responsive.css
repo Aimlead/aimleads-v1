@@ -129,7 +129,7 @@
   }
 
   .landing-mobile-language {
-    min-width: 110px;
+    min-width: 72px;
   }
 
   .landing-mobile-login {
@@ -142,6 +142,13 @@
     font-size: 13px;
     font-weight: 600;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .landing-mobile-login-icon {
+    flex-shrink: 0;
   }
 
   .landing-mobile-overlay {
@@ -223,11 +230,15 @@
   }
 
   .landing-mobile-language {
-    min-width: 92px;
+    min-width: 64px;
   }
 
   .landing-mobile-login {
-    display: none;
+    display: inline-flex;
+    height: 36px;
+    padding: 0 11px;
+    font-size: 12px;
+    gap: 5px;
   }
 
   .geo-hero,
@@ -349,11 +360,21 @@
   }
 
   .landing-mobile-actions {
-    gap: 8px;
+    gap: 6px;
   }
 
   .landing-mobile-language {
-    min-width: 82px;
+    min-width: 56px;
+  }
+
+  .landing-mobile-login {
+    height: 36px;
+    padding: 0 10px;
+    gap: 0;
+  }
+
+  .landing-mobile-login-label {
+    display: none;
   }
 
   .sidebar {
