@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 import '@/styles/landing-v2.css';
 
+import BrandLogo from '@/components/brand/BrandLogo';
 import HeroScene from '@/components/landing-v2/HeroScene';
 import NavV2 from '@/components/landing-v2/NavV2';
 import LogosMarquee from '@/components/landing-v2/LogosMarquee';
@@ -56,9 +57,11 @@ export default function LandingV2() {
             <span>IA accessible aux PME & ETI · 2026</span>
           </span>
 
-          <h1 className="lv2-h1">
-            <span style={{ display: 'block' }}>L&apos;IA qui travaille.</span>
-            <span className="lv2-h1-gradient" style={{ display: 'block' }}>Pendant que vous scalez.</span>
+          <h1 className="lv2-hero-logo-title" aria-label="AimLeads">
+            <span className="lv2-hero-menu-logo">
+              <BrandLogo variant="mark" tone="light" className="lv2-hero-logo-mark" alt="AimLeads" />
+              <span>AimLeads</span>
+            </span>
           </h1>
 
           <p className="lv2-sub">

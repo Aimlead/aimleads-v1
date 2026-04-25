@@ -107,6 +107,42 @@
   color: transparent;
 }
 
+.lv2-hero-logo-title {
+  margin: 0;
+  line-height: 1;
+}
+.lv2-hero-menu-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(12px, 1.8vw, 26px);
+  color: var(--lv2-text);
+  font-family: 'Aptos', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: clamp(46px, 8vw, 118px);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  height: auto !important;
+  filter:
+    drop-shadow(0 0 22px rgba(58, 141, 255, 0.42))
+    drop-shadow(0 28px 70px rgba(0, 0, 0, 0.55));
+  animation: lv2-logo-arrive 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.lv2-hero-logo-mark {
+  height: 1.85em !important;
+  width: auto !important;
+  filter: drop-shadow(0 0 10px rgba(58, 141, 255, 0.35));
+}
+@keyframes lv2-logo-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .lv2-h2 {
   font-family: 'Aptos Display', 'Aptos', sans-serif;
   font-weight: 700;
@@ -321,7 +357,7 @@
 .lv2-hero-content {
   position: relative;
   z-index: 2;
-  max-width: 1000px;
+  max-width: 1100px;
   margin: 0 auto;
   text-align: center;
   display: flex;

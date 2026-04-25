@@ -125,51 +125,72 @@ export default function Header({ user, onSignOut, onOpenPalette, bannerOffset = 
   const { t } = useTranslation();
 
   return (
-    <header className="fixed left-0 md:left-64 right-0 h-16 border-b border-[#e6e4df] z-40" style={{ top: bannerOffset, background: 'rgba(247,247,245,0.92)', backdropFilter: 'blur(16px) saturate(1.2)', WebkitBackdropFilter: 'blur(16px) saturate(1.2)', boxShadow: '0 1px 0 rgba(26,18,0,0.05)' }}>
-      <div className="h-full px-2 md:px-6 flex items-center justify-between gap-2 md:gap-3">
+    <header
+      className="fixed left-0 md:left-64 right-0 h-16 z-40"
+      style={{
+        top: bannerOffset,
+        background: 'rgba(252,251,249,0.96)',
+        backdropFilter: 'blur(20px) saturate(1.4)',
+        WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
+        borderBottom: '1px solid rgba(0,0,0,0.06)',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 4px 16px -8px rgba(0,0,0,0.06)',
+      }}
+    >
+      <div className="h-full px-3 md:px-6 flex items-center justify-between gap-2 md:gap-4">
 
-        <div className="flex items-center gap-1 md:gap-3 min-w-0">
-          {/* Desktop: logo top-left */}
-          <Link to={ROUTES.dashboard} className="hidden md:flex items-center gap-2 flex-shrink-0 mr-1">
-            <img src="/brand/aimleads-mark.png" alt="AimLeads" style={{ height: 22, width: 'auto' }} />
-            <span className="text-sm font-bold text-slate-800 tracking-tight">AimLeads</span>
-          </Link>
+        {/* Left: search */}
+        <div className="flex items-center gap-2 min-w-0">
           <button
             onClick={onOpenPalette}
-            className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg bg-white hover:bg-[#fbfaf8] border border-[#e6e4df] text-slate-500 text-sm transition-all duration-150 group"
+            className="hidden md:flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-sm transition-all duration-150 group"
+            style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.07)' }}
           >
-            <Search className="w-3.5 h-3.5" />
-            <span className="text-xs pr-4">{t('nav.searchPlaceholder')}</span>
-            <kbd className="text-[10px] bg-[#f7f5f0] border border-[#e6e4df] rounded px-1.5 py-0.5 font-medium text-slate-500">⌘K</kbd>
+            <Search className="w-3.5 h-3.5 text-slate-400" />
+            <span className="text-xs text-slate-400 pr-6">{t('nav.searchPlaceholder')}</span>
+            <kbd className="text-[10px] rounded-md px-1.5 py-0.5 font-medium text-slate-400 bg-white border border-slate-200/80 shadow-sm">⌘K</kbd>
           </button>
-          {/* Mobile: search icon button */}
           <button
             onClick={onOpenPalette}
-            className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl bg-white border border-[#e6e4df] text-slate-500 hover:bg-[#fbfaf8] transition-colors flex-shrink-0"
+            className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl text-slate-500 hover:bg-black/[0.04] transition-colors flex-shrink-0"
+            style={{ border: '1px solid rgba(0,0,0,0.08)' }}
             aria-label={t('nav.searchPlaceholder')}
           >
             <Search className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Mobile: centered brand name */}
+        {/* Mobile: centered brand */}
         <div className="md:hidden absolute left-1/2 -translate-x-1/2 pointer-events-none select-none">
-          <Link to={ROUTES.dashboard} className="pointer-events-auto flex items-center gap-1.5">
-            <img src="/brand/aimleads-mark.png" alt="" aria-hidden="true" style={{ height: 20, width: 'auto' }} />
-            <span className="text-sm font-bold text-slate-800 tracking-tight">AimLeads</span>
+          <Link to={ROUTES.dashboard} className="pointer-events-auto flex items-center gap-2">
+            <img src="/brand/aimleads-mark.png" alt="" aria-hidden="true" style={{ height: 22, width: 'auto' }} />
+            <img src="/brand/aimleads-wordmark.png" alt="AimLeads" style={{ height: 14, width: 'auto', opacity: 0.85 }} />
           </Link>
         </div>
 
-        <div className="flex items-center gap-1 md:gap-1.5 min-w-0 flex-shrink-0">
+        {/* Right: actions */}
+        <div className="flex items-center gap-1.5 md:gap-2 min-w-0 flex-shrink-0">
           <LanguageSwitcher compact className="hidden sm:inline-flex" />
           <CreditBadge />
-          <span className="text-sm text-slate-400 hidden lg:inline mr-1 truncate">{user?.email}</span>
+          <div className="hidden lg:flex items-center h-8 px-2.5 rounded-lg text-xs text-slate-400 truncate max-w-[180px]" style={{ background: 'rgba(0,0,0,0.025)', border: '1px solid rgba(0,0,0,0.05)' }}>
+            {user?.email}
+          </div>
           <Link to={ROUTES.accountSettings} className="flex-shrink-0">
-            <Button variant="ghost" size="icon" title={t('nav.accountSettings')} aria-label={t('nav.accountSettings')} className="w-9 h-9 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+            <Button
+              variant="ghost"
+              size="icon"
+              title={t('nav.accountSettings')}
+              aria-label={t('nav.accountSettings')}
+              className="w-9 h-9 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-black/[0.04]"
+            >
               <UserCog className="w-4 h-4" />
             </Button>
           </Link>
-          <Button variant="outline" size="sm" onClick={onSignOut} className="text-slate-500 border-slate-200/80 hover:border-brand-sky/40 hover:text-brand-sky hover:bg-brand-sky/5 rounded-xl text-xs h-8 hidden sm:inline-flex transition-all flex-shrink-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onSignOut}
+            className="hidden sm:inline-flex text-slate-400 hover:text-slate-700 hover:bg-black/[0.04] rounded-xl text-xs h-8 px-3 transition-all flex-shrink-0"
+          >
             {t('nav.signOut')}
           </Button>
         </div>

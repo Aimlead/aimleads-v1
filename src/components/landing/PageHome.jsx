@@ -2,6 +2,7 @@ import WaveCanvas from './WaveCanvas';
 import AnimatedBtn from './AnimatedBtn';
 import { useTranslation } from 'react-i18next';
 import { landingHeadingFont } from '../../lib/brandFonts';
+import BrandLogo from '@/components/brand/BrandLogo';
 
 function IconConseil() {
   return (
@@ -85,15 +86,19 @@ export default function PageHome({ ctx }) {
         </div>
 
         <div className="geo-content">
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.2rem', marginBottom: '2rem' }}>
+            <BrandLogo variant="mark" tone="light" className="h-40 w-auto drop-shadow-[0_0_48px_rgba(58,141,255,0.55)]" />
+            <BrandLogo variant="full" tone="light" className="h-20 w-auto opacity-95" />
+            <h1 className="geo-title" style={{ fontSize: 'clamp(18px, 2.4vw, 30px)', letterSpacing: '-0.5px', marginBottom: 0, marginTop: '0.4rem' }}>
+              <span className="geo-title-line1">{t('landing.heroTitleLine1')}</span>
+              <span className="geo-title-line2">{t('landing.heroTitleLine2')}</span>
+            </h1>
+          </div>
+
           <div className="geo-badge">
             <span className="geo-badge-dot" />
             <span className="geo-badge-txt">{t('landing.heroBadge')}</span>
           </div>
-
-          <h1 className="geo-title">
-            <span className="geo-title-line1">{t('landing.heroTitleLine1')}</span>
-            <span className="geo-title-line2">{t('landing.heroTitleLine2')}</span>
-          </h1>
 
           <p className="geo-sub">
             {t('landing.heroSubtitle')}

@@ -21,7 +21,6 @@ import {
   Target,
   Users,
 } from 'lucide-react';
-import BrandLogo from '@/components/brand/BrandLogo';
 
 export const sidebarNavigation = [
   { name: 'Dashboard', labelKey: 'nav.dashboard', href: ROUTES.dashboard, icon: LayoutDashboard, group: 'main', shortcut: '1' },
@@ -67,7 +66,19 @@ export default function Sidebar({ mobile = false, onNavigate, onOpenPalette, onS
     >
       {/* Brand */}
       <div className="h-16 flex items-center px-5 border-b border-white/[0.06]">
-        <BrandLogo variant="full" tone="light" className="h-8 w-auto max-w-[150px]" />
+        <Link to={ROUTES.dashboard} className="flex items-center gap-2.5 group">
+          <img
+            src="/brand/aimleads-mark.png"
+            alt=""
+            aria-hidden="true"
+            className="h-8 w-auto brightness-110 drop-shadow-[0_0_14px_rgba(58,141,255,0.55)] group-hover:drop-shadow-[0_0_18px_rgba(58,141,255,0.75)] transition-all duration-300"
+          />
+          <img
+            src="/brand/aimleads-wordmark.png"
+            alt="AimLeads"
+            className="h-[18px] w-auto brightness-110 contrast-110 opacity-90 group-hover:opacity-100 transition-opacity duration-200"
+          />
+        </Link>
       </div>
 
       {/* Search / Cmd+K */}
