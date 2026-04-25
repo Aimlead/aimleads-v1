@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  BarChart3, Kanban, LayoutDashboard, LogOut, MoreHorizontal,
+  CreditCard, Kanban, LayoutDashboard, ListOrdered, LogOut, MoreHorizontal,
   Rows3, ScrollText, Settings, Target, UserCog, Users,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -11,17 +11,18 @@ import { ROUTES } from '@/constants/routes';
 
 const PRIMARY_TABS = [
   { name: 'Dashboard', href: ROUTES.dashboard, icon: LayoutDashboard },
-  { name: 'Pipeline',  href: ROUTES.pipeline,  icon: Kanban },
-  { name: 'Analytics', href: ROUTES.analytics, icon: BarChart3 },
-  { name: 'ICP',       href: ROUTES.icp,       icon: Target },
+  { name: 'Priorites', href: ROUTES.priorities, icon: ListOrdered },
+  { name: 'Pipeline', href: ROUTES.pipeline, icon: Kanban },
+  { name: 'ICP', href: ROUTES.icp, icon: Target },
 ];
 
 const MORE_ITEMS = [
-  { name: 'Listes',      href: ROUTES.lists,          icon: Rows3 },
-  { name: 'Team',        href: ROUTES.team,           icon: Users },
-  { name: 'Settings',    href: ROUTES.settings,       icon: Settings },
-  { name: 'Audit Log',   href: ROUTES.auditLog,       icon: ScrollText },
-  { name: 'Mon compte',  href: ROUTES.accountSettings, icon: UserCog },
+  { name: 'Listes', href: ROUTES.lists, icon: Rows3 },
+  { name: 'Facturation', href: ROUTES.billing, icon: CreditCard },
+  { name: 'Team', href: ROUTES.team, icon: Users },
+  { name: 'Settings', href: ROUTES.settings, icon: Settings },
+  { name: 'Audit Log', href: ROUTES.auditLog, icon: ScrollText },
+  { name: 'Mon compte', href: ROUTES.accountSettings, icon: UserCog },
 ];
 
 export default function MobileBottomNav({ onSignOut }) {
@@ -29,8 +30,8 @@ export default function MobileBottomNav({ onSignOut }) {
   const [moreOpen, setMoreOpen] = useState(false);
 
   const isActive = (href) => {
-    if (href === ROUTES.dashboard)
-      return pathname === ROUTES.dashboard || pathname.startsWith('/leads');
+    if (href === ROUTES.priorities)
+      return pathname === ROUTES.priorities || pathname.startsWith('/leads');
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 

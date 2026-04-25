@@ -99,7 +99,7 @@ export default function AuthCallback() {
 
   if (error) {
     return (
-      <div className="auth-v2-loader">
+      <div className="auth-v2-loader" role="alert">
         <p style={{ color: '#ffb4aa', fontWeight: 500, textAlign: 'center', maxWidth: 380, fontSize: 14 }}>{error}</p>
         <a href={ROUTES.login} className="auth-v2-ghost-link" style={{ marginTop: 8 }}>
           {t('authCallback.backToLogin')}
@@ -109,8 +109,8 @@ export default function AuthCallback() {
   }
 
   return (
-    <div className="auth-v2-loader">
-      <Loader2 className="auth-v2-loader-spinner animate-spin" />
+    <div className="auth-v2-loader" aria-live="polite" aria-busy="true">
+      <Loader2 className="auth-v2-loader-spinner animate-spin" aria-hidden="true" />
       <p className="auth-v2-loader-label">{t('authCallback.connecting')}</p>
     </div>
   );

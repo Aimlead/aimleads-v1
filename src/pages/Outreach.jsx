@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -383,6 +384,17 @@ export default function Outreach() {
   const [sequence, setSequence] = useState(null);
   const [activeJobId, setActiveJobId] = useState('');
   const [handledJobId, setHandledJobId] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+
+  const JOB_POLL_TIMEOUT_MS = 10 * 60 * 1000;
+  useEffect(() => {
+    if (!activeJobId) return;
+    const timerId = setTimeout(() => {
+      setActiveJobId('');
+      toast.error(t('leads.asyncJobTimeout', { defaultValue: 'Sequence job timed out. Please try again.' }));
+    }, JOB_POLL_TIMEOUT_MS);
+    return () => clearTimeout(timerId);
+  }, [activeJobId, t]);
 
   const { data: leads = [] } = useQuery({
     queryKey: ['leads'],
@@ -475,10 +487,12 @@ export default function Outreach() {
     setIsNew(false);
   };
 
-  const handleDelete = (id) => {
-    setTemplates((prev) => prev.filter((t) => t.id !== id));
-    if (selected?.id === id) setSelected(null);
+  const handleDeleteConfirmed = () => {
+    if (!deleteConfirmId) return;
+    setTemplates((prev) => prev.filter((t) => t.id !== deleteConfirmId));
+    if (selected?.id === deleteConfirmId) setSelected(null);
     toast.success(t('outreach.toasts.templateDeleted', { defaultValue: 'Template deleted.' }));
+    setDeleteConfirmId(null);
   };
 
   return (
@@ -564,7 +578,7 @@ export default function Outreach() {
                     isSelected={selected?.id === t.id}
                     onClick={() => setSelected(t)}
                     onEdit={(tpl) => { setEditing(tpl); setSelected(null); setIsNew(false); }}
-                    onDelete={handleDelete}
+                    onDelete={(id) => setDeleteConfirmId(id)}
                   />
                 ))}
               </div>
@@ -638,7 +652,14 @@ export default function Outreach() {
                   {Math.max(0, Math.min(100, Number(sequenceJob.progress || 0)))}%
                 </span>
               </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/80">
+              <div
+                role="progressbar"
+                aria-valuenow={Math.max(0, Math.min(100, Number(sequenceJob.progress || 0)))}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={t('outreach.sequence.progressLabel', { defaultValue: 'Sequence generation progress' })}
+                className="mt-3 h-2 overflow-hidden rounded-full bg-white/80"
+              >
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-brand-sky to-brand-sky-2 transition-all"
                   style={{ width: `${Math.max(8, Math.min(100, Number(sequenceJob.progress || 0)))}%` }}
@@ -666,6 +687,21 @@ export default function Outreach() {
           )}
         </TabsContent>
       </Tabs>
+
+      <Dialog open={Boolean(deleteConfirmId)} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('outreach.deleteConfirm.title', { defaultValue: 'Delete template?' })}</DialogTitle>
+            <DialogDescription>
+              {t('outreach.deleteConfirm.body', { defaultValue: 'This template will be permanently deleted. This action cannot be undone.' })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>{t('common.cancel', { defaultValue: 'Cancel' })}</Button>
+            <Button variant="destructive" onClick={handleDeleteConfirmed}>{t('common.delete', { defaultValue: 'Delete' })}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

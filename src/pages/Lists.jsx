@@ -64,10 +64,13 @@ export default function Lists() {
       };
 
       current.total += 1;
-      if ((lead.final_category || '').toLowerCase() === 'high fit') current.qualified += 1;
+      const score = Number.isFinite(lead.final_score) ? lead.final_score : lead.icp_score;
+      const category = String(lead.final_category || lead.icp_category || '').toLowerCase();
+      if (lead.status === LEAD_STATUS.QUALIFIED || category.includes('excellent') || Number(score) >= 80) {
+        current.qualified += 1;
+      }
       if (lead.status === LEAD_STATUS.TO_ANALYZE) current.toAnalyze += 1;
 
-      const score = Number.isFinite(lead.final_score) ? lead.final_score : lead.icp_score;
       if (Number.isFinite(score)) {
         current.scoreSum += score;
         current.scored += 1;
@@ -229,10 +232,14 @@ export default function Lists() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-[1160px] space-y-6">
+      <div className="rounded-xl border border-[#e6e4df] bg-white px-5 py-4 shadow-sm">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{t('lists.title', { defaultValue: 'Gestion des listes' })}</h1>
+          <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+            {t('lists.eyebrow', { defaultValue: 'Sources importées' })}
+          </p>
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold text-[#1a1200]">{t('lists.title', { defaultValue: 'Gestion des listes' })}</h1>
           <p className="text-slate-500 mt-1 text-sm">
             {t('lists.subtitle', {
               defaultValue: 'Centralisez vos listes importées, fusionnez les doublons et nettoyez vos sources avant les prochaines campagnes.',
@@ -240,28 +247,29 @@ export default function Lists() {
           </p>
         </div>
       </div>
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="rounded-xl border border-[#e6e4df] bg-white p-4 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-slate-500">{t('lists.metrics.totalLists', { defaultValue: 'Listes actives' })}</p>
           <p className="mt-2 text-2xl font-bold text-slate-900">{totalLists}</p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="rounded-xl border border-[#e6e4df] bg-white p-4 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-slate-500">{t('lists.metrics.totalLeads', { defaultValue: 'Leads classés' })}</p>
           <p className="mt-2 text-2xl font-bold text-slate-900">{Math.max(leads.length - unlistedLeads, 0)}</p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="rounded-xl border border-[#e6e4df] bg-white p-4 shadow-sm">
           <p className="text-xs uppercase tracking-wide text-slate-500">{t('lists.metrics.unlisted', { defaultValue: 'Leads non classés' })}</p>
           <p className="mt-2 text-2xl font-bold text-slate-900">{unlistedLeads}</p>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
+      <div className="rounded-xl border border-[#e6e4df] bg-white overflow-hidden shadow-sm">
+        <div className="px-4 py-3 border-b border-[#ece9e2] flex items-center gap-2">
           <FolderOpen className="w-4 h-4 text-slate-500" />
           <p className="text-sm font-semibold text-slate-900">{t('lists.table.title', { defaultValue: 'Portefeuille de listes' })}</p>
         </div>
-        <div className="px-4 py-3 border-b border-slate-100 flex flex-wrap items-center gap-2">
+        <div className="px-4 py-3 border-b border-[#ece9e2] flex flex-wrap items-center gap-2">
           <Input
             value={searchTerm}
             onChange={(event) => {
@@ -316,8 +324,8 @@ export default function Lists() {
         ) : filteredAndSortedLists.length === 0 ? (
           <div className="py-14 text-center text-slate-500 text-sm">{t('lists.empty', { defaultValue: 'Aucune liste disponible. Importez des leads pour démarrer.' })}</div>
         ) : (
-          <div className="divide-y divide-slate-100">
-            <div className="px-4 py-2 bg-slate-50 flex items-center text-xs text-slate-500">
+          <div className="divide-y divide-[#eeece7]">
+            <div className="px-4 py-2 bg-[#faf9f7] flex items-center text-xs text-slate-500">
               <Checkbox
                 checked={allVisibleSelected}
                 onCheckedChange={(checked) => {
@@ -428,7 +436,7 @@ export default function Lists() {
               );
             })}
             {openedListKey ? (
-              <div className="px-4 py-4 border-t border-slate-100 bg-slate-50/70">
+              <div className="px-4 py-4 border-t border-[#ece9e2] bg-[#faf9f7]">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="text-sm font-semibold text-slate-900">
@@ -477,9 +485,12 @@ export default function Lists() {
                             <p className="text-sm font-medium text-slate-900 truncate">{lead.company_name || '-'}</p>
                             <p className="text-xs text-slate-500 truncate">{lead.website_url || lead.industry || '-'}</p>
                           </div>
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 md:block md:text-sm md:text-slate-700">
+                          <div className="min-w-0 text-xs text-slate-600 md:text-sm md:text-slate-700">
                             <p className="truncate"><span className="md:hidden text-slate-400 mr-1">Contact:</span>{lead.contact_name || '-'}</p>
-                            <p className="truncate"><span className="md:hidden text-slate-400 mr-1">Pays:</span>{lead.country || '-'}</p>
+                            <p className="truncate text-slate-400">{lead.contact_role || '-'}</p>
+                          </div>
+                          <div className="text-xs text-slate-600 md:text-sm md:text-slate-700">
+                            <span className="md:hidden text-slate-400 mr-1">Pays:</span>{lead.country || '-'}
                           </div>
                           <div className="text-left md:text-right md:col-start-4">
                             <Button size="sm" variant="ghost" className="h-7 px-2.5 text-xs md:h-8 md:px-3 md:text-sm" onClick={() => navigate(`/leads/${lead.id}`)}>

@@ -135,7 +135,7 @@ function WeightSlider({ label, value, onChange, disabled, description }) {
 
 function SectionCard({ icon: Icon, title, color, children }) {
   return (
-    <Card className="border border-slate-200 shadow-sm">
+    <Card className="border border-[#e6e4df] shadow-sm">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <div className={`w-7 h-7 rounded-lg ${color} flex items-center justify-center`}>
@@ -303,12 +303,17 @@ export default function ICP() {
 
   const icpWeight = formData.weights.meta?.finalScoreWeights?.icp ?? 60;
   const aiWeight = 100 - icpWeight;
+  const isMockMode = dataClient.mode === 'mock';
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-start gap-4 mb-8">
+    <div className="mx-auto w-full max-w-[1160px]">
+      <div className="mb-8 rounded-xl border border-[#e6e4df] bg-white px-5 py-4 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-start gap-4">
         <div className="flex-1">
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{t('icp.title')}</h1>
+          <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+            {t('icp.eyebrow', { defaultValue: 'Profil de scoring' })}
+          </p>
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold text-[#1a1200]">{t('icp.title')}</h1>
           <p className="text-slate-500 mt-1">{t('icp.subtitle')}</p>
           {editing && (
             <p className="text-xs text-amber-600 mt-1 font-medium">
@@ -322,6 +327,8 @@ export default function ICP() {
             <Button
               variant="outline"
               onClick={() => setGenOpen(true)}
+              disabled={isMockMode}
+              title={isMockMode ? t('icp.actions.generateRequiresInternet', { defaultValue: 'Génération IA désactivée en local: elle nécessite Internet et une clé API.' }) : undefined}
               className="gap-2"
             >
               <Sparkles className="w-4 h-4" />
@@ -350,6 +357,7 @@ export default function ICP() {
           </div>
         )}
       </div>
+      </div>
 
       {/* ── First-run prompt ────────────────────────────── */}
       {!activeProfile && !isLoading && (
@@ -359,19 +367,23 @@ export default function ICP() {
               <Sparkles className="w-6 h-6 text-brand-sky" />
             </div>
           </div>
-          <h2 className="text-lg font-bold text-slate-800 mb-1">{t('icp.firstRun.title', 'Create your first ICP profile')}</h2>
+          <h2 className="text-lg font-bold text-slate-800 mb-1">{t('icp.firstRun.title', 'Créer votre premier profil ICP')}</h2>
           <p className="text-sm text-slate-500 mb-4 max-w-sm mx-auto">
-            {t('icp.firstRun.body', 'Describe your ideal customer and Claude will generate a complete scoring profile in seconds.')}
+            {t('icp.firstRun.body', 'Décrivez votre client idéal puis générez un profil, ou remplissez les critères manuellement.')}
           </p>
           <Button
             onClick={() => setGenOpen(true)}
+            disabled={isMockMode}
+            title={isMockMode ? t('icp.actions.generateRequiresInternet', { defaultValue: 'Génération IA désactivée en local: elle nécessite Internet et une clé API.' }) : undefined}
             className="gap-2 bg-gradient-to-r from-brand-sky to-brand-sky-2"
           >
             <Sparkles className="w-4 h-4" />
-            {t('icp.actions.generateWithAi', 'Generate with AI')}
+            {t('icp.actions.generateWithAi', 'Générer avec IA')}
           </Button>
           <p className="text-xs text-slate-400 mt-3">
-            {t('icp.firstRun.hint', 'Or fill the form below manually if you prefer.')}
+            {isMockMode
+              ? t('icp.firstRun.mockHint', 'En local, utilisez le bouton Modifier pour créer le profil manuellement.')
+              : t('icp.firstRun.hint', 'Ou remplissez le formulaire ci-dessous manuellement.')}
           </p>
         </div>
       )}

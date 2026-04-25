@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import BuildStamp from '@/components/ui/BuildStamp';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/lib/AuthContext';
+import { validatePassword } from '@/lib/passwordValidation';
 import { dataClient } from '@/services/dataClient';
 
 export default function AccountSettings() {
@@ -19,16 +20,13 @@ export default function AccountSettings() {
   const usesManagedPasswordRecovery = Boolean(user?.supabase_auth_id);
 
   const [exportLoading, setExportLoading] = useState('');
-  const [exportError, setExportError] = useState('');
 
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteError, setDeleteError] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const downloadJsonExport = async ({ exportType, url, filename, successMessage }) => {
     setExportLoading(exportType);
-    setExportError('');
     try {
       const res = await fetch(url, { credentials: 'include' });
       if (!res.ok) throw new Error(t('accountSettings.exportFailed'));
@@ -43,7 +41,7 @@ export default function AccountSettings() {
       URL.revokeObjectURL(objectUrl);
       toast.success(successMessage);
     } catch (error) {
-      setExportError(error?.message || t('accountSettings.exportFailed'));
+      toast.error(error?.message || t('accountSettings.exportFailed'));
     } finally {
       setExportLoading('');
     }
@@ -70,40 +68,33 @@ export default function AccountSettings() {
   const handleDeleteAccount = async () => {
     if (deleteConfirm !== 'DELETE') return;
     setDeleteLoading(true);
-    setDeleteError('');
     try {
       await dataClient.auth.deleteMe();
       toast.success(t('toasts.accountDeleted'));
       if (logout) await logout().catch(() => {});
       navigate(ROUTES.login, { replace: true });
     } catch (error) {
-      setDeleteError(error?.message || t('accountSettings.deleteFailed'));
+      toast.error(error?.message || t('accountSettings.deleteFailed'));
       setDeleteLoading(false);
     }
   };
 
   const [profileForm, setProfileForm] = useState({ full_name: user?.full_name || '' });
   const [profileLoading, setProfileLoading] = useState(false);
-  const [profileError, setProfileError] = useState('');
-  const [profileSuccess, setProfileSuccess] = useState('');
 
   const [passwordForm, setPasswordForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
   const [passwordLoading, setPasswordLoading] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
-  const [passwordSuccess, setPasswordSuccess] = useState('');
 
   const handleProfileSubmit = async (event) => {
     event.preventDefault();
     setProfileLoading(true);
-    setProfileError('');
-    setProfileSuccess('');
 
     try {
       await dataClient.auth.updateMe({ full_name: profileForm.full_name });
-      setProfileSuccess(t('accountSettings.profileUpdated'));
+      toast.success(t('accountSettings.profileUpdated'));
       if (refreshUser) await refreshUser();
     } catch (error) {
-      setProfileError(error?.message || t('accountSettings.profileUpdateFailed'));
+      toast.error(error?.message || t('accountSettings.profileUpdateFailed'));
     } finally {
       setProfileLoading(false);
     }
@@ -112,29 +103,16 @@ export default function AccountSettings() {
   const handlePasswordSubmit = async (event) => {
     event.preventDefault();
     setPasswordLoading(true);
-    setPasswordError('');
-    setPasswordSuccess('');
 
     if (passwordForm.new_password !== passwordForm.confirm_password) {
-      setPasswordError(t('accountSettings.passwordMismatch'));
+      toast.error(t('accountSettings.passwordMismatch'));
       setPasswordLoading(false);
       return;
     }
 
-    if (passwordForm.new_password.length < 8) {
-      setPasswordError(t('accountSettings.passwordMinLength'));
-      setPasswordLoading(false);
-      return;
-    }
-
-    if (!/[A-Z]/.test(passwordForm.new_password)) {
-      setPasswordError(t('accountSettings.passwordNeedsUppercase'));
-      setPasswordLoading(false);
-      return;
-    }
-
-    if (!/[0-9]/.test(passwordForm.new_password)) {
-      setPasswordError(t('accountSettings.passwordNeedsNumber'));
+    const passwordError = validatePassword(passwordForm.new_password, t);
+    if (passwordError) {
+      toast.error(passwordError);
       setPasswordLoading(false);
       return;
     }
@@ -144,24 +122,27 @@ export default function AccountSettings() {
         current_password: passwordForm.current_password,
         new_password: passwordForm.new_password,
       });
-      setPasswordSuccess(t('accountSettings.passwordChanged'));
+      toast.success(t('accountSettings.passwordChanged'));
       setPasswordForm({ current_password: '', new_password: '', confirm_password: '' });
     } catch (error) {
-      setPasswordError(error?.message || t('accountSettings.passwordChangeFailed'));
+      toast.error(error?.message || t('accountSettings.passwordChangeFailed'));
     } finally {
       setPasswordLoading(false);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">{t('accountSettings.title')}</h1>
+    <div className="mx-auto w-full max-w-[960px] space-y-6">
+      <div className="rounded-xl border border-[#e6e4df] bg-white px-5 py-4 shadow-sm">
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+          {t('accountSettings.eyebrow', { defaultValue: 'Identité et sécurité' })}
+        </p>
+        <h1 className="mt-1 text-2xl font-bold text-[#1a1200]">{t('accountSettings.title')}</h1>
         <p className="text-slate-500 mt-1">{t('accountSettings.subtitle')}</p>
       </div>
 
       {/* Profile */}
-      <Card>
+      <Card className="border-[#e6e4df] shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="w-5 h-5" />
@@ -188,9 +169,6 @@ export default function AccountSettings() {
               />
             </div>
 
-            {profileError && <p className="text-sm text-rose-600">{profileError}</p>}
-            {profileSuccess && <p className="text-sm text-emerald-600">{profileSuccess}</p>}
-
             <Button type="submit" disabled={profileLoading} className="gap-2">
               {profileLoading && <Loader2 className="w-4 h-4 animate-spin" />}
               {t('accountSettings.saveChanges')}
@@ -201,7 +179,7 @@ export default function AccountSettings() {
 
       {/* Password */}
       {usesManagedPasswordRecovery ? (
-        <Card>
+        <Card className="border-[#e6e4df] shadow-sm">
           <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Lock className="w-5 h-5" />
@@ -222,7 +200,7 @@ export default function AccountSettings() {
         </CardContent>
         </Card>
       ) : (
-        <Card>
+        <Card className="border-[#e6e4df] shadow-sm">
           <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Lock className="w-5 h-5" />
@@ -268,9 +246,6 @@ export default function AccountSettings() {
                 />
               </div>
 
-              {passwordError && <p className="text-sm text-rose-600">{passwordError}</p>}
-              {passwordSuccess && <p className="text-sm text-emerald-600">{passwordSuccess}</p>}
-
               <Button type="submit" variant="outline" disabled={passwordLoading} className="gap-2">
                 {passwordLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                 {t('accountSettings.passwordChange')}
@@ -281,7 +256,7 @@ export default function AccountSettings() {
       )}
 
       {/* RGPD — Export */}
-      <Card>
+      <Card className="border-[#e6e4df] shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Download className="w-5 h-5" />
@@ -293,7 +268,6 @@ export default function AccountSettings() {
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
             {t('accountSettings.exportDescription')}
           </div>
-          {exportError && <p className="text-sm text-rose-600">{exportError}</p>}
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button variant="outline" disabled={Boolean(exportLoading)} onClick={handleWorkspaceExport} className="gap-2">
               {exportLoading === 'workspace'
@@ -316,7 +290,7 @@ export default function AccountSettings() {
       </Card>
 
       {/* RGPD — Delete */}
-      <Card className="border-rose-200">
+      <Card className="border-rose-200 shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-rose-700">
             <Trash2 className="w-5 h-5" />
@@ -354,7 +328,6 @@ export default function AccountSettings() {
                 placeholder="DELETE"
                 className="border-rose-300 focus-visible:ring-rose-400 font-mono"
               />
-              {deleteError && <p className="text-sm text-rose-600">{deleteError}</p>}
               <div className="flex gap-2">
                 <Button
                   variant="destructive"
@@ -367,7 +340,7 @@ export default function AccountSettings() {
                 </Button>
                 <Button
                   variant="ghost"
-                  onClick={() => { setShowDeleteConfirm(false); setDeleteConfirm(''); setDeleteError(''); }}
+                  onClick={() => { setShowDeleteConfirm(false); setDeleteConfirm(''); }}
                 >
                   {t('common.cancel')}
                 </Button>
@@ -377,7 +350,7 @@ export default function AccountSettings() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-[#e6e4df] shadow-sm">
         <CardHeader>
           <CardTitle>{t('accountSettings.versionInfoTitle', { defaultValue: 'Version de l’application' })}</CardTitle>
           <CardDescription>{t('accountSettings.versionInfoSubtitle', { defaultValue: 'Utilisez cette empreinte pour vérifier qu’un conteneur ou un domaine sert bien le dernier build.' })}</CardDescription>

@@ -128,6 +128,7 @@ export default function Settings() {
   const [scoringDirty, setScoringDirty] = useState(false);
   const [scoringForm, setScoringForm] = useState(DEFAULT_SCORING_SETTINGS);
   const [savingFlagName, setSavingFlagName] = useState('');
+  const [isLoadingMockDemo, setIsLoadingMockDemo] = useState(false);
   const locale = getLocale(i18n.language);
 
   const { data: icpProfiles = [] } = useQuery({
@@ -151,6 +152,14 @@ export default function Settings() {
     queryKey: ['workspaceFeatureFlags'],
     queryFn: () => dataClient.workspace.listFeatureFlags(),
     staleTime: 30_000,
+  });
+
+  const { data: devCheckup = null, isError: devCheckupError } = useQuery({
+    queryKey: ['devCheckup'],
+    queryFn: () => dataClient.dev.checkup(),
+    enabled: import.meta.env.DEV,
+    retry: 1,
+    staleTime: 60_000,
   });
 
   const activeIcpProfile = useMemo(
@@ -389,10 +398,31 @@ export default function Settings() {
     }
   };
 
+  const handleLoadMockDemo = async () => {
+    setIsLoadingMockDemo(true);
+    try {
+      const result = await dataClient.workspace.loadSampleData();
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success(
+        result?.already_seeded
+          ? t('onboarding.toasts.sampleAlreadyReady', { defaultValue: 'Les données de démonstration sont déjà chargées.' })
+          : t('onboarding.toasts.sampleLoaded', { defaultValue: '{{count}} leads de démonstration chargés.', count: result?.inserted || 0 })
+      );
+    } catch (error) {
+      console.warn('Failed to load mock demo data', error);
+      toast.error(error?.message || t('onboarding.toasts.sampleLoadFailed', { defaultValue: 'Impossible de charger les données de démonstration.' }));
+    } finally {
+      setIsLoadingMockDemo(false);
+    }
+  };
+
   return (
-    <div className="max-w-5xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{t('settings.pageTitle')}</h1>
+    <div className="mx-auto w-full max-w-[1160px]">
+      <div className="mb-8 rounded-xl border border-[#e6e4df] bg-white px-5 py-4 shadow-sm">
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+          {t('settings.eyebrow', { defaultValue: 'Contrôle workspace' })}
+        </p>
+        <h1 className="mt-1 text-2xl sm:text-3xl font-bold text-[#1a1200]">{t('settings.pageTitle')}</h1>
         <p className="text-slate-500 mt-1">{t('settings.pageSubtitle')}</p>
       </div>
 
@@ -602,21 +632,21 @@ export default function Settings() {
                 <ShieldCheck className="w-5 h-5 text-slate-700" />
               </div>
               <div>
-                <CardTitle>Workspace Mode</CardTitle>
-                <CardDescription>Current frontend mode and backend connectivity policy</CardDescription>
+              <CardTitle>{t('settings.dev.workspaceMode.title', { defaultValue: 'Mode workspace' })}</CardTitle>
+              <CardDescription>{t('settings.dev.workspaceMode.description', { defaultValue: 'Mode frontend actuel et politique de connexion backend' })}</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-2">
             <p className="text-sm text-slate-700">
               <ShieldCheck className="inline w-4 h-4 mr-1.5" />
-              Mode: <span className="font-semibold">{appPublicSettings?.mode || 'mock'}</span>
+              {t('settings.dev.workspaceMode.mode', { defaultValue: 'Mode' })}: <span className="font-semibold">{appPublicSettings?.mode || 'mock'}</span>
             </p>
             <p className="text-sm text-slate-500">
-              In API mode, data stays strictly backend-sourced. Use mock mode only for local product exploration.
+              {t('settings.dev.workspaceMode.apiPolicy', { defaultValue: 'En mode API, les données restent servies par le backend. Le mode mock sert à explorer le produit localement.' })}
             </p>
             <p className="text-xs text-slate-500">
-              Front fallback: <span className="font-semibold">{dataClient.debug.allowApiFallback ? 'enabled' : 'disabled'}</span>
+              {t('settings.dev.workspaceMode.fallback', { defaultValue: 'Fallback front' })}: <span className="font-semibold">{dataClient.debug.allowApiFallback ? t('common.enabled') : t('common.disabled')}</span>
             </p>
           </CardContent>
         </Card>}
@@ -674,6 +704,56 @@ export default function Settings() {
           </CardContent>
         </Card>
       </div>
+
+      {import.meta.env.DEV && <Card className="mt-6 border-blue-300 bg-blue-50 min-h-[260px]">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-200 to-cyan-200 flex items-center justify-center">
+              <Wand2 className="w-5 h-5 text-blue-700" />
+            </div>
+            <div>
+              <CardTitle className="text-blue-900">{t('settings.dev.mockData.title', { defaultValue: 'Outils dev - Données mock' })}</CardTitle>
+              <CardDescription className="text-blue-700">{t('settings.dev.mockData.description', { defaultValue: 'Chargez un set de démonstration sans Internet.' })}</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3 flex h-full flex-col justify-between">
+          <div className="space-y-3">
+            {devCheckupError && dataClient.mode !== 'mock' && (
+              <div className="rounded-lg border border-orange-300 bg-orange-50 p-3">
+                <p className="text-sm font-semibold text-orange-900">
+                  {t('settings.dev.mockData.backendUnavailableTitle', { defaultValue: 'Backend indisponible' })}
+                </p>
+                <p className="text-xs text-orange-800 mt-1">
+                  {t('settings.dev.mockData.backendUnavailableBody', { defaultValue: 'Le checkup backend local ne répond pas, mais les données mock frontend restent disponibles.' })}
+                </p>
+              </div>
+            )}
+          </div>
+          <div>
+            <Button
+              onClick={handleLoadMockDemo}
+              disabled={isLoadingMockDemo}
+              className={`w-full font-semibold py-2 px-4 text-base gap-2 ${
+                'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+              title={t('settings.dev.mockData.buttonTitle', { defaultValue: 'Charger des leads de démonstration' })}
+            >
+              {isLoadingMockDemo ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  {t('settings.dev.mockData.loading', { defaultValue: 'Chargement...' })}
+                </>
+              ) : (
+                <>
+                  <Wand2 className="w-5 h-5" />
+                  {t('settings.dev.mockData.import', { defaultValue: 'Importer les leads de démo' })}
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>}
 
       <Card className="mt-6">
         <CardHeader>

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import PasswordStrength from '@/components/PasswordStrength';
 import BrandLogo from '@/components/brand/BrandLogo';
 import { ROUTES } from '@/constants/routes';
+import { validatePassword } from '@/lib/passwordValidation';
 import { dataClient } from '@/services/dataClient';
 import '@/styles/auth-v2.css';
 
@@ -62,6 +63,13 @@ export default function ResetPassword() {
 
     if (form.new_password !== form.confirm_password) {
       setError(t('passwordRecovery.reset.passwordMismatch', 'New passwords do not match.'));
+      setLoading(false);
+      return;
+    }
+
+    const passwordError = validatePassword(form.new_password, t);
+    if (passwordError) {
+      setError(passwordError);
       setLoading(false);
       return;
     }

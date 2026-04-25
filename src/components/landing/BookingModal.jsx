@@ -82,7 +82,7 @@ export default function BookingModal({ open, onClose }) {
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
       >
-        <button className="modal-close" type="button" onClick={onClose} aria-label={t('common.close')}>✕</button>
+        <button className="modal-close" type="button" onClick={onClose} aria-label={t('common.close', { defaultValue: 'Fermer' })}>✕</button>
 
         {submitted ? (
           <div style={{ textAlign: 'center', padding: '32px 0' }}>
@@ -90,7 +90,7 @@ export default function BookingModal({ open, onClose }) {
             <div id={titleId} className="modal-title">{t('landing.bookingModal.successTitle')}</div>
             <p id={descriptionId} className="modal-sub">{submissionNote || t('landing.bookingModal.successNote')}</p>
             <button className="m-submit" type="button" onClick={onClose} style={{ marginTop: 16 }}>
-              {t('common.close')}
+              {t('common.close', { defaultValue: 'Fermer' })}
             </button>
           </div>
         ) : (

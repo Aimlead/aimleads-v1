@@ -1,5 +1,6 @@
 import { FOLLOW_UP_STATUS, LEAD_STATUS } from '@/constants/leads';
 import { ROUTES } from '@/constants/routes';
+import { computeIcpScoreFromProfile, resolveLeadScores } from '@/lib/leadScoring';
 import { mockDb } from '@/services/mock/mockDb';
 
 const defaultApiBase = '/api';
@@ -172,6 +173,119 @@ const sanitizeWebsite = (website) => {
   return String(website).replace(/^https?:\/\//, '').trim();
 };
 
+const toDataUrl = (payload) => {
+  const json = JSON.stringify(payload, null, 2);
+  return `data:application/json;charset=utf-8,${encodeURIComponent(json)}`;
+};
+
+const getIcpCategory = (score) => {
+  if (score >= 80) return 'Excellent';
+  if (score >= 50) return 'Strong Fit';
+  if (score >= 20) return 'Medium Fit';
+  return 'Low Fit';
+};
+
+const estimateLocalSignalScore = (lead) => {
+  let score = 45;
+  if (lead?.contact_email || lead?.email) score += 12;
+  if (lead?.phone || lead?.contact_phone) score += 8;
+  if (lead?.linkedin_url || lead?.linkedin) score += 6;
+  if (lead?.website_url) score += 6;
+  if (Array.isArray(lead?.internet_signals) && lead.internet_signals.length > 0) score += 10;
+  if (String(lead?.industry || '').toLowerCase().includes('saas')) score += 8;
+  return Math.max(0, Math.min(100, Math.round(score)));
+};
+
+const buildLocalSequence = (lead, { tone = 'consultative' } = {}) => {
+  const company = lead?.company_name || 'votre équipe';
+  const contact = lead?.contact_name || 'Bonjour';
+  const role = lead?.contact_role || 'votre rôle';
+  const hook = lead?.analysis_summary || lead?.recommended_action || `${company} semble avoir un bon potentiel de priorisation commerciale.`;
+
+  return {
+    sequence_name: `Séquence ${company}`,
+    objective: `Transformer ${company} en conversation qualifiée avec un ton ${tone}.`,
+    personalization_hooks: [
+      hook,
+      `${role} peut relier le besoin métier aux priorités pipeline.`,
+    ],
+    touches: [
+      {
+        day: 1,
+        channel: 'email',
+        subject: `${company} - priorisation des comptes`,
+        body: `${contact},\n\nJe me permets de vous contacter car ${hook}\n\nAimLeads aide les équipes sales à repérer les comptes à traiter maintenant, avec un scoring lisible et une prochaine action claire.`,
+        cta: 'Ouvert à un échange de 15 minutes cette semaine ?',
+      },
+      {
+        day: 3,
+        channel: 'linkedin',
+        body: `Bonjour ${lead?.contact_name || ''}, je vous ai écrit au sujet de la priorisation des comptes ${company}. Curieux d'échanger si le sujet est d'actualité.`,
+        cta: 'Se connecter',
+      },
+      {
+        day: 6,
+        channel: 'email_followup',
+        subject: `Re: ${company} - priorisation`,
+        body: `Je vous relance rapidement. Si la qualification des leads ou la lecture des signaux prend trop de temps côté équipe, je peux vous montrer un workflow simple à tester avec vos propres comptes.`,
+        cta: 'Je vous envoie deux créneaux ?',
+      },
+    ],
+  };
+};
+
+const createSampleLeads = () => ([
+  {
+    id: mockDb.createId(),
+    company_name: 'Nexa Revenue',
+    website_url: 'nexarevenue.io',
+    industry: 'SaaS',
+    company_size: 280,
+    country: 'France',
+    contact_name: 'Emma Laurent',
+    contact_role: 'VP Sales',
+    contact_email: 'emma.laurent@nexarevenue.io',
+    phone: '+33123456780',
+    linkedin_url: 'https://www.linkedin.com',
+    source_list: 'Demo pipeline',
+    status: LEAD_STATUS.TO_ANALYZE,
+    follow_up_status: FOLLOW_UP_STATUS.TO_CONTACT,
+    created_at: mockDb.nowIso(),
+    created_date: mockDb.nowIso(),
+  },
+  {
+    id: mockDb.createId(),
+    company_name: 'Atlas Fintech',
+    website_url: 'atlasfintech.co',
+    industry: 'FinTech',
+    company_size: 620,
+    country: 'Belgium',
+    contact_name: 'Noah Dubois',
+    contact_role: 'Head of Growth',
+    contact_email: 'noah.dubois@atlasfintech.co',
+    source_list: 'Demo pipeline',
+    status: LEAD_STATUS.TO_ANALYZE,
+    follow_up_status: FOLLOW_UP_STATUS.TO_CONTACT,
+    created_at: mockDb.nowIso(),
+    created_date: mockDb.nowIso(),
+  },
+  {
+    id: mockDb.createId(),
+    company_name: 'Mistral Ops',
+    website_url: 'mistralops.eu',
+    industry: 'Logistics',
+    company_size: 1800,
+    country: 'Germany',
+    contact_name: 'Sofia Weber',
+    contact_role: 'COO',
+    source_list: 'Demo pipeline',
+    status: LEAD_STATUS.TO_ANALYZE,
+    follow_up_status: FOLLOW_UP_STATUS.TO_CONTACT,
+    created_at: mockDb.nowIso(),
+    created_date: mockDb.nowIso(),
+  },
+]);
+
 const leadsMockApi = {
   async list() {
     return sortByCreatedDateDesc(mockDb.getLeads());
@@ -257,6 +371,83 @@ const leadsMockApi = {
 
   async discoverSignals(id) {
     return this.getById(id);
+  },
+
+  async scoreIcp(id) {
+    const activeIcp = icpMockApi.getActive ? await icpMockApi.getActive() : null;
+    const lead = await this.getById(id);
+    if (!lead) return null;
+
+    const computed = computeIcpScoreFromProfile(lead, activeIcp);
+    const icpScore = computed?.score ?? Number(lead.icp_score || 0);
+    return this.update(id, {
+      icp_score: icpScore,
+      icp_category: getIcpCategory(icpScore),
+      score_details: {
+        ...(lead.score_details || {}),
+        icp: {
+          profile_id: activeIcp?.id,
+          profile_name: activeIcp?.name,
+          criteria: computed?.criteria || [],
+          calculated_locally: true,
+        },
+      },
+    });
+  },
+
+  async reanalyze(id) {
+    const activeIcp = await icpMockApi.getActive();
+    const lead = await this.getById(id);
+    if (!lead) return null;
+
+    const computed = computeIcpScoreFromProfile(lead, activeIcp);
+    const icpScore = computed?.score ?? Number(lead.icp_score || 0);
+    const aiScore = estimateLocalSignalScore(lead);
+    const scores = resolveLeadScores({ ...lead, icp_score: icpScore, ai_score: aiScore }, activeIcp);
+    const finalScore = scores.finalScore ?? icpScore;
+    const nextAction = finalScore >= 80
+      ? 'Priorité haute: contacter maintenant avec un message personnalisé.'
+      : finalScore >= 55
+        ? 'À travailler: envoyer un email court et valider le besoin.'
+        : 'À enrichir ou garder pour nurturing.';
+
+    return this.update(id, {
+      status: finalScore >= 45 ? LEAD_STATUS.QUALIFIED : LEAD_STATUS.REJECTED,
+      icp_score: icpScore,
+      icp_category: getIcpCategory(icpScore),
+      ai_score: aiScore,
+      final_score: finalScore,
+      final_recommended_action: nextAction,
+      recommended_action: nextAction,
+      analysis_summary: `${lead.company_name || 'Ce lead'} obtient ${finalScore}/100 en analyse locale, avec un ICP à ${icpScore}/100 et un signal estimé à ${aiScore}/100.`,
+      generated_icebreakers: {
+        email: `J'ai remarqué que ${lead.company_name || 'votre équipe'} correspond à notre ICP et semble prioritaire pour un échange court.`,
+        linkedin: `Bonjour ${lead.contact_name || ''}, curieux d'échanger sur vos priorités de qualification commerciale.`,
+        call: `Mentionner le score local ${finalScore}/100 et valider le besoin de priorisation.`,
+      },
+      score_details: {
+        ...(lead.score_details || {}),
+        icp: {
+          profile_id: activeIcp?.id,
+          profile_name: activeIcp?.name,
+          criteria: computed?.criteria || [],
+          calculated_locally: true,
+        },
+        signal_analysis: {
+          ai_score: aiScore,
+          confidence: 72,
+          icebreaker: `Le contexte disponible indique une bonne raison de prioriser ${lead.company_name || 'ce compte'}.`,
+          calculated_locally: true,
+        },
+      },
+      last_analyzed_at: mockDb.nowIso(),
+    });
+  },
+
+  async generateSequence(id, payload = {}) {
+    const lead = await this.getById(id);
+    if (!lead) return null;
+    return buildLocalSequence(lead, payload);
   },
 };
 
@@ -463,7 +654,18 @@ export const dataClient = {
       return runWithMode({
         operationName: 'auth.login',
         apiCall: () => apiClient.auth.login(payload),
-        fallbackCall: async () => mockDb.getUser(),
+        fallbackCall: async () => {
+          const existing = mockDb.getUser();
+          if (existing) return existing;
+          const user = {
+            id: mockDb.createId(),
+            email: payload?.email || 'demo@aimleads.local',
+            full_name: payload?.full_name || 'Demo User',
+            created_at: mockDb.nowIso(),
+          };
+          mockDb.setUser(user);
+          return user;
+        },
         passAuthErrors: true,
       });
     },
@@ -472,7 +674,16 @@ export const dataClient = {
       return runWithMode({
         operationName: 'auth.register',
         apiCall: () => apiClient.auth.register(payload),
-        fallbackCall: async () => mockDb.getUser(),
+        fallbackCall: async () => {
+          const user = {
+            id: mockDb.createId(),
+            email: payload?.email || 'demo@aimleads.local',
+            full_name: payload?.full_name || 'Demo User',
+            created_at: mockDb.nowIso(),
+          };
+          mockDb.setUser(user);
+          return user;
+        },
       });
     },
 
@@ -498,7 +709,7 @@ export const dataClient = {
       return runWithMode({
         operationName: 'auth.completePasswordRecovery',
         apiCall: () => apiRequest('/auth/reset-password/complete', { method: 'POST', body: payload }),
-        fallbackCall: mockUnsupported,
+        fallbackCall: async () => ({ ok: true }),
       });
     },
 
@@ -506,7 +717,37 @@ export const dataClient = {
       return runWithMode({
         operationName: 'auth.updateMe',
         apiCall: () => apiClient.auth.updateMe(payload),
-        fallbackCall: mockUnsupported,
+        fallbackCall: async () => {
+          const current = mockDb.getUser() || {};
+          const updated = {
+            ...current,
+            full_name: payload?.full_name ?? current.full_name,
+            updated_at: mockDb.nowIso(),
+          };
+          mockDb.setUser(updated);
+          return updated;
+        },
+      });
+    },
+
+    exportMe() {
+      if (FORCED_MODE === 'mock') {
+        return toDataUrl({
+          exported_at: mockDb.nowIso(),
+          user: mockDb.getUser(),
+        });
+      }
+      return apiClient.auth.exportMe();
+    },
+
+    async deleteMe() {
+      return runWithMode({
+        operationName: 'auth.deleteMe',
+        apiCall: () => apiClient.auth.deleteMe(),
+        fallbackCall: async () => {
+          mockDb.deleteUser();
+          return { deleted: true };
+        },
       });
     },
 
@@ -630,7 +871,7 @@ export const dataClient = {
       return runWithMode({
         operationName: 'leads.scoreIcp',
         apiCall: () => apiClient.leads.scoreIcp(id),
-        fallbackCall: mockUnsupported,
+        fallbackCall: () => leadsMockApi.scoreIcp(id),
         passAuthErrors: true,
       });
     },
@@ -639,7 +880,7 @@ export const dataClient = {
       return runWithMode({
         operationName: 'leads.reanalyze',
         apiCall: () => apiClient.leads.reanalyze(id, payload),
-        fallbackCall: mockUnsupported,
+        fallbackCall: () => leadsMockApi.reanalyze(id, payload),
         passAuthErrors: true,
       });
     },
@@ -664,7 +905,7 @@ export const dataClient = {
       return runWithMode({
         operationName: 'leads.generateSequence',
         apiCall: () => apiClient.leads.generateSequence(id, payload),
-        fallbackCall: mockUnsupported,
+        fallbackCall: () => leadsMockApi.generateSequence(id, payload),
         passAuthErrors: true,
       });
     },
@@ -786,7 +1027,14 @@ export const dataClient = {
       return runWithMode({
         operationName: 'workspace.loadSampleData',
         apiCall: () => apiClient.workspace.loadSampleData(),
-        fallbackCall: mockUnsupported,
+        fallbackCall: async () => {
+          const leads = mockDb.getLeads();
+          const alreadySeeded = leads.some((lead) => lead.source_list === 'Demo pipeline');
+          if (alreadySeeded) return { already_seeded: true, inserted: 0 };
+          const sampleLeads = createSampleLeads();
+          mockDb.setLeads([...sampleLeads, ...leads]);
+          return { already_seeded: false, inserted: sampleLeads.length, createdLeads: sampleLeads };
+        },
         passAuthErrors: true,
       });
     },
@@ -794,7 +1042,7 @@ export const dataClient = {
       return runWithMode({
         operationName: 'workspace.listInvites',
         apiCall: () => apiClient.workspace.listInvites(),
-        fallbackCall: async () => [],
+        fallbackCall: async () => mockDb.getInvites(),
         passAuthErrors: true,
       });
     },
@@ -864,7 +1112,20 @@ export const dataClient = {
       return runWithMode({
         operationName: 'workspace.inviteMember',
         apiCall: () => apiClient.workspace.inviteMember(payload),
-        fallbackCall: mockUnsupported,
+        fallbackCall: async () => {
+          const email = String(payload?.email || '').trim().toLowerCase();
+          if (!email) throw new Error('Email is required.');
+          const invite = {
+            id: mockDb.createId(),
+            email,
+            role: payload?.role || 'member',
+            status: 'pending',
+            invited_at: mockDb.nowIso(),
+            created_at: mockDb.nowIso(),
+          };
+          mockDb.setInvites([invite, ...mockDb.getInvites().filter((item) => item.email !== email)]);
+          return invite;
+        },
         passAuthErrors: true,
       });
     },
@@ -872,7 +1133,11 @@ export const dataClient = {
       return runWithMode({
         operationName: 'workspace.revokeInvite',
         apiCall: () => apiClient.workspace.revokeInvite(inviteId),
-        fallbackCall: mockUnsupported,
+        fallbackCall: async () => {
+          const before = mockDb.getInvites();
+          mockDb.setInvites(before.filter((invite) => String(invite.id) !== String(inviteId)));
+          return { revoked: true };
+        },
         passAuthErrors: true,
       });
     },
@@ -880,7 +1145,7 @@ export const dataClient = {
       return runWithMode({
         operationName: 'workspace.updateMemberRole',
         apiCall: () => apiClient.workspace.updateMemberRole(memberUserId, payload),
-        fallbackCall: mockUnsupported,
+        fallbackCall: async () => ({ user_id: memberUserId, role: payload?.role || 'member' }),
         passAuthErrors: true,
       });
     },
@@ -888,11 +1153,20 @@ export const dataClient = {
       return runWithMode({
         operationName: 'workspace.transferOwnership',
         apiCall: () => apiClient.workspace.transferOwnership(memberUserId),
-        fallbackCall: mockUnsupported,
+        fallbackCall: async () => ({ user_id: memberUserId, role: 'owner' }),
         passAuthErrors: true,
       });
     },
     exportUrl() {
+      if (FORCED_MODE === 'mock') {
+        return toDataUrl({
+          exported_at: mockDb.nowIso(),
+          user: mockDb.getUser(),
+          leads: mockDb.getLeads(),
+          icp_profiles: mockDb.getIcpProfiles(),
+          invites: mockDb.getInvites(),
+        });
+      }
       return apiClient.workspace.exportUrl();
     },
     async getCredits(params = {}) {
@@ -982,7 +1256,7 @@ export const dataClient = {
       return runWithMode({
         operationName: 'crm.list',
         apiCall: () => apiClient.crm.list(),
-        fallbackCall: async () => [],
+        fallbackCall: async () => mockDb.getCrmIntegrations(),
         passAuthErrors: true,
       });
     },
@@ -990,7 +1264,24 @@ export const dataClient = {
       return runWithMode({
         operationName: 'crm.save',
         apiCall: () => apiClient.crm.save(payload),
-        fallbackCall: mockUnsupported,
+        fallbackCall: async () => {
+          const crmType = String(payload?.crm_type || '').trim().toLowerCase();
+          if (!crmType) throw new Error('CRM type is required.');
+          const masked = payload?.api_token ? `••••${String(payload.api_token).slice(-4)}` : '';
+          const item = {
+            id: crmType,
+            crm_type: crmType,
+            api_token: masked,
+            config: payload?.config || {},
+            is_active: true,
+            connected_at: mockDb.nowIso(),
+            updated_at: mockDb.nowIso(),
+            field_mapping: {},
+          };
+          const next = [item, ...mockDb.getCrmIntegrations().filter((entry) => entry.crm_type !== crmType)];
+          mockDb.setCrmIntegrations(next);
+          return item;
+        },
         passAuthErrors: true,
       });
     },
@@ -998,7 +1289,10 @@ export const dataClient = {
       return runWithMode({
         operationName: 'crm.delete',
         apiCall: () => apiClient.crm.delete(crmType),
-        fallbackCall: mockUnsupported,
+        fallbackCall: async () => {
+          mockDb.setCrmIntegrations(mockDb.getCrmIntegrations().filter((entry) => entry.crm_type !== crmType));
+          return { deleted: true };
+        },
         passAuthErrors: true,
       });
     },
@@ -1006,7 +1300,15 @@ export const dataClient = {
       return runWithMode({
         operationName: 'crm.test',
         apiCall: () => apiClient.crm.test(crmType),
-        fallbackCall: async () => ({ success: false, error: 'mock_mode' }),
+        fallbackCall: async () => {
+          const integrations = mockDb.getCrmIntegrations();
+          const existing = integrations.find((entry) => entry.crm_type === crmType && entry.is_active);
+          if (!existing) return { success: false, error: 'not_connected' };
+          mockDb.setCrmIntegrations(integrations.map((entry) =>
+            entry.crm_type === crmType ? { ...entry, last_tested_at: mockDb.nowIso() } : entry
+          ));
+          return { success: true, mock: true };
+        },
         passAuthErrors: true,
       });
     },
@@ -1014,7 +1316,17 @@ export const dataClient = {
       return runWithMode({
         operationName: 'crm.syncLead',
         apiCall: () => apiClient.crm.syncLead(leadId, crmType),
-        fallbackCall: mockUnsupported,
+        fallbackCall: async () => {
+          await leadsMockApi.update(leadId, {
+            crm_sync_status: 'synced',
+            crm_last_synced_at: mockDb.nowIso(),
+            crm_type: crmType,
+          });
+          mockDb.setCrmIntegrations(mockDb.getCrmIntegrations().map((entry) =>
+            entry.crm_type === crmType ? { ...entry, last_synced_at: mockDb.nowIso() } : entry
+          ));
+          return { success: true, lead_id: leadId, crm_type: crmType };
+        },
         passAuthErrors: true,
       });
     },
@@ -1022,7 +1334,16 @@ export const dataClient = {
       return runWithMode({
         operationName: 'crm.syncBulk',
         apiCall: () => apiClient.crm.syncBulk(leadIds, crmType),
-        fallbackCall: mockUnsupported,
+        fallbackCall: async () => {
+          for (const leadId of leadIds || []) {
+            await leadsMockApi.update(leadId, {
+              crm_sync_status: 'synced',
+              crm_last_synced_at: mockDb.nowIso(),
+              crm_type: crmType,
+            });
+          }
+          return { success: true, synced: (leadIds || []).length, failed: 0 };
+        },
         passAuthErrors: true,
       });
     },
@@ -1038,7 +1359,8 @@ export const dataClient = {
       return runWithMode({
         operationName: 'crm.getFieldMapping',
         apiCall: () => apiClient.crm.getFieldMapping(crmType),
-        fallbackCall: async () => ({}),
+        fallbackCall: async () =>
+          mockDb.getCrmIntegrations().find((entry) => entry.crm_type === crmType)?.field_mapping || {},
         passAuthErrors: true,
       });
     },
@@ -1046,7 +1368,12 @@ export const dataClient = {
       return runWithMode({
         operationName: 'crm.saveFieldMapping',
         apiCall: () => apiClient.crm.saveFieldMapping(crmType, mapping),
-        fallbackCall: mockUnsupported,
+        fallbackCall: async () => {
+          mockDb.setCrmIntegrations(mockDb.getCrmIntegrations().map((entry) =>
+            entry.crm_type === crmType ? { ...entry, field_mapping: mapping, updated_at: mockDb.nowIso() } : entry
+          ));
+          return { crm_type: crmType, mapping };
+        },
         passAuthErrors: true,
       });
     },

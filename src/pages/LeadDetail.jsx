@@ -214,6 +214,26 @@ export default function LeadDetail() {
   const [sequenceHandledJobId, setSequenceHandledJobId] = useState('');
   const [signalAnalysisError, setSignalAnalysisError] = useState('');
 
+  const JOB_POLL_TIMEOUT_MS = 10 * 60 * 1000;
+
+  React.useEffect(() => {
+    if (!activeJob?.jobId) return;
+    const timerId = setTimeout(() => {
+      setActiveJob(null);
+      toast.error(t('leads.asyncJobTimeout', { defaultValue: 'Analysis job timed out. Please try again.' }));
+    }, JOB_POLL_TIMEOUT_MS);
+    return () => clearTimeout(timerId);
+  }, [activeJob?.jobId, t]);
+
+  React.useEffect(() => {
+    if (!sequenceActiveJobId) return;
+    const timerId = setTimeout(() => {
+      setSequenceActiveJobId('');
+      toast.error(t('leads.asyncJobTimeout', { defaultValue: 'Sequence job timed out. Please try again.' }));
+    }, JOB_POLL_TIMEOUT_MS);
+    return () => clearTimeout(timerId);
+  }, [sequenceActiveJobId, t]);
+
   React.useEffect(() => {
     if (!lead) return;
     setNotes(lead.notes || '');
@@ -679,13 +699,10 @@ export default function LeadDetail() {
               );
             })
           ) : (
-            <>
-              {/* TODO: enable CRM sync action when an active CRM integration exists for this workspace. */}
-              <Button size="sm" variant="outline" disabled>
-                <Database className="mr-1.5 h-3.5 w-3.5" />
-                CRM sync
-              </Button>
-            </>
+            <Button size="sm" variant="outline" onClick={() => navigate(ROUTES.crmIntegration)}>
+              <Database className="mr-1.5 h-3.5 w-3.5" />
+              Configure CRM
+            </Button>
           )}
         </CardContent>
       </Card>

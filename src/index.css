@@ -4,24 +4,24 @@
 
 @layer base {
   :root {
-    --background: 220 20% 97%;
-    --foreground: 224 40% 12%;
+    --background: 48 18% 96%;
+    --foreground: 37 100% 5%;
     --card: 0 0% 100%;
-    --card-foreground: 224 40% 12%;
+    --card-foreground: 37 100% 5%;
     --popover: 0 0% 100%;
     --popover-foreground: 224 40% 12%;
-    --primary: 213 100% 61%;
+    --primary: 38 88% 58%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 15% 93%;
+    --secondary: 42 16% 92%;
     --secondary-foreground: 224 30% 25%;
-    --muted: 220 15% 95%;
-    --muted-foreground: 220 15% 50%;
-    --accent: 142 62% 60%;
-    --accent-foreground: 0 0% 100%;
+    --muted: 44 17% 94%;
+    --muted-foreground: 35 8% 45%;
+    --accent: 38 88% 58%;
+    --accent-foreground: 37 100% 5%;
     --destructive: 4 86% 58%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 20% 88%;
-    --input: 220 20% 91%;
+    --border: 40 14% 86%;
+    --input: 40 14% 88%;
     --ring: 213 100% 61%;
     --radius: 0.75rem;
     --sidebar-background: 224 45% 9%;
@@ -38,11 +38,11 @@
     --c-mint:    #5AD38C;
     --c-coral:   #FF6F61;
     --c-sand:    #F5F0E8;
-    --c-bg:      #f4f6fa;
+    --c-bg:      #f7f7f5;
     --c-surface: #ffffff;
-    --c-border:  #dce1ec;
-    --c-text:    #0f1a2e;
-    --c-muted:   #6b7a99;
+    --c-border:  #e6e4df;
+    --c-text:    #1a1200;
+    --c-muted:   #787268;
 
     /* Shadow scale */
     --shadow-xs:  0 1px 3px rgba(15,26,46,.05);
@@ -92,7 +92,7 @@
 .aimlead-btn-ghost:hover { background: var(--c-bg); color: var(--c-text); }
 
 .app-card {
-  background: #fff; border: 1px solid var(--c-border); border-radius: 16px;
+  background: #fff; border: 1px solid var(--c-border); border-radius: 12px;
   box-shadow: var(--shadow-xs); transition: border-color .2s, box-shadow .2s, transform .2s;
 }
 .app-card:hover { border-color: rgba(58,141,255,.3); box-shadow: var(--shadow-md); transform: translateY(-1px); }
@@ -118,7 +118,7 @@
 .lead-card:hover { border-color: rgba(58,141,255,.35); box-shadow: var(--shadow-md); transform: translateY(-1px); }
 
 .metric-card {
-  background: #fff; border: 1px solid #e8edf5; border-radius: 16px;
+  background: #fff; border: 1px solid var(--c-border); border-radius: 12px;
   padding: 20px 24px; box-shadow: var(--shadow-xs); transition: box-shadow .2s, transform .2s, border-color .2s;
 }
 .metric-card:hover { box-shadow: var(--shadow-md); border-color: rgba(58,141,255,.2); transform: translateY(-1px); }
@@ -126,7 +126,7 @@
 .leads-table-row { border-bottom: 1px solid #f1f4f9; transition: background .12s; }
 .leads-table-row:hover { background: #f8fafc; }
 
-.score-panel { background: #fff; border: 1px solid #e8edf5; border-radius: 16px; padding: 24px 20px; box-shadow: 0 1px 4px rgba(15,26,46,.04); }
+.score-panel { background: #fff; border: 1px solid var(--c-border); border-radius: 12px; padding: 24px 20px; box-shadow: 0 1px 4px rgba(15,26,46,.04); }
 .score-mini-card { background: #f8fafc; border: 1px solid #e8edf5; border-radius: 10px; padding: 12px 14px; }
 .score-mini-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--c-muted); margin-bottom: 4px; }
 .score-mini-value { font-size: 22px; font-weight: 700; color: var(--c-text); letter-spacing: -0.03em; line-height: 1.1; }
@@ -143,7 +143,7 @@
 .signal-positive { background: #e8faf1; color: #1a8c56; border: 1px solid rgba(26,140,86,.18); border-radius: 8px; padding: 6px 12px; font-size: 12.5px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
 .signal-negative { background: #fff0ef; color: #c43a30; border: 1px solid rgba(196,58,48,.18); border-radius: 8px; padding: 6px 12px; font-size: 12.5px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
 
-.form-section { background: #fff; border: 1px solid #e8edf5; border-radius: 16px; padding: 24px 26px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(15,26,46,.04); }
+.form-section { background: #fff; border: 1px solid var(--c-border); border-radius: 12px; padding: 24px 26px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(15,26,46,.04); }
 .form-section-title { font-size: 15px; font-weight: 700; color: var(--c-text); letter-spacing: -0.02em; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
 .tag-chip { background: #eef2ff; color: #4f46e5; border: 1px solid rgba(79,70,229,.2); border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 5px; }
 

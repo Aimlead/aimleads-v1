@@ -25,16 +25,16 @@ import { LEAD_STATUS } from '@/constants/leads';
 import { dataClient } from '@/services/dataClient';
 
 const CATEGORY_COLORS = {
-  Excellent: '#7c3aed',
-  'Strong Fit': '#2563eb',
+  Excellent: '#f0a63b',
+  'Strong Fit': '#3A8DFF',
   'Medium Fit': '#d97706',
   'Low Fit': '#dc2626',
   Excluded: '#6b7280',
 };
 
 const SCORE_BANDS = [
-  { label: '80–100', min: 80, max: 100, color: '#7c3aed' },
-  { label: '60–79', min: 60, max: 79, color: '#2563eb' },
+  { label: '80-100', min: 80, max: 100, color: '#f0a63b' },
+  { label: '60-79', min: 60, max: 79, color: '#3A8DFF' },
   { label: '40–59', min: 40, max: 59, color: '#d97706' },
   { label: '20–39', min: 20, max: 39, color: '#f97316' },
   { label: '0–19', min: 0, max: 19, color: '#dc2626' },
@@ -46,7 +46,7 @@ const StatCard = ({ icon: Icon, value, label, sub, color, delay = 0 }) => (
     initial={{ opacity: 0, y: 16 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.4, delay }}
-    className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm"
+    className="rounded-xl border border-[#e6e4df] bg-white p-5 shadow-sm"
   >
     <div className="flex items-center gap-3">
       <div className={`w-11 h-11 rounded-xl ${color} flex items-center justify-center`}>
@@ -66,10 +66,10 @@ export default function Analytics() {
   const [dateRangeDays, setDateRangeDays] = useState(null); // null = all time
 
   const dateRanges = [
-    { label: t('analytics.ranges.last7', { defaultValue: 'Last 7 days' }), days: 7 },
-    { label: t('analytics.ranges.last30', { defaultValue: 'Last 30 days' }), days: 30 },
-    { label: t('analytics.ranges.last90', { defaultValue: 'Last 90 days' }), days: 90 },
-    { label: t('analytics.ranges.last365', { defaultValue: 'Last 365 days' }), days: 365 },
+    { label: t('analytics.ranges.last7', { defaultValue: '7 derniers jours' }), days: 7 },
+    { label: t('analytics.ranges.last30', { defaultValue: '30 derniers jours' }), days: 30 },
+    { label: t('analytics.ranges.last90', { defaultValue: '90 derniers jours' }), days: 90 },
+    { label: t('analytics.ranges.last365', { defaultValue: '12 derniers mois' }), days: 365 },
   ];
 
   const { data: allLeads = [], isLoading } = useQuery({
@@ -142,7 +142,7 @@ export default function Analytics() {
   const sourceListData = useMemo(() => {
     const groups = {};
     for (const lead of leads) {
-      const key = lead.source_list || t('analytics.unlistedSource', { defaultValue: 'Unlisted' });
+      const key = lead.source_list || t('analytics.unlistedSource', { defaultValue: 'Sans liste' });
       if (!groups[key]) groups[key] = { list: key, total: 0, scoreSum: 0, qualified: 0 };
       groups[key].total += 1;
       const score = Number.isFinite(lead.final_score) ? lead.final_score : lead.icp_score;
@@ -168,11 +168,15 @@ export default function Analytics() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="mx-auto w-full max-w-[1160px] space-y-6">
+      <div className="rounded-xl border border-[#e6e4df] bg-white px-5 py-4 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{t('analytics.title', { defaultValue: 'Analytics' })}</h1>
-          <p className="text-slate-500 mt-1 text-sm">{t('analytics.subtitle', { defaultValue: 'Lead scoring performance and pipeline insights' })}</p>
+          <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+            {t('analytics.eyebrow', { defaultValue: 'Pilotage' })}
+          </p>
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold text-[#1a1200]">{t('analytics.title', { defaultValue: 'Analytiques' })}</h1>
+          <p className="text-slate-500 mt-1 text-sm">{t('analytics.subtitle', { defaultValue: 'Performance du scoring lead et insights pipeline.' })}</p>
         </div>
         <div className="flex items-center gap-1.5 flex-wrap">
           <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
@@ -183,8 +187,8 @@ export default function Analytics() {
               onClick={() => setDateRangeDays(dateRangeDays === range.days ? null : range.days)}
               className={`text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
                 dateRangeDays === range.days
-                  ? 'bg-brand-sky text-white border-brand-sky'
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-brand-sky/40 hover:text-brand-sky'
+                  ? 'bg-[#1a1200] text-white border-[#1a1200]'
+                  : 'bg-white text-slate-600 border-[#e6e4df] hover:border-brand-sky/40 hover:text-brand-sky'
               }`}
             >
               {range.label}
@@ -195,37 +199,38 @@ export default function Analytics() {
               type="button"
               onClick={() => setDateRangeDays(null)}
               className="text-xs px-2 py-1.5 rounded-lg text-slate-400 hover:text-slate-600"
-              aria-label={t('analytics.clearDateFilter', { defaultValue: 'Clear date filter' })}
+              aria-label={t('analytics.clearDateFilter', { defaultValue: 'Effacer le filtre de dates' })}
             >
               <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
+        </div>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={Users} value={stats.total} label={t('analytics.cards.totalLeads', { defaultValue: 'Total Leads' })} color="bg-violet-500" delay={0} />
+        <StatCard icon={Users} value={stats.total} label={t('analytics.cards.totalLeads', { defaultValue: 'Total leads' })} color="bg-slate-900" delay={0} />
         <StatCard
           icon={TrendingUp}
           value={`${stats.conversionRate}%`}
-          label={t('analytics.cards.qualificationRate', { defaultValue: 'Qualification Rate' })}
-          sub={t('analytics.cards.qualifiedCount', { defaultValue: '{{count}} qualified', count: stats.qualified })}
+          label={t('analytics.cards.qualificationRate', { defaultValue: 'Taux de qualification' })}
+          sub={t('analytics.cards.qualifiedCount', { defaultValue: '{{count}} qualifiés', count: stats.qualified })}
           color="bg-emerald-500"
           delay={0.05}
         />
         <StatCard
           icon={Target}
           value={stats.avgScore}
-          label={t('analytics.cards.avgFinalScore', { defaultValue: 'Avg Final Score' })}
-          sub={t('analytics.cards.avgFinalScoreHint', { defaultValue: 'across all leads' })}
+          label={t('analytics.cards.avgFinalScore', { defaultValue: 'Score final moyen' })}
+          sub={t('analytics.cards.avgFinalScoreHint', { defaultValue: 'sur les leads scorés' })}
           color="bg-amber-500"
           delay={0.1}
         />
         <StatCard
           icon={Zap}
           value={stats.excellent}
-          label={t('analytics.cards.excellentLeads', { defaultValue: 'Excellent Leads' })}
+          label={t('analytics.cards.excellentLeads', { defaultValue: 'Leads excellents' })}
           sub={t('analytics.cards.excellentLeadsHint', { defaultValue: 'Score ≥ 80' })}
           color="bg-brand-sky"
           delay={0.15}
@@ -242,7 +247,7 @@ export default function Analytics() {
           <Zap className="w-5 h-5 flex-shrink-0" />
           <p className="text-sm font-medium">
             {t('analytics.aiBanner', {
-              defaultValue: '<strong>{{count}} leads</strong> enriched with AI reasoning, verified internet signals, and tailored score adjustments.',
+              defaultValue: '<strong>{{count}} leads</strong> enrichis avec raisonnement IA, signaux vérifiés et ajustements de score.',
               count: stats.llmEnriched,
             }).split('<strong>').map((part, index) => {
               if (index === 0) return part;
@@ -260,16 +265,16 @@ export default function Analytics() {
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Category Distribution */}
-        <Card className="shadow-sm">
+        <Card className="border-[#e6e4df] shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <BarChart3 className="w-4 h-4 text-violet-600" />
-              {t('analytics.charts.categoryBreakdown', { defaultValue: 'ICP Category Breakdown' })}
+              {t('analytics.charts.categoryBreakdown', { defaultValue: 'Répartition des catégories ICP' })}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {categoryData.length === 0 ? (
-              <p className="text-slate-500 text-sm py-8 text-center">{t('analytics.empty.analyzedLeads', { defaultValue: 'No analyzed leads yet' })}</p>
+              <p className="text-slate-500 text-sm py-8 text-center">{t('analytics.empty.analyzedLeads', { defaultValue: 'Aucun lead analysé pour le moment' })}</p>
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
@@ -295,9 +300,9 @@ export default function Analytics() {
         </Card>
 
         {/* Score Distribution */}
-        <Card className="shadow-sm">
+        <Card className="border-[#e6e4df] shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base">{t('analytics.charts.scoreDistribution', { defaultValue: 'Score Distribution' })}</CardTitle>
+            <CardTitle className="text-base">{t('analytics.charts.scoreDistribution', { defaultValue: 'Distribution des scores' })}</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={220}>
@@ -317,13 +322,13 @@ export default function Analytics() {
         </Card>
 
         {/* Top Industries */}
-        <Card className="shadow-sm">
+        <Card className="border-[#e6e4df] shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base">{t('analytics.charts.topIndustries', { defaultValue: 'Top Industries' })}</CardTitle>
+            <CardTitle className="text-base">{t('analytics.charts.topIndustries', { defaultValue: 'Secteurs principaux' })}</CardTitle>
           </CardHeader>
           <CardContent>
             {industryData.length === 0 ? (
-              <p className="text-slate-500 text-sm py-8 text-center">{t('analytics.empty.industryData', { defaultValue: 'No industry data yet' })}</p>
+              <p className="text-slate-500 text-sm py-8 text-center">{t('analytics.empty.industryData', { defaultValue: 'Aucune donnée secteur pour le moment' })}</p>
             ) : (
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={industryData} layout="vertical" margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
@@ -331,7 +336,7 @@ export default function Analytics() {
                   <XAxis type="number" tick={{ fontSize: 11 }} />
                   <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 11 }} />
                   <Tooltip formatter={(value) => [t('analytics.tooltip.leadsCount', { defaultValue: '{{count}} leads', count: value })]} />
-                  <Bar dataKey="count" fill="#7c3aed" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="count" fill="#3A8DFF" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -339,13 +344,13 @@ export default function Analytics() {
         </Card>
 
         {/* Source List Performance */}
-        <Card className="shadow-sm">
+        <Card className="border-[#e6e4df] shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base">{t('analytics.charts.sourceListPerformance', { defaultValue: 'Source List Performance' })}</CardTitle>
+            <CardTitle className="text-base">{t('analytics.charts.sourceListPerformance', { defaultValue: 'Performance par liste source' })}</CardTitle>
           </CardHeader>
           <CardContent>
             {sourceListData.length === 0 ? (
-              <p className="text-slate-500 text-sm py-8 text-center">{t('analytics.empty.sourceListData', { defaultValue: 'No source list data yet' })}</p>
+              <p className="text-slate-500 text-sm py-8 text-center">{t('analytics.empty.sourceListData', { defaultValue: 'Aucune liste source pour le moment' })}</p>
             ) : (
               <ResponsiveContainer width="100%" height={240}>
                 <AreaChart data={sourceListData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
@@ -354,8 +359,8 @@ export default function Analytics() {
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
                   <Legend />
-                  <Area type="monotone" dataKey="avgScore" name={t('analytics.legend.avgScore', { defaultValue: 'Avg Score' })} stroke="#7c3aed" fill="#ede9fe" />
-                  <Area type="monotone" dataKey="convRate" name={t('analytics.legend.convRate', { defaultValue: 'Conv. Rate %' })} stroke="#2563eb" fill="#dbeafe" />
+                  <Area type="monotone" dataKey="avgScore" name={t('analytics.legend.avgScore', { defaultValue: 'Score moyen' })} stroke="#f0a63b" fill="#fff4db" />
+                  <Area type="monotone" dataKey="convRate" name={t('analytics.legend.convRate', { defaultValue: 'Taux conv. %' })} stroke="#3A8DFF" fill="#dbeafe" />
                 </AreaChart>
               </ResponsiveContainer>
             )}

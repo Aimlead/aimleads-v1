@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ClipboardList, Download, Filter, Loader2, Mail, RefreshCcw, Search, Shield, Sparkles, Tag, Trash2, TrendingUp, Users } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { enUS, fr } from 'date-fns/locale';
+import { toast } from 'sonner';
 import { dataClient } from '@/services/dataClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -143,7 +144,7 @@ export default function AuditLog() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => refetch()}
+          onClick={() => refetch().then(() => toast.success(t('auditLog.refreshed', { defaultValue: 'Audit log refreshed.' }))).catch(() => toast.error(t('auditLog.refreshFailed', { defaultValue: 'Failed to refresh.' })))}
           disabled={isFetching}
           className="gap-2 rounded-xl"
         >
@@ -186,6 +187,7 @@ export default function AuditLog() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('auditLog.filters.searchPlaceholder', { defaultValue: 'Search changes…' })}
+            aria-label={t('auditLog.filters.searchPlaceholder', { defaultValue: 'Search changes…' })}
             className="pl-9 rounded-xl text-sm h-9"
           />
         </div>
@@ -250,10 +252,10 @@ export default function AuditLog() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-100">
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('auditLog.table.resource', { defaultValue: 'Resource' })}</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('auditLog.table.action', { defaultValue: 'Action' })}</th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('auditLog.table.changes', { defaultValue: 'Changes' })}</th>
-                  <th className="px-5 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('auditLog.table.when', { defaultValue: 'When' })}</th>
+                  <th scope="col" className="px-5 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('auditLog.table.resource', { defaultValue: 'Resource' })}</th>
+                  <th scope="col" className="px-5 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('auditLog.table.action', { defaultValue: 'Action' })}</th>
+                  <th scope="col" className="px-5 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('auditLog.table.changes', { defaultValue: 'Changes' })}</th>
+                  <th scope="col" className="px-5 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('auditLog.table.when', { defaultValue: 'When' })}</th>
                 </tr>
               </thead>
               <tbody>

@@ -21,6 +21,7 @@ function BetaBanner({ onVisibilityChange }) {
 
   useEffect(() => {
     onVisibilityChange(visible);
+    document.documentElement.style.setProperty('--banner-h', visible ? `${BANNER_H}px` : '0px');
   }, [visible, onVisibilityChange]);
 
   const dismiss = () => {
@@ -52,6 +53,11 @@ export default function AppShell({ children }) {
   const [bannerVisible, setBannerVisible] = useState(() => {
     try { return !window.localStorage.getItem(BETA_BANNER_KEY); } catch { return true; }
   });
+
+  // Keep --banner-h CSS variable in sync so fixed overlays (Sheet, dialogs) can offset themselves
+  useEffect(() => {
+    document.documentElement.style.setProperty('--banner-h', bannerVisible ? `${BANNER_H}px` : '0px');
+  }, [bannerVisible]);
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();

@@ -1,6 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter as Router, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Outlet, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import AppShell from '@/components/layout/AppShell';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { Toaster } from '@/components/ui/toaster';
@@ -90,6 +90,11 @@ function PublicOnlyGuard({ children }) {
   return children;
 }
 
+function LegacyLeadRedirect() {
+  const { leadId } = useParams();
+  return <Navigate to={`/leads/${encodeURIComponent(leadId || '')}`} replace />;
+}
+
 
 function AppRoutes() {
   return (
@@ -110,6 +115,11 @@ function AppRoutes() {
       />
       <Route element={<PrivateGuard />}>
         <Route path={ROUTES.dashboard} element={<Dashboard />} />
+        <Route path={ROUTES.leads} element={<Navigate to={ROUTES.priorities} replace />} />
+        <Route path="/priority-list" element={<Navigate to={ROUTES.priorities} replace />} />
+        <Route path="/lead/:leadId" element={<LegacyLeadRedirect />} />
+        <Route path="/facturation" element={<Navigate to={ROUTES.billing} replace />} />
+        <Route path="/profil-icp" element={<Navigate to={ROUTES.icp} replace />} />
         <Route path={ROUTES.onboarding} element={<Onboarding />} />
         <Route path={ROUTES.analytics} element={<Analytics />} />
         <Route path={ROUTES.pipeline} element={<Pipeline />} />

@@ -133,17 +133,17 @@ function FieldMappingSection({ crmType, isConnected }) {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-[1fr_auto_1fr] gap-2 text-xs font-medium text-slate-500 px-1">
+            <div className="hidden sm:grid grid-cols-[1fr_auto_1fr] gap-2 text-xs font-medium text-slate-500 px-1">
               <span>{t('crm.mapping.aimleadField')}</span>
               <span />
               <span>{t('crm.mapping.crmField', { crm: crmType === 'hubspot' ? 'HubSpot' : 'Salesforce' })}</span>
             </div>
             {AIMLEADS_FIELDS.map((field) => (
-              <div key={field.key} className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
+              <div key={field.key} className="grid grid-cols-1 gap-1 sm:grid-cols-[1fr_auto_1fr] sm:gap-2 sm:items-center">
                 <div className="text-sm bg-slate-50 rounded-lg px-3 py-2 text-slate-700 border border-slate-200">
                   {t(field.labelKey)}
                 </div>
-                <div className="text-slate-400 text-xs">→</div>
+                <div className="hidden sm:block text-slate-400 text-xs">→</div>
                 <select
                   className="text-sm bg-white rounded-lg px-3 py-2 text-slate-700 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-sky/30"
                   value={mapping[field.key] || ''}

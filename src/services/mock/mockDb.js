@@ -4,6 +4,8 @@ const STORAGE_KEYS = {
   user: 'aimleads_mock_user',
   leads: 'aimleads_mock_leads',
   icpProfiles: 'aimleads_mock_icp_profiles',
+  invites: 'aimleads_mock_invites',
+  crmIntegrations: 'aimleads_mock_crm_integrations',
 };
 
 const hasWindow = () => typeof window !== 'undefined';
@@ -142,6 +144,14 @@ const ensureMockDb = () => {
   if (!window.localStorage.getItem(STORAGE_KEYS.leads)) {
     writeStorage(STORAGE_KEYS.leads, defaultLeads);
   }
+
+  if (!window.localStorage.getItem(STORAGE_KEYS.invites)) {
+    writeStorage(STORAGE_KEYS.invites, []);
+  }
+
+  if (!window.localStorage.getItem(STORAGE_KEYS.crmIntegrations)) {
+    writeStorage(STORAGE_KEYS.crmIntegrations, []);
+  }
 };
 
 export const mockDb = {
@@ -151,6 +161,12 @@ export const mockDb = {
   getUser() {
     ensureMockDb();
     return readStorage(STORAGE_KEYS.user, defaultUser);
+  },
+  setUser(user) {
+    writeStorage(STORAGE_KEYS.user, user);
+  },
+  deleteUser() {
+    writeStorage(STORAGE_KEYS.user, null);
   },
   getLeads() {
     ensureMockDb();
@@ -165,6 +181,20 @@ export const mockDb = {
   },
   setIcpProfiles(profiles) {
     writeStorage(STORAGE_KEYS.icpProfiles, profiles);
+  },
+  getInvites() {
+    ensureMockDb();
+    return readStorage(STORAGE_KEYS.invites, []);
+  },
+  setInvites(invites) {
+    writeStorage(STORAGE_KEYS.invites, invites);
+  },
+  getCrmIntegrations() {
+    ensureMockDb();
+    return readStorage(STORAGE_KEYS.crmIntegrations, []);
+  },
+  setCrmIntegrations(integrations) {
+    writeStorage(STORAGE_KEYS.crmIntegrations, integrations);
   },
 };
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ArrowRight, Building2, Circle, Download, Ellipsis, Flame, Linkedin, Loader2, Mail, Phone, RefreshCcw, Sparkles, Target, Upload } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Building2, Circle, Copy, Download, Ellipsis, Flame, Linkedin, Loader2, Mail, Phone, RefreshCcw, Sparkles, Target, Upload } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import LeadSlideOver from '@/components/leads/LeadSlideOver';
@@ -13,6 +13,7 @@ import { ACTIVATION_ANALYZE_BATCH_SIZE } from '@/constants/activation';
 import { ROUTES } from '@/constants/routes';
 import { exportLeadsToCsv } from '@/lib/exportCsv';
 import { waitForJobCompletion } from '@/lib/jobs';
+import { computeLeadPriority, deriveLeadNextAction, getBestOutreachHook } from '@/lib/leadScoring';
 import { dataClient } from '@/services/dataClient';
 
 const LIST_KEYS = {
@@ -43,35 +44,8 @@ const clampScore = (value) => {
   return Math.max(0, Math.min(100, Math.round(parsed)));
 };
 
-const estimatePriorityScore = (lead) => {
-  const icp = clampScore(lead?.icp_score);
-  const final = clampScore(lead?.final_score);
-  const ai = clampScore(lead?.ai_score);
-  const scoreDetailsAi = clampScore(lead?.score_details?.signal_analysis?.ai_score);
-  const aiScore = ai ?? scoreDetailsAi;
-  const base = final ?? icp ?? 0;
-  const signalWeight = aiScore ? aiScore * 0.25 : 0;
-  const freshnessWeight = lead?.llm_enriched ? 8 : 0;
-  const needsContactBoost = !String(lead?.follow_up_status || '').toLowerCase().includes('contact') ? 12 : 0;
-  return Math.round(base + signalWeight + freshnessWeight + needsContactBoost);
-};
-
 const deriveNextAction = (lead) => {
-  const followUpStatus = String(lead?.follow_up_status || '').toLowerCase();
-  const hasEmail = Boolean(String(lead?.email || lead?.contact_email || '').trim());
-  const hasPhone = Boolean(String(lead?.phone || lead?.contact_phone || '').trim());
-  const hasLinkedin = Boolean(String(lead?.linkedin_url || '').trim());
-  const score = clampScore(lead?.final_score ?? lead?.icp_score) ?? 0;
-  const highScore = score >= 80;
-
-  if (!hasEmail && !hasPhone && !hasLinkedin) return 'Enrich contact';
-  if (followUpStatus.includes('replied') || followUpStatus.includes('meeting')) return 'Prep follow-up';
-  if (followUpStatus.includes('called') || followUpStatus.includes('voicemail')) return 'Send recap email';
-  if (highScore && !followUpStatus.includes('contact') && hasPhone) return 'Call now';
-  if (hasEmail) return 'Send email';
-  if (hasPhone) return 'Call lead';
-  if (hasLinkedin) return 'Connect on LinkedIn';
-  return 'Review lead';
+  return deriveLeadNextAction(lead);
 };
 
 const getStatusTone = (score) => {
@@ -84,7 +58,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const [selectedLead, setSelectedLead] = useState(null);
   const [slideOverOpen, setSlideOverOpen] = useState(false);
@@ -462,12 +436,16 @@ export default function Dashboard() {
 
   const rankedPriorityLeads = useMemo(() => {
     return [...visibleLeads]
-      .map((lead) => ({
-        ...lead,
-        priorityRankScore: estimatePriorityScore(lead),
-      }))
+      .map((lead) => {
+        const priorityMeta = computeLeadPriority(lead, activeIcp);
+        return {
+          ...lead,
+          priorityMeta,
+          priorityRankScore: priorityMeta.priorityScore,
+        };
+      })
       .sort((left, right) => right.priorityRankScore - left.priorityRankScore);
-  }, [visibleLeads]);
+  }, [visibleLeads, activeIcp]);
 
   const topPriorityLeads = rankedPriorityLeads.slice(0, 3);
   const nextPriorityLeads = rankedPriorityLeads.slice(3, 11);
@@ -491,7 +469,23 @@ export default function Dashboard() {
     window.open(withProtocol, '_blank', 'noopener,noreferrer');
   };
 
-  const formatDateEyebrow = new Date().toLocaleDateString(undefined, {
+  const copyLeadHook = async (lead) => {
+    const hook = getBestOutreachHook(lead) || `${lead.company_name}: ${deriveNextAction(lead)}`;
+    try {
+      await navigator.clipboard.writeText(hook);
+      toast.success(t('toasts.copied', { defaultValue: 'Copied.' }));
+    } catch {
+      toast.error(t('errors.generic', { defaultValue: 'Something went wrong.' }));
+    }
+  };
+
+  const openSequenceBuilder = (lead) => {
+    navigate(`${ROUTES.outreach}?leadId=${encodeURIComponent(lead.id)}&mode=sequence`, { state: { lead } });
+  };
+
+  const isMockMode = dataClient.mode === 'mock';
+
+  const formatDateEyebrow = new Date().toLocaleDateString(i18n.language, {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -504,13 +498,13 @@ export default function Dashboard() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">
-                {formatDateEyebrow} · {t('dashboard.priority.eyebrow', { defaultValue: 'Priority queue' })}
+                {formatDateEyebrow} · {t('dashboard.priority.eyebrow', { defaultValue: 'File prioritaire' })}
               </p>
               <h1 className="mt-1 text-[31px] font-bold tracking-tight text-[#1a1200]">
-                {t('dashboard.priority.title', { defaultValue: 'Who to contact now' })}
+                {t('dashboard.priority.title', { defaultValue: 'Qui contacter maintenant' })}
               </h1>
               <p className="mt-1 text-sm text-slate-500">
-                {t('dashboard.priority.subtitle', { defaultValue: 'Design-first dashboard ranked by ICP fit, AI signals, and follow-up momentum.' })}
+                {t('dashboard.priority.subtitle', { defaultValue: 'Leads classés par fit ICP, signaux disponibles et dynamique de suivi.' })}
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Select value={selectedSourceList} onValueChange={setSelectedSourceList}>
@@ -564,19 +558,28 @@ export default function Dashboard() {
                 variant="outline"
                 size="sm"
                 onClick={handleAnalyzeSignalsVisible}
-                disabled={isAnalyzingSignalsVisible || isReanalyzing || isScoringIcpVisible}
+                disabled={isMockMode || isAnalyzingSignalsVisible || isReanalyzing || isScoringIcpVisible}
+                title={isMockMode ? t('dashboard.actions.requiresInternet', { defaultValue: 'Action désactivée en local: elle nécessite Internet.' }) : undefined}
                 className="h-8 gap-1.5 rounded-md border-[#e8e5de] px-2.5 text-[11.5px]"
               >
                 {isAnalyzingSignalsVisible ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                {t('dashboard.actions.analyzeSignals', { defaultValue: 'Analyze signals' })}
+                {t('dashboard.actions.analyzeSignals', { defaultValue: 'Analyser les signaux' })}
               </Button>
               <Button id="import-csv-trigger" size="sm" onClick={() => setImportDialogOpen(true)} className="h-8 gap-1.5 rounded-md bg-[#1a1200] px-2.5 text-[11.5px] text-white hover:bg-[#2a1f07]">
                 <Upload className="h-3.5 w-3.5" />
                 {t('dashboard.actions.importCsv')}
               </Button>
-              <Button id="research-lead-trigger" size="sm" variant="outline" onClick={() => setResearchDialogOpen(true)} className="h-8 gap-1.5 rounded-md border-[#e8e5de] px-2.5 text-[11.5px]">
+              <Button
+                id="research-lead-trigger"
+                size="sm"
+                variant="outline"
+                onClick={() => setResearchDialogOpen(true)}
+                disabled={isMockMode}
+                title={isMockMode ? t('dashboard.actions.requiresInternet', { defaultValue: 'Action désactivée en local: elle nécessite Internet.' }) : undefined}
+                className="h-8 gap-1.5 rounded-md border-[#e8e5de] px-2.5 text-[11.5px]"
+              >
                 <Sparkles className="h-3.5 w-3.5" />
-                {t('dashboard.actions.researchLead', { defaultValue: 'Research lead' })}
+                {t('dashboard.actions.researchLead', { defaultValue: 'Rechercher un lead' })}
               </Button>
               <Button
                 variant="outline"
@@ -586,7 +589,7 @@ export default function Dashboard() {
                 className="h-8 gap-1.5 rounded-md border-[#e8e5de] px-2.5 text-[11.5px]"
               >
                 {isScoringIcpVisible ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Target className="h-3.5 w-3.5" />}
-                {t('dashboard.actions.analyzeIcp', { defaultValue: 'Analyze ICP' })}
+                {t('dashboard.actions.analyzeIcp', { defaultValue: 'Scorer ICP' })}
               </Button>
             </div>
           </div>
@@ -608,33 +611,33 @@ export default function Dashboard() {
         )}
 
         {!isLoading && totalLeads > 0 && priorityLead && (
-          <section className="max-w-[1040px] rounded-xl border border-[#e6e4df] bg-white px-6 py-5 shadow-sm">
+          <section className="w-full rounded-xl border border-[#e6e4df] bg-white px-6 py-5 shadow-sm">
             <div className="grid gap-6 xl:grid-cols-[136px_minmax(0,1fr)_auto] xl:items-center">
               <div className="relative h-[118px] w-[118px]">
                 <div
                   className="h-full w-full rounded-full"
                   style={{
-                    background: `conic-gradient(#f0a63b ${(clampScore(priorityLead.final_score ?? priorityLead.icp_score) ?? 0) * 3.6}deg, #efece6 0deg)`,
+                    background: `conic-gradient(#f0a63b ${(priorityLead.priorityMeta?.finalScore ?? clampScore(priorityLead.final_score ?? priorityLead.icp_score) ?? 0) * 3.6}deg, #efece6 0deg)`,
                   }}
                 />
                 <div className="absolute inset-[7px] flex flex-col items-center justify-center rounded-full bg-white">
-                  <p className="text-[38px] font-bold leading-none tracking-tight text-[#1a1200]">{clampScore(priorityLead.final_score ?? priorityLead.icp_score) ?? '—'}</p>
-                  <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">Final score</p>
+                  <p className="text-[38px] font-bold leading-none tracking-tight text-[#1a1200]">{priorityLead.priorityMeta?.finalScore ?? clampScore(priorityLead.final_score ?? priorityLead.icp_score) ?? '—'}</p>
+                  <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">{t('dashboard.priority.finalScore', { defaultValue: 'Score final' })}</p>
                 </div>
               </div>
 
               <div className="min-w-0">
                 <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-amber-700">
-                  Priority today
+                  {t('dashboard.priority.today', { defaultValue: 'Priorité du jour' })}
                 </span>
                 <h2 className="mt-1.5 truncate text-[30px] font-bold leading-tight tracking-tight text-[#1a1200]">{priorityLead.company_name}</h2>
                 <p className="mt-1 truncate text-sm text-slate-600">{priorityLead.contact_name || t('common.contact')} · {priorityLead.contact_role || t('common.contact')}</p>
 
                 <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-slate-600">
-                  <span><strong className="text-slate-900">ICP:</strong> {clampScore(priorityLead.icp_score) ?? '—'}</span>
-                  <span><strong className="text-slate-900">AI:</strong> {clampScore(priorityLead.ai_score ?? priorityLead?.score_details?.signal_analysis?.ai_score) ?? '—'}</span>
-                  <span><strong className="text-slate-900">Best time:</strong> Morning</span>
-                  <span><strong className="text-slate-900">Path:</strong> {deriveNextAction(priorityLead)}</span>
+                  <span><strong className="text-slate-900">ICP:</strong> {priorityLead.priorityMeta?.icpScore ?? clampScore(priorityLead.icp_score) ?? '—'}</span>
+                  <span><strong className="text-slate-900">AI:</strong> {priorityLead.priorityMeta?.aiScore ?? clampScore(priorityLead.ai_score ?? priorityLead?.score_details?.signal_analysis?.ai_score) ?? '—'}</span>
+                  <span><strong className="text-slate-900">{t('dashboard.priority.bestTime', { defaultValue: 'Meilleur créneau' })}:</strong> {t('dashboard.priority.morning', { defaultValue: 'Matin' })}</span>
+                  <span><strong className="text-slate-900">{t('dashboard.priority.path', { defaultValue: 'Suite' })}:</strong> {deriveNextAction(priorityLead)}</span>
                 </div>
 
                 <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -652,18 +655,18 @@ export default function Dashboard() {
                   className="h-8 gap-1.5 rounded-md border-[#dcd8cd] px-2.5 text-xs"
                 >
                   <Phone className="h-3.5 w-3.5" />
-                  {t('dashboard.priority.call', { defaultValue: 'Call' })}
+                  {t('dashboard.priority.call', { defaultValue: 'Appeler' })}
                 </Button>
-                {/* TODO: wire hero copy hook action to dashboard-level compose workflow when available. */}
-                <Button size="sm" variant="outline" disabled className="h-8 gap-1.5 rounded-md border-[#dcd8cd] px-2.5 text-xs">Copy hook</Button>
-                {/* TODO: wire sequence generation action once Dashboard has a production handler. */}
-                <Button size="sm" variant="outline" disabled className="h-8 gap-1.5 rounded-md border-[#dcd8cd] px-2.5 text-xs">Generate sequence</Button>
-                {/* TODO: wire overflow actions menu for extra workflows. */}
-                <Button size="icon" variant="outline" disabled className="h-8 w-8 rounded-md border-[#dcd8cd]">
+                <Button size="sm" variant="outline" onClick={() => copyLeadHook(priorityLead)} className="h-8 gap-1.5 rounded-md border-[#dcd8cd] px-2.5 text-xs">
+                  <Copy className="h-3.5 w-3.5" />
+                  {t('dashboard.priority.copyHook', { defaultValue: "Copier l'accroche" })}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => openSequenceBuilder(priorityLead)} className="h-8 gap-1.5 rounded-md border-[#dcd8cd] px-2.5 text-xs">{t('dashboard.priority.generateSequence', { defaultValue: 'Préparer une séquence' })}</Button>
+                <Button size="icon" variant="outline" onClick={() => navigate(ROUTES.priorities)} className="h-8 w-8 rounded-md border-[#dcd8cd]" aria-label={t('dashboard.priority.openPriorityList', { defaultValue: 'Ouvrir la liste prioritaire' })}>
                   <Ellipsis className="h-4 w-4" />
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => handleSelectLead(priorityLead)} className="h-8 px-2 text-xs">Open panel</Button>
-                <Button size="sm" variant="ghost" onClick={() => handleOpenLeadPage(priorityLead)} className="h-8 px-2 text-xs">Open lead</Button>
+                <Button size="sm" variant="ghost" onClick={() => handleSelectLead(priorityLead)} className="h-8 px-2 text-xs">{t('dashboard.priority.openPanel', { defaultValue: 'Ouvrir le panneau' })}</Button>
+                <Button size="sm" variant="ghost" onClick={() => handleOpenLeadPage(priorityLead)} className="h-8 px-2 text-xs">{t('dashboard.priority.openLead', { defaultValue: 'Voir le lead' })}</Button>
               </div>
             </div>
           </section>
@@ -672,24 +675,24 @@ export default function Dashboard() {
         {!isLoading && totalLeads > 0 && (
           <section className="grid overflow-hidden rounded-xl border border-[#e6e4df] bg-white shadow-sm sm:grid-cols-4">
             <div className="border-b border-r border-[#ece9e2] px-4 py-3.5 sm:border-b-0">
-              <p className="text-[10.75px] font-semibold uppercase tracking-[0.1em] text-slate-500">Focus list</p>
+              <p className="text-[10.75px] font-semibold uppercase tracking-[0.1em] text-slate-500">{t('dashboard.priority.focusList', { defaultValue: 'Liste active' })}</p>
               <p className="mt-0.5 text-[27px] font-bold leading-none text-[#1a1200]">{totalLeads}</p>
               <p className="mt-1 text-[11px] text-slate-500">{sourceListLabel(selectedSourceList === LIST_KEYS.ALL ? LIST_KEYS.ALL : selectedSourceList, t)}</p>
             </div>
             <div className="border-b border-r border-[#ece9e2] px-4 py-3.5 sm:border-b-0">
-              <p className="text-[10.75px] font-semibold uppercase tracking-[0.1em] text-slate-500">High priority</p>
+              <p className="text-[10.75px] font-semibold uppercase tracking-[0.1em] text-slate-500">{t('dashboard.priority.highPriority', { defaultValue: 'Haute priorité' })}</p>
               <p className="mt-0.5 text-[27px] font-bold leading-none text-[#1a1200]">{highPriority}</p>
-              <p className="mt-1 text-[11px] text-slate-500">Score 80+</p>
+              <p className="mt-1 text-[11px] text-slate-500">{t('dashboard.priority.score80', { defaultValue: 'Score 80+' })}</p>
             </div>
             <div className="border-b border-r border-[#ece9e2] px-4 py-3.5 sm:border-b-0">
-              <p className="text-[10.75px] font-semibold uppercase tracking-[0.1em] text-slate-500">Pipeline ready</p>
+              <p className="text-[10.75px] font-semibold uppercase tracking-[0.1em] text-slate-500">{t('dashboard.priority.pipelineReady', { defaultValue: 'Prêts pipeline' })}</p>
               <p className="mt-0.5 text-[27px] font-bold leading-none text-[#1a1200]">{qualifiedLeads}</p>
-              <p className="mt-1 text-[11px] text-slate-500">Qualified leads</p>
+              <p className="mt-1 text-[11px] text-slate-500">{t('dashboard.priority.qualifiedLeads', { defaultValue: 'Leads qualifiés' })}</p>
             </div>
             <div className="px-4 py-3.5">
-              <p className="text-[10.75px] font-semibold uppercase tracking-[0.1em] text-slate-500">Updated / avg score</p>
+              <p className="text-[10.75px] font-semibold uppercase tracking-[0.1em] text-slate-500">{t('dashboard.priority.updatedAvg', { defaultValue: 'Score moyen' })}</p>
               <p className="mt-0.5 text-[27px] font-bold leading-none text-[#1a1200]">{avgScore}</p>
-              <p className="mt-1 text-[11px] text-slate-500">{staleLeadCount} stale · {toAnalyze} to analyze</p>
+              <p className="mt-1 text-[11px] text-slate-500">{t('dashboard.priority.staleAndAnalyze', { defaultValue: '{{stale}} obsolète(s) · {{toAnalyze}} à analyser', stale: staleLeadCount, toAnalyze })}</p>
             </div>
           </section>
         )}
@@ -697,13 +700,13 @@ export default function Dashboard() {
         {!isLoading && topPriorityLeads.length > 0 && (
           <section>
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-[24px] font-semibold tracking-tight text-[#1a1200]">{t('dashboard.priority.topLeads', { defaultValue: 'Top 3 hot leads' })}</h3>
+              <h3 className="text-[24px] font-semibold tracking-tight text-[#1a1200]">{t('dashboard.priority.topLeads', { defaultValue: 'Top 3 des leads chauds' })}</h3>
             </div>
             <div className="grid gap-3.5 xl:grid-cols-3">
               {topPriorityLeads.map((lead, index) => {
-                const finalScore = clampScore(lead.final_score ?? lead.icp_score);
-                const icpScore = clampScore(lead.icp_score) ?? 0;
-                const aiScore = clampScore(lead.ai_score ?? lead?.score_details?.signal_analysis?.ai_score) ?? 0;
+                const finalScore = lead.priorityMeta?.finalScore ?? clampScore(lead.final_score ?? lead.icp_score);
+                const icpScore = lead.priorityMeta?.icpScore ?? clampScore(lead.icp_score) ?? 0;
+                const aiScore = lead.priorityMeta?.aiScore ?? clampScore(lead.ai_score ?? lead?.score_details?.signal_analysis?.ai_score) ?? 0;
                 return (
                   <article key={lead.id} className="rounded-xl border border-[#e6e4df] bg-white p-[18px] shadow-sm transition hover:border-[#d9d5cb]">
                     <div className="flex items-start justify-between gap-2">
@@ -746,7 +749,7 @@ export default function Dashboard() {
                       <Button size="icon" variant="ghost" className="h-7 w-7" disabled={!(lead.linkedin_url || lead.linkedin)} onClick={() => openLinkedin(lead)}><Linkedin className="h-3.5 w-3.5" /></Button>
                       <div className="flex-1" />
                       <Button size="sm" variant="outline" className="h-7 px-2.5 text-xs" onClick={() => handleOpenLeadPage(lead)}>
-                        Open lead
+                        {t('dashboard.priority.openLead', { defaultValue: 'Voir le lead' })}
                       </Button>
                     </div>
                   </article>
@@ -759,21 +762,21 @@ export default function Dashboard() {
         {!isLoading && nextPriorityLeads.length > 0 && (
           <section id="dashboard-leads-table" className="overflow-hidden rounded-xl border border-[#e6e4df] bg-white shadow-sm">
             <div className="flex items-center justify-between border-b border-[#ece9e2] px-4 py-2.5">
-              <h3 className="text-[23px] font-semibold tracking-tight text-[#1a1200]">{t('dashboard.priority.nextInLine', { defaultValue: 'Next in line' })}</h3>
-              <Button variant="ghost" size="sm" onClick={() => navigate(ROUTES.pipeline)}>{t('dashboard.priority.openPipeline', { defaultValue: 'Open pipeline' })}</Button>
+              <h3 className="text-[23px] font-semibold tracking-tight text-[#1a1200]">{t('dashboard.priority.nextInLine', { defaultValue: 'Suite de la file' })}</h3>
+              <Button variant="ghost" size="sm" onClick={() => navigate(ROUTES.pipeline)}>{t('dashboard.priority.openPipeline', { defaultValue: 'Ouvrir le pipeline' })}</Button>
             </div>
             <div className="grid grid-cols-[82px_minmax(190px,1.9fr)_minmax(150px,1fr)_minmax(140px,0.9fr)_minmax(180px,1fr)_172px] items-center gap-4 bg-[#faf9f7] px-4 py-2 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">
               <span>{t('dashboard.priority.score', { defaultValue: 'Score' })}</span>
               <span>{t('dashboard.priority.lead', { defaultValue: 'Lead' })}</span>
-              <span>{t('dashboard.priority.company', { defaultValue: 'Company' })}</span>
-              <span>{t('dashboard.priority.status', { defaultValue: 'Status' })}</span>
-              <span>{t('dashboard.priority.nextAction', { defaultValue: 'Next action' })}</span>
+              <span>{t('dashboard.priority.company', { defaultValue: 'Entreprise' })}</span>
+              <span>{t('dashboard.priority.status', { defaultValue: 'Statut' })}</span>
+              <span>{t('dashboard.priority.nextAction', { defaultValue: 'Prochaine action' })}</span>
               <span className="text-right">{t('dashboard.priority.actions', { defaultValue: 'Actions' })}</span>
             </div>
             <div className="divide-y divide-[#eeece7]">
               {nextPriorityLeads.slice(0, 8).map((lead) => {
-                const score = clampScore(lead.final_score ?? lead.icp_score) ?? 0;
-                const nextAction = deriveNextAction(lead);
+                const score = lead.priorityMeta?.priorityScore ?? clampScore(lead.final_score ?? lead.icp_score) ?? 0;
+                const nextAction = lead.priorityMeta?.nextAction ?? deriveNextAction(lead);
                 const emailAddress = String(lead.email || lead.contact_email || '').trim();
                 const phoneNumber = String(lead.phone || lead.contact_phone || '').trim();
                 return (
@@ -789,7 +792,7 @@ export default function Dashboard() {
                     <div className="truncate text-[12.75px] font-medium text-slate-700">{lead.company_name}</div>
                     <div>
                       <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${getStatusTone(score)}`}>
-                        {lead.follow_up_status || t('dashboard.priority.toContact', { defaultValue: 'To contact' })}
+                        {lead.follow_up_status || t('dashboard.priority.toContact', { defaultValue: 'À contacter' })}
                       </span>
                     </div>
                     <div className="truncate text-[13px] text-slate-600">{nextAction}</div>
@@ -804,7 +807,7 @@ export default function Dashboard() {
                           handleSelectLead(lead);
                         }}
                       >
-                        Open
+                        {t('common.open', { defaultValue: 'Ouvrir' })}
                       </Button>
                       <Button
                         variant="ghost"
@@ -855,7 +858,7 @@ export default function Dashboard() {
         {!isLoading && totalLeads === 0 && (
           <section className="rounded-xl border border-dashed border-[#ddd8cd] bg-white/70 p-8 text-center">
             <Building2 className="mx-auto h-8 w-8 text-slate-400" />
-            <p className="mt-2 text-sm text-slate-600">{t('dashboard.empty.noLeads', { defaultValue: 'No leads yet in this list.' })}</p>
+            <p className="mt-2 text-sm text-slate-600">{t('dashboard.empty.noLeads', { defaultValue: 'Aucun lead dans cette liste pour le moment.' })}</p>
           </section>
         )}
       </div>

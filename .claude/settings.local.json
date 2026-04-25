@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const db=require\\('./server/data/db.json'\\); console.log\\(JSON.stringify\\(db.icpProfiles[0], null, 2\\)\\)\")",
+      "Bash(npm run *)",
+      "Bash(git stash *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(npx vite *)"
+    ]
+  }
+}

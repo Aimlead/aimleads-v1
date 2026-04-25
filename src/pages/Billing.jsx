@@ -27,6 +27,11 @@ const resolveRunwayLabel = (days, t) => {
   return t('billing.runwayDays', { count: days });
 };
 
+const openBillingAction = (url, intent) => {
+  const fallback = `mailto:billing@aimlead.io?subject=${encodeURIComponent(`AimLead ${intent}`)}`;
+  window.open(url || fallback, '_blank', 'noopener,noreferrer');
+};
+
 const formatActionLabel = (action, t) => {
   const map = {
     analyze: 'billing.actions.analyze',
@@ -39,10 +44,17 @@ const formatActionLabel = (action, t) => {
   return map[action] ? t(map[action]) : action;
 };
 
-function ProgressBar({ value = 0 }) {
+function ProgressBar({ value = 0, label }) {
   const safeValue = Math.max(0, Math.min(100, Number(value) || 0));
   return (
-    <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+    <div
+      role="progressbar"
+      aria-valuenow={safeValue}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={label}
+      className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100"
+    >
       <div
         className="h-full rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 transition-all duration-300"
         style={{ width: `${safeValue}%` }}
@@ -127,11 +139,14 @@ export default function Billing() {
   ]);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Credits / Crédits IA</h1>
+    <div className="mx-auto w-full max-w-[1160px] space-y-6">
+      <header className="rounded-xl border border-[#e6e4df] bg-white px-5 py-4 shadow-sm">
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+          {t('billing.eyebrow', { defaultValue: 'Capacité workspace' })}
+        </p>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-[#1a1200] sm:text-3xl">{t('billing.title', { defaultValue: 'Crédits IA' })}</h1>
         <p className="text-sm text-slate-500">
-          {t('billing.subtitle', 'Track monthly AI usage, credit limits, and workspace entitlements in one place.')}
+          {t('billing.subtitle', 'Suivez usage IA mensuel, limites de crédits et capacités workspace au même endroit.')}
         </p>
       </header>
 
@@ -157,7 +172,7 @@ export default function Billing() {
               </div>
             </div>
             <div className="space-y-2">
-              <ProgressBar value={usagePercent} />
+              <ProgressBar value={usagePercent} label={t('billing.usagePercent', { defaultValue: 'Credit usage: {{percent}}%', percent: usagePercent })} />
               <p className="text-xs text-slate-500">
                 {t('billing.usageSummary', {
                   used: formatNumber(usedCredits, locale),
@@ -169,20 +184,20 @@ export default function Billing() {
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Renewal / trial end</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">{t('billing.renewalOrTrial', { defaultValue: "Renouvellement / fin d'essai" })}</p>
             <p className="mt-1 text-sm font-medium text-slate-900">{formatDate(renewalDate, locale)}</p>
             <div className="mt-4 space-y-2">
-              <Button size="sm" className="w-full gap-1.5" disabled={!upgradeUrl} onClick={() => upgradeUrl && window.open(upgradeUrl, '_blank', 'noopener,noreferrer')}>
+              <Button size="sm" className="w-full gap-1.5" onClick={() => openBillingAction(upgradeUrl, 'plan upgrade')}>
                 <Rocket className="h-3.5 w-3.5" />
-                Upgrade plan {!upgradeUrl && '(TODO)'}
+                {t('billing.actions.upgradePlan', { defaultValue: 'Changer de plan' })}
               </Button>
-              <Button size="sm" variant="outline" className="w-full gap-1.5" disabled={!buyCreditsUrl} onClick={() => buyCreditsUrl && window.open(buyCreditsUrl, '_blank', 'noopener,noreferrer')}>
+              <Button size="sm" variant="outline" className="w-full gap-1.5" onClick={() => openBillingAction(buyCreditsUrl, 'credit purchase')}>
                 <Sparkles className="h-3.5 w-3.5" />
-                Buy credits {!buyCreditsUrl && '(TODO)'}
+                {t('billing.actions.buyCredits', { defaultValue: 'Acheter des crédits' })}
               </Button>
-              <Button size="sm" variant="outline" className="w-full gap-1.5" disabled={!manageBillingUrl} onClick={() => manageBillingUrl && window.open(manageBillingUrl, '_blank', 'noopener,noreferrer')}>
+              <Button size="sm" variant="outline" className="w-full gap-1.5" onClick={() => openBillingAction(manageBillingUrl, 'billing portal')}>
                 <CreditCard className="h-3.5 w-3.5" />
-                Manage billing {!manageBillingUrl && '(TODO)'}
+                {t('billing.actions.manageBilling', { defaultValue: 'Gérer la facturation' })}
               </Button>
             </div>
           </div>
@@ -194,9 +209,9 @@ export default function Billing() {
           <CardContent className="flex items-start gap-3 p-4">
             <AlertTriangle className="mt-0.5 h-4 w-4 text-amber-700" />
             <div>
-              <p className="text-sm font-semibold text-amber-900">Low credits warning</p>
+              <p className="text-sm font-semibold text-amber-900">{t('billing.lowCreditsTitle', { defaultValue: 'Crédits bientôt épuisés' })}</p>
               <p className="text-sm text-amber-800">
-                Your workspace is running low on credits. Contact sales or upgrade to avoid interruptions.
+                {t('billing.lowCreditsBody', { defaultValue: 'Votre workspace arrive en limite de crédits. Contactez l’équipe ou ajustez le plan pour éviter une interruption.' })}
               </p>
             </div>
           </CardContent>
@@ -218,32 +233,32 @@ export default function Billing() {
       <section className="grid gap-4 lg:grid-cols-2">
         <Card className="border-slate-200 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base">Entitlements & limits</CardTitle>
-            <CardDescription>Workspace seats, CRM slots, and plan features</CardDescription>
+            <CardTitle className="text-base">{t('billing.entitlements.title', { defaultValue: 'Droits et limites' })}</CardTitle>
+            <CardDescription>{t('billing.entitlements.description', { defaultValue: 'Places équipe, connexions CRM et capacités du plan' })}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-slate-700">
             <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2.5">
-              <span className="inline-flex items-center gap-2"><Users className="h-4 w-4 text-slate-400" /> Seats</span>
+              <span className="inline-flex items-center gap-2"><Users className="h-4 w-4 text-slate-400" /> {t('billing.teamSeats', { defaultValue: 'Places équipe' })}</span>
               <span>{formatNumber(seatsUsed, locale)} / {formatNumber(seatsIncluded, locale)}</span>
             </div>
             <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2.5">
-              <span className="inline-flex items-center gap-2"><ExternalLink className="h-4 w-4 text-slate-400" /> CRM integrations</span>
+              <span className="inline-flex items-center gap-2"><ExternalLink className="h-4 w-4 text-slate-400" /> {t('billing.crmSlots', { defaultValue: 'Connexions CRM' })}</span>
               <span>{formatNumber(crmUsed, locale)} / {formatNumber(crmIncluded, locale)}</span>
             </div>
             <div className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2.5">
-              <span className="inline-flex items-center gap-2"><Sparkles className="h-4 w-4 text-slate-400" /> Analysis credits</span>
+              <span className="inline-flex items-center gap-2"><Sparkles className="h-4 w-4 text-slate-400" /> {t('billing.analysisCredits', { defaultValue: 'Crédits analyse' })}</span>
               <span>{formatNumber(remainingCredits, locale)} / {formatNumber(includedCredits, locale)}</span>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-600">
-              API access: {entitlements?.includes_api_access ? 'Included' : 'Not included'} · Priority support: {entitlements?.includes_priority_support ? 'Included' : 'Standard'}
+              {t('billing.apiAccess', { defaultValue: 'Accès API' })}: {entitlements?.includes_api_access ? t('billing.included', { defaultValue: 'Inclus' }) : t('billing.notIncluded', { defaultValue: 'Non inclus' })} · {t('billing.prioritySupport', { defaultValue: 'Support prioritaire' })}: {entitlements?.includes_priority_support ? t('billing.included', { defaultValue: 'Inclus' }) : t('billing.standard', { defaultValue: 'Standard' })}
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-slate-200 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base">Top actions</CardTitle>
-            <CardDescription>Most credit-consuming AI actions this cycle</CardDescription>
+            <CardTitle className="text-base">{t('billing.topActions.title', { defaultValue: 'Actions principales' })}</CardTitle>
+            <CardDescription>{t('billing.topActions.description', { defaultValue: 'Actions IA qui consomment le plus de crédits ce cycle' })}</CardDescription>
           </CardHeader>
           <CardContent>
             {topActions.length > 0 ? (
@@ -252,7 +267,7 @@ export default function Billing() {
                   <div key={item.action} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2.5">
                     <div>
                       <p className="text-sm font-medium text-slate-900">{formatActionLabel(item.action, t)}</p>
-                      <p className="text-xs text-slate-500">{item.count ?? 0} runs</p>
+                      <p className="text-xs text-slate-500">{t('billing.runsCount', { defaultValue: '{{count}} exécutions', count: item.count ?? 0 })}</p>
                     </div>
                     <span className="text-sm font-semibold text-slate-700">{formatNumber(item.credits ?? 0, locale)} cr</span>
                   </div>
@@ -260,7 +275,7 @@ export default function Billing() {
               </div>
             ) : (
               <div className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">
-                No top actions recorded yet.
+                {t('billing.topActions.empty', { defaultValue: 'Aucune action créditée enregistrée pour le moment.' })}
               </div>
             )}
           </CardContent>
@@ -269,8 +284,8 @@ export default function Billing() {
 
       <Card className="border-slate-200 shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base"><Clock3 className="h-4 w-4 text-slate-400" /> Usage history</CardTitle>
-          <CardDescription>Credit transactions and usage events</CardDescription>
+          <CardTitle className="flex items-center gap-2 text-base"><Clock3 className="h-4 w-4 text-slate-400" /> {t('billing.usageHistory.title', { defaultValue: "Historique d'usage" })}</CardTitle>
+          <CardDescription>{t('billing.usageHistory.description', { defaultValue: 'Transactions de crédits et événements d’usage' })}</CardDescription>
         </CardHeader>
         <CardContent>
           {transactions.length > 0 ? (
@@ -286,9 +301,8 @@ export default function Billing() {
               ))}
             </div>
           ) : (
-            // TODO(billing): replace this placeholder when a dedicated usage-history endpoint is available.
             <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-              No usage history available yet.
+              {t('billing.usageHistory.empty', { defaultValue: "Aucun historique d'usage disponible pour le moment." })}
             </div>
           )}
         </CardContent>

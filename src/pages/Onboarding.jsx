@@ -51,6 +51,10 @@ export default function Onboarding() {
     () => getActivationSnapshot({ activeIcp, leads }),
     [activeIcp, leads]
   );
+  const hasDemoPipeline = useMemo(
+    () => leads.some((lead) => lead.source_list === 'Demo pipeline'),
+    [leads]
+  );
 
   const sampleDataMutation = useMutation({
     mutationFn: () => dataClient.workspace.loadSampleData(),
@@ -279,7 +283,7 @@ export default function Onboarding() {
             size="sm"
             variant="outline"
             onClick={() => sampleDataMutation.mutate()}
-            disabled={sampleDataMutation.isPending || leads.length > 0}
+            disabled={sampleDataMutation.isPending || hasDemoPipeline}
             className="gap-2"
           >
             {sampleDataMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
@@ -375,7 +379,14 @@ export default function Onboarding() {
                   {activationSnapshot.completedSteps}/{activationSnapshot.totalSteps}
                 </span>
               </div>
-              <div className="mt-3 h-2 rounded-full bg-white/10">
+              <div
+                role="progressbar"
+                aria-valuenow={progress}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={t('onboarding.progressLabel', { defaultValue: 'Progression' })}
+                className="mt-3 h-2 rounded-full bg-white/10"
+              >
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-brand-sky to-emerald-400 transition-all"
                   style={{ width: `${progress}%` }}
@@ -527,12 +538,12 @@ export default function Onboarding() {
               <Button
                 variant="outline"
                 onClick={() => sampleDataMutation.mutate()}
-                disabled={sampleDataMutation.isPending || leads.length > 0}
+                disabled={sampleDataMutation.isPending || hasDemoPipeline}
                 className="w-full gap-2"
               >
                 {sampleDataMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-                {leads.length > 0
-                  ? t('onboarding.actions.sampleLocked', { defaultValue: 'Déjà des leads présents' })
+                {hasDemoPipeline
+                  ? t('onboarding.actions.sampleLocked', { defaultValue: 'Démo déjà chargée' })
                   : t('onboarding.actions.loadDemoWorkspace', { defaultValue: 'Charger la démo' })}
               </Button>
 

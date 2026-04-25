@@ -5,6 +5,7 @@ import { AlertTriangle, Check, Copy, Crown, Loader2, Mail, Shield, UserPlus, Use
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { ROUTES } from '@/constants/routes';
 import { dataClient } from '@/services/dataClient';
@@ -22,7 +23,7 @@ function RoleBadge({ role }) {
 
   return (
     <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold ${config.color}`}>
-      {Icon ? <Icon className="h-3 w-3" /> : null}
+      {Icon ? <Icon className="h-3 w-3" aria-hidden="true" /> : null}
       {t(`team.${role}`, role)}
     </span>
   );
@@ -58,6 +59,8 @@ export default function Team() {
   const [inviteRole, setInviteRole] = useState('member');
   const [lastCreatedInvite, setLastCreatedInvite] = useState(null);
   const [copiedInviteKey, setCopiedInviteKey] = useState('');
+  const [transferTarget, setTransferTarget] = useState(null);
+  const [revokeTarget, setRevokeTarget] = useState(null);
   const inviteRoleOptions = useMemo(() => ([
     { value: 'member', label: t('team.member') },
     { value: 'admin', label: t('team.admin') },
@@ -214,10 +217,14 @@ export default function Team() {
   const seatLimitReached = Boolean(seatUsage?.limit_reached);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto w-full max-w-[1160px] space-y-6">
+      <div className="rounded-xl border border-[#e6e4df] bg-white px-5 py-4 shadow-sm">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{t('team.title')}</h1>
+          <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+            {t('team.eyebrow', { defaultValue: 'Accès workspace' })}
+          </p>
+          <h1 className="mt-1 text-2xl font-bold text-[#1a1200]">{t('team.title')}</h1>
           <p className="mt-1 text-slate-500">{t('team.subtitle')}</p>
           <p className="mt-2 text-sm text-slate-400">
             {memberCountLabel}
@@ -225,7 +232,7 @@ export default function Team() {
           </p>
         </div>
 
-        <div className="space-y-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+        <div className="space-y-2 rounded-xl border border-[#e6e4df] bg-[#faf9f7] px-4 py-3 text-sm text-slate-600">
           <div className="flex items-center gap-2">
             <span>{t('team.yourRole')}</span>
             <RoleBadge role={currentRole || 'member'} />
@@ -249,9 +256,10 @@ export default function Team() {
           </p>
         </div>
       </div>
+      </div>
 
       {membershipIssue ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900">
+        <div role="alert" className="rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900">
           {t('team.readOnlyWarning')}
         </div>
       ) : !canManageInvites ? (
@@ -275,6 +283,7 @@ export default function Team() {
                 <Input
                   type="email"
                   placeholder={t('team.inviteEmailPlaceholder')}
+                  aria-label={t('team.inviteEmailPlaceholder')}
                   value={inviteEmail}
                   onChange={(event) => setInviteEmail(event.target.value)}
                   disabled={inviteMutation.isPending || seatLimitReached}
@@ -283,6 +292,7 @@ export default function Team() {
                   value={inviteRole}
                   onChange={(event) => setInviteRole(event.target.value)}
                   disabled={inviteMutation.isPending || seatLimitReached}
+                  aria-label={t('team.inviteRole', { defaultValue: 'Role' })}
                   className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700"
                 >
                   {visibleInviteRoleOptions.map((option) => (
@@ -409,7 +419,7 @@ export default function Team() {
                         variant="outline"
                         size="sm"
                         disabled={isRevoking}
-                        onClick={() => revokeInviteMutation.mutate(invite.id)}
+                        onClick={() => setRevokeTarget(invite)}
                       >
                         {isRevoking ? <Loader2 className="h-4 w-4 animate-spin" /> : t('team.revokeInvite')}
                       </Button>
@@ -477,6 +487,7 @@ export default function Team() {
                             })
                           }
                           disabled={isUpdatingRole}
+                          aria-label={t('team.changeRoleFor', { defaultValue: 'Change role for {{name}}', name: member.full_name || member.email || member.user_id })}
                           className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700"
                         >
                           {inviteRoleOptions.map((option) => (
@@ -498,14 +509,7 @@ export default function Team() {
                           size="sm"
                           variant="outline"
                           disabled={isTransferringOwnership}
-                          onClick={() => {
-                            const memberLabel = member.full_name || member.email || member.user_id;
-                            const confirmed = window.confirm(
-                              t('team.transferOwnershipConfirm', { member: memberLabel })
-                            );
-                            if (!confirmed) return;
-                            transferOwnershipMutation.mutate(member.user_id);
-                          }}
+                          onClick={() => setTransferTarget(member)}
                         >
                           {isTransferringOwnership ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                           {t('team.transferOwnership')}
@@ -530,6 +534,62 @@ export default function Team() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={Boolean(transferTarget)} onOpenChange={(open) => !open && setTransferTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('team.transferOwnership', { defaultValue: 'Transfer ownership' })}</DialogTitle>
+            <DialogDescription>
+              {t('team.transferOwnershipConfirm', {
+                defaultValue: 'Transfer workspace ownership to {{member}}? You will become an admin. This cannot be undone.',
+                member: transferTarget?.full_name || transferTarget?.email || transferTarget?.user_id || '',
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTransferTarget(null)}>{t('common.cancel', { defaultValue: 'Cancel' })}</Button>
+            <Button
+              variant="destructive"
+              disabled={transferOwnershipMutation.isPending}
+              onClick={() => {
+                transferOwnershipMutation.mutate(transferTarget.user_id);
+                setTransferTarget(null);
+              }}
+            >
+              {transferOwnershipMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {t('team.transferOwnership', { defaultValue: 'Transfer ownership' })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(revokeTarget)} onOpenChange={(open) => !open && setRevokeTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('team.revokeInvite', { defaultValue: 'Revoke invite' })}</DialogTitle>
+            <DialogDescription>
+              {t('team.revokeInviteConfirm', {
+                defaultValue: 'Revoke the pending invite for {{email}}? They will no longer be able to join the workspace.',
+                email: revokeTarget?.email || '',
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRevokeTarget(null)}>{t('common.cancel', { defaultValue: 'Cancel' })}</Button>
+            <Button
+              variant="destructive"
+              disabled={revokeInviteMutation.isPending}
+              onClick={() => {
+                revokeInviteMutation.mutate(revokeTarget.id);
+                setRevokeTarget(null);
+              }}
+            >
+              {revokeInviteMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {t('team.revokeInvite', { defaultValue: 'Revoke invite' })}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader>

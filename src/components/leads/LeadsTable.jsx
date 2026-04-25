@@ -27,6 +27,7 @@ import ScorePill from '@/components/leads/ScorePill';
 import StatusBadge from '@/components/leads/StatusBadge';
 import StatusFilter from '@/components/leads/StatusFilter';
 import { LEAD_STATUS } from '@/constants/leads';
+import { computeLeadPriority } from '@/lib/leadScoring';
 import { dataClient } from '@/services/dataClient';
 
 const formatCompanySize = (value, emptyLabel) => {
@@ -39,32 +40,6 @@ const formatCompanySize = (value, emptyLabel) => {
 const sourceListLabel = (value, emptyLabel) => {
   const text = String(value || '').trim();
   return text || emptyLabel;
-};
-
-const toMetric = (value) => (Number.isFinite(Number(value)) ? Number(value) : null);
-const toScore = (value) => {
-  const metric = toMetric(value);
-  if (metric === null) return null;
-  return Math.max(0, Math.min(100, Math.round(metric)));
-};
-
-const resolveLeadScores = (lead) => {
-  const icpScore = toScore(lead?.icp_score);
-  const aiScore = toScore(lead?.ai_score);
-  const explicitFinalScore = toScore(lead?.final_score);
-  const finalScore = explicitFinalScore ?? icpScore ?? 0;
-  return {
-    finalScore,
-    icpScore,
-    aiScore,
-    hasExplicitFinalScore: explicitFinalScore !== null,
-  };
-};
-
-const getScoreTier = (score) => {
-  if (score >= 80) return { key: 'hot', badge: 'HOT', color: 'bg-rose-500', soft: 'bg-rose-50 text-rose-700 border-rose-200' };
-  if (score >= 65) return { key: 'warm', badge: 'WARM', color: 'bg-amber-500', soft: 'bg-amber-50 text-amber-700 border-amber-200' };
-  return { key: 'cool', badge: 'COOL', color: 'bg-slate-400', soft: 'bg-slate-100 text-slate-600 border-slate-200' };
 };
 
 /**
@@ -94,6 +69,12 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
   const [deletingIds, setDeletingIds] = useState(new Set());
   const [page, setPage] = useState(1);
 
+  const { data: activeIcp = null } = useQuery({
+    queryKey: ['icpActive', 'leads-table'],
+    queryFn: () => dataClient.icp.getActive(),
+    staleTime: 60_000,
+  });
+
   const industries = useMemo(() => {
     const set = new Set(leads.map((l) => l.industry).filter(Boolean));
     return [...set].sort();
@@ -116,14 +97,17 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
       const matchesFollowUp = followUpFilter === 'all' || lead.follow_up_status === followUpFilter;
       const matchesIndustry = !industryFilter || String(lead.industry || '').toLowerCase().includes(industryFilter.toLowerCase());
       const matchesCountry = !countryFilter || lead.country === countryFilter;
-      const { finalScore } = resolveLeadScores(lead);
-      const matchesScore = !minScoreFilter || (finalScore ?? 0) >= Number(minScoreFilter);
-      const tier = getScoreTier(finalScore);
-      const matchesPriority = priorityFilter === 'all' || tier.key === priorityFilter;
+      const priority = computeLeadPriority(lead, activeIcp);
+      const matchesScore = !minScoreFilter || (priority.priorityScore ?? 0) >= Number(minScoreFilter);
+      const tier = priority.tier;
+      const matchesPriority =
+        priorityFilter === 'all'
+        || tier.key === priorityFilter
+        || (priorityFilter === 'warm' && tier.key === 'qualified');
 
       return matchesSearch && matchesStatus && matchesFollowUp && matchesIndustry && matchesCountry && matchesScore && matchesPriority;
     });
-  }, [leads, debouncedSearch, statusFilter, followUpFilter, industryFilter, countryFilter, minScoreFilter, priorityFilter]);
+  }, [leads, activeIcp, debouncedSearch, statusFilter, followUpFilter, industryFilter, countryFilter, minScoreFilter, priorityFilter]);
 
   const sortedFiltered = useMemo(() => {
     const list = [...filtered];
@@ -131,12 +115,12 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
       if (sortBy === 'company_asc') return String(left.company_name || '').localeCompare(String(right.company_name || ''));
       if (sortBy === 'recent_desc') return new Date(right.created_at || 0).getTime() - new Date(left.created_at || 0).getTime();
       if (sortBy === 'recent_asc') return new Date(left.created_at || 0).getTime() - new Date(right.created_at || 0).getTime();
-      const leftScore = resolveLeadScores(left).finalScore ?? 0;
-      const rightScore = resolveLeadScores(right).finalScore ?? 0;
+      const leftScore = computeLeadPriority(left, activeIcp).priorityScore ?? 0;
+      const rightScore = computeLeadPriority(right, activeIcp).priorityScore ?? 0;
       return rightScore - leftScore;
     });
     return list;
-  }, [filtered, sortBy]);
+  }, [filtered, sortBy, activeIcp]);
 
   const totalPages = Math.max(1, Math.ceil(sortedFiltered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -372,8 +356,8 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
           {[
             { key: 'all', label: tt('leads.priority.all', 'All priorities') },
             { key: 'hot', label: 'HOT ≥ 80' },
-            { key: 'warm', label: 'WARM 65-79' },
-            { key: 'cool', label: 'COOL < 65' },
+            { key: 'warm', label: 'FIT 45-79' },
+            { key: 'cool', label: 'COOL < 45' },
           ].map((segment) => (
             <button
               key={segment.key}
@@ -573,8 +557,10 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
               </div>
               <div className="grid gap-3 lg:grid-cols-3">
                 {paginated.slice(0, 3).map((lead) => {
-                  const { icpScore, aiScore, finalScore, hasExplicitFinalScore } = resolveLeadScores(lead);
-                  const tier = getScoreTier(finalScore);
+                  const priority = computeLeadPriority(lead, activeIcp);
+                  const { icpScore, aiScore, hasExplicitFinalScore } = priority;
+                  const finalScore = priority.finalScore ?? priority.priorityScore;
+                  const tier = priority.tier;
                   return (
                     <div
                       key={lead.id}
@@ -586,7 +572,7 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
                           <p className="font-semibold text-slate-900 truncate">{lead.contact_name || lead.company_name}</p>
                           <p className="text-xs text-slate-500 truncate">{lead.contact_role || tt('common.company', 'Company')} · {lead.company_name}</p>
                         </div>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${tier.soft}`}>{tier.badge}</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${tier.className}`}>{tier.badge}</span>
                       </div>
                       <div className="mt-3 flex items-end gap-2">
                         <span className="text-4xl font-semibold tracking-tight text-slate-900">{finalScore}</span>
@@ -625,8 +611,10 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
               </div>
               <div className="divide-y divide-slate-100">
                 {paginated.map((lead) => {
-                  const { icpScore, aiScore, finalScore, hasExplicitFinalScore } = resolveLeadScores(lead);
-                  const tier = getScoreTier(finalScore);
+                  const priority = computeLeadPriority(lead, activeIcp);
+                  const { icpScore, aiScore, hasExplicitFinalScore } = priority;
+                  const finalScore = priority.finalScore ?? priority.priorityScore;
+                  const tier = priority.tier;
                   const isAnalyzing = analyzingIds.has(lead.id) || lead.status === LEAD_STATUS.PROCESSING;
                   return (
                     <div
@@ -635,7 +623,7 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
                       onClick={() => onSelectLead?.(lead)}
                     >
                       <div className="flex items-center gap-3 min-w-0 lg:w-[35%]">
-                        <span className={`w-2.5 h-2.5 rounded-full ${tier.color} ring-4 ring-slate-100`} />
+                        <span className={`w-2.5 h-2.5 rounded-full ${tier.dotClass} ring-4 ring-slate-100`} />
                         <span className="text-xl font-semibold text-slate-900 tabular-nums">{finalScore}</span>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-slate-900 truncate">{lead.company_name}</p>
