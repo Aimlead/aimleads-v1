@@ -17,6 +17,9 @@ import {
   Phone,
   RefreshCcw,
   Sparkles,
+  Target,
+  TrendingUp,
+  Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
