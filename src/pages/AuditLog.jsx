@@ -129,29 +129,32 @@ export default function AuditLog() {
   });
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center">
-              <ClipboardList className="w-4 h-4 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-slate-900">{t('auditLog.title', { defaultValue: 'Audit Log' })}</h1>
+    <div className="mx-auto w-full max-w-[1160px] space-y-6">
+      <section className="rounded-xl border border-[#e6e4df] bg-white px-5 py-4 shadow-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+              {t('auditLog.eyebrow', { defaultValue: 'Gouvernance workspace' })}
+            </p>
+            <h1 className="mt-1 text-2xl sm:text-3xl font-bold text-[#1a1200]">
+              {t('auditLog.title', { defaultValue: 'Audit Log' })}
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              {t('auditLog.subtitle', { defaultValue: 'Historique immuable de toutes les actions et modifications du workspace.' })}
+            </p>
           </div>
-          <p className="text-sm text-slate-500">{t('auditLog.subtitle', { defaultValue: 'Immutable record of all workspace actions and changes.' })}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch().then(() => toast.success(t('auditLog.refreshed', { defaultValue: 'Audit log refreshed.' }))).catch(() => toast.error(t('auditLog.refreshFailed', { defaultValue: 'Failed to refresh.' })))}
+            disabled={isFetching}
+            className="gap-2 rounded-xl shrink-0 mt-1"
+          >
+            <RefreshCcw className={cn('w-3.5 h-3.5', isFetching && 'animate-spin')} />
+            {t('auditLog.refresh', { defaultValue: 'Refresh' })}
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch().then(() => toast.success(t('auditLog.refreshed', { defaultValue: 'Audit log refreshed.' }))).catch(() => toast.error(t('auditLog.refreshFailed', { defaultValue: 'Failed to refresh.' })))}
-          disabled={isFetching}
-          className="gap-2 rounded-xl"
-        >
-          <RefreshCcw className={cn('w-3.5 h-3.5', isFetching && 'animate-spin')} />
-          {t('auditLog.refresh', { defaultValue: 'Refresh' })}
-        </Button>
-      </div>
+      </section>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

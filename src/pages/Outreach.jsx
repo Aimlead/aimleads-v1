@@ -496,17 +496,18 @@ export default function Outreach() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center gap-2.5">
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center">
-          <BookOpen className="w-4 h-4 text-white" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">{t('outreach.title', { defaultValue: 'Outreach' })}</h1>
-          <p className="text-sm text-slate-500">{t('outreach.subtitle', { defaultValue: 'Manual templates and personalized AI sequences.' })}</p>
-        </div>
-      </div>
+    <div className="mx-auto w-full max-w-[1160px] space-y-6">
+      <section className="rounded-xl border border-[#e6e4df] bg-white px-5 py-4 shadow-sm">
+        <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+          {t('outreach.eyebrow', { defaultValue: 'Séquences & Templates' })}
+        </p>
+        <h1 className="mt-1 text-2xl sm:text-3xl font-bold text-[#1a1200]">
+          {t('outreach.title', { defaultValue: 'Outreach' })}
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          {t('outreach.subtitle', { defaultValue: 'Templates manuels et séquences IA personnalisées par lead.' })}
+        </p>
+      </section>
 
       <Tabs defaultValue={selectedLeadId ? 'sequences' : 'templates'}>
         <TabsList className="bg-slate-100">

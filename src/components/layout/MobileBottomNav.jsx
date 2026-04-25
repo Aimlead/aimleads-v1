@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  CreditCard, Kanban, LayoutDashboard, ListOrdered, LogOut, MoreHorizontal,
-  Rows3, ScrollText, Settings, Target, UserCog, Users,
+  CreditCard, HelpCircle, Kanban, LayoutDashboard, ListOrdered, LogOut, Mail,
+  MoreHorizontal, Rows3, ScrollText, Settings, Target, UserCog, Users,
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
@@ -11,15 +11,17 @@ import { ROUTES } from '@/constants/routes';
 
 const PRIMARY_TABS = [
   { name: 'Dashboard', href: ROUTES.dashboard, icon: LayoutDashboard },
-  { name: 'Priorites', href: ROUTES.priorities, icon: ListOrdered },
+  { name: 'Priorités', href: ROUTES.priorities, icon: ListOrdered },
   { name: 'Pipeline', href: ROUTES.pipeline, icon: Kanban },
-  { name: 'ICP', href: ROUTES.icp, icon: Target },
+  { name: 'Outreach', href: ROUTES.outreach, icon: Mail },
 ];
 
 const MORE_ITEMS = [
+  { name: 'ICP', href: ROUTES.icp, icon: Target },
   { name: 'Listes', href: ROUTES.lists, icon: Rows3 },
   { name: 'Facturation', href: ROUTES.billing, icon: CreditCard },
   { name: 'Team', href: ROUTES.team, icon: Users },
+  { name: 'Aide', href: ROUTES.help, icon: HelpCircle },
   { name: 'Settings', href: ROUTES.settings, icon: Settings },
   { name: 'Audit Log', href: ROUTES.auditLog, icon: ScrollText },
   { name: 'Mon compte', href: ROUTES.accountSettings, icon: UserCog },

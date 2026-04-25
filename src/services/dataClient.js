@@ -1092,7 +1092,29 @@ export const dataClient = {
               updated_at: null,
               updated_by_user_id: null,
             },
+            {
+              flag_name: 'send_to_aimlead',
+              label: 'Send to real AimLead',
+              description: 'Enable syncing workspace modifications directly to the live AimLead production environment.',
+              category: 'platform',
+              default_enabled: false,
+              enabled: false,
+              updated_at: null,
+              updated_by_user_id: null,
+            },
           ],
+        }),
+        passAuthErrors: true,
+      });
+    },
+    async grantCredits(payload) {
+      return runWithMode({
+        operationName: 'workspace.grantCredits',
+        apiCall: () => apiClient.workspace.grantCredits(payload),
+        fallbackCall: async () => ({
+          success: true,
+          new_balance: 200,
+          amount: payload?.amount || 150,
         }),
         passAuthErrors: true,
       });

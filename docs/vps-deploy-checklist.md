@@ -33,6 +33,7 @@ On the Hostinger VPS, make sure these are already installed and working:
 - Docker Compose plugin
 - Traefik container on the same Docker network
 - valid `.env` file in the project root
+- Supabase Auth redirect URLs allow `https://aimlead.io/auth/callback` and `https://aimlead.io/reset-password`
 
 Check the current runtime:
 
@@ -70,6 +71,8 @@ The relevant variables are:
 - `APP_VERSION`
 - `APP_BUILD_TIME`
 - `APP_COMMIT_SHA`
+- `APP_ORIGIN=https://aimlead.io`
+- `CORS_ORIGIN=https://aimlead.io,https://www.aimlead.io`
 
 If they are missing, the app will still build, but you lose the ability to confirm whether `aimlead.io` is serving the correct revision.
 

@@ -129,6 +129,7 @@ export default function Settings() {
   const [scoringForm, setScoringForm] = useState(DEFAULT_SCORING_SETTINGS);
   const [savingFlagName, setSavingFlagName] = useState('');
   const [isLoadingMockDemo, setIsLoadingMockDemo] = useState(false);
+  const [isGrantingCredits, setIsGrantingCredits] = useState(false);
   const locale = getLocale(i18n.language);
 
   const { data: icpProfiles = [] } = useQuery({
@@ -416,6 +417,20 @@ export default function Settings() {
     }
   };
 
+  const handleGrantCredits = async () => {
+    setIsGrantingCredits(true);
+    try {
+      const result = await dataClient.workspace.grantCredits({ amount: 150, description: 'Manual top-up from settings' });
+      queryClient.invalidateQueries({ queryKey: ['workspaceCreditsSettings'] });
+      toast.success(`+150 credits added. New balance: ${result?.new_balance ?? '—'}`);
+    } catch (error) {
+      console.warn('Failed to grant credits', error);
+      toast.error(error?.message || 'Failed to add credits.');
+    } finally {
+      setIsGrantingCredits(false);
+    }
+  };
+
   return (
     <div className="mx-auto w-full max-w-[1160px]">
       <div className="mb-8 rounded-xl border border-[#e6e4df] bg-white px-5 py-4 shadow-sm">
@@ -699,6 +714,15 @@ export default function Settings() {
               </Button>
               <Button asChild variant="ghost">
                 <Link to={ROUTES.pricing}>{t('settings.livePlan.comparePlans')}</Link>
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleGrantCredits}
+                disabled={isGrantingCredits}
+                className="gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+              >
+                {isGrantingCredits ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                {t('settings.livePlan.grantCredits', { defaultValue: '+ 150 crédits' })}
               </Button>
             </div>
           </CardContent>

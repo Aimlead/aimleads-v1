@@ -52,25 +52,27 @@ export default function Help() {
   ];
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-sky/10 text-brand-sky">
-              <LifeBuoy className="h-5 w-5" />
-            </div>
-            <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">{t('help.page.title', { defaultValue: 'Help Center' })}</h1>
+    <div className="mx-auto w-full max-w-[1160px] space-y-6">
+      <section className="rounded-xl border border-[#e6e4df] bg-white px-5 py-4 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+              {t('help.page.eyebrow', { defaultValue: 'Support & Playbooks' })}
+            </p>
+            <h1 className="mt-1 text-2xl sm:text-3xl font-bold text-[#1a1200]">
+              {t('help.page.title', { defaultValue: 'Help Center' })}
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              {t('help.page.subtitle', {
+                defaultValue: "Débloquez rapidement l'onboarding, l'accès au compte, et la collaboration d'équipe.",
+              })}
+            </p>
           </div>
-          <p className="mt-2 max-w-3xl text-sm text-slate-500">
-            {t('help.page.subtitle', {
-              defaultValue: 'The fastest way to unblock onboarding, account access, import quality, and team collaboration without hunting through settings.',
-            })}
-          </p>
+          <Button asChild variant="outline" className="shrink-0 mt-1">
+            <Link to={ROUTES.settings}>{t('help.page.openSettings', { defaultValue: 'Open Settings' })}</Link>
+          </Button>
         </div>
-        <Button asChild variant="outline">
-          <Link to={ROUTES.settings}>{t('help.page.openSettings', { defaultValue: 'Open Settings' })}</Link>
-        </Button>
-      </div>
+      </section>
 
       <div className="grid gap-4 lg:grid-cols-3">
         {playbooks.map((item) => {

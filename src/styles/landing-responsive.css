@@ -255,8 +255,20 @@
   .volet-row,
   .cta-band,
   .art-grid,
-  .product-cards-home {
+  .product-cards-home,
+  .home-blocages,
+  .home-grid-2 {
     grid-template-columns: 1fr !important;
+  }
+
+  .home-blocages {
+    gap: 40px !important;
+    padding-top: 56px !important;
+    padding-bottom: 56px !important;
+  }
+
+  .hb-intro {
+    position: static !important;
   }
 
   .cta-band {
@@ -379,5 +391,20 @@
     right: 10px;
     bottom: 10px;
     grid-template-columns: 1fr;
+  }
+
+  /* Stats strip stacks on small phones */
+  .home-stats-strip {
+    flex-direction: column;
+  }
+
+  .hss-sep {
+    width: 60%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,.1), transparent);
+  }
+
+  .hss-val {
+    font-size: 40px;
   }
 }

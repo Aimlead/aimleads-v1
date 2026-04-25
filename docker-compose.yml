@@ -28,7 +28,8 @@ services:
       - NODE_ENV=production
       - API_PORT=3010
       - TRUST_PROXY=1
-      - CORS_ORIGIN=https://aimlead.io
+      - APP_ORIGIN=https://aimlead.io
+      - CORS_ORIGIN=https://aimlead.io,https://www.aimlead.io
       - VITE_API_BASE_URL=https://aimlead.io/api
       - DATA_PROVIDER=supabase
       - AUTH_PROVIDER=supabase

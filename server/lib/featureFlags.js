@@ -26,6 +26,13 @@ export const FEATURE_FLAG_DEFINITIONS = [
     category: 'experience',
     default_enabled: false,
   },
+  {
+    flag_name: 'send_to_aimlead',
+    label: 'Send to real AimLead',
+    description: 'Enable syncing workspace modifications directly to the live AimLead production environment.',
+    category: 'platform',
+    default_enabled: false,
+  },
 ];
 
 const FEATURE_FLAGS_BY_NAME = new Map(FEATURE_FLAG_DEFINITIONS.map((flag) => [flag.flag_name, flag]));

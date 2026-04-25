@@ -83,6 +83,28 @@ test('trusted mutation helper allows production writes from trusted origin', () 
   );
 });
 
+test('trusted mutation helper allows production writes from www when configured', () => {
+  const req = {
+    method: 'POST',
+    headers: {
+      origin: 'https://www.aimlead.io',
+      'x-csrf-token': 'token_456',
+      'x-requested-with': 'XMLHttpRequest',
+    },
+    cookies: {
+      aimleads_csrf: 'token_456',
+    },
+  };
+
+  assert.equal(
+    isTrustedMutationRequest(req, {
+      isProduction: true,
+      corsOrigin: 'https://aimlead.io,https://www.aimlead.io',
+    }),
+    true
+  );
+});
+
 test('csrfProtection still allows trusted csrf-backed xhr mutations in non-production', async () => {
   await withEnv(
     {

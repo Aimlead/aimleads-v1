@@ -500,15 +500,15 @@ export default function Dashboard() {
               <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">
                 {formatDateEyebrow} · {t('dashboard.priority.eyebrow', { defaultValue: 'File prioritaire' })}
               </p>
-              <h1 className="mt-1 text-[31px] font-bold tracking-tight text-[#1a1200]">
+              <h1 className="mt-1 text-xl sm:text-[31px] font-bold tracking-tight text-[#1a1200]">
                 {t('dashboard.priority.title', { defaultValue: 'Qui contacter maintenant' })}
               </h1>
               <p className="mt-1 text-sm text-slate-500">
                 {t('dashboard.priority.subtitle', { defaultValue: 'Leads classés par fit ICP, signaux disponibles et dynamique de suivi.' })}
               </p>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div className="mt-3 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2">
                 <Select value={selectedSourceList} onValueChange={setSelectedSourceList}>
-                  <SelectTrigger className="h-8 w-[250px] border-[#e8e5de] text-xs">
+                  <SelectTrigger className="h-8 w-full sm:w-[250px] border-[#e8e5de] text-xs">
                     <SelectValue placeholder={t('dashboard.placeholders.selectLeadList')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -521,7 +521,7 @@ export default function Dashboard() {
                   </SelectContent>
                 </Select>
                 <Select value={activeIcp?.id || ''} onValueChange={handleSwitchIcp} disabled={isSwitchingIcp || icpProfiles.length === 0}>
-                  <SelectTrigger className="h-8 w-[220px] border-[#e8e5de] text-xs">
+                  <SelectTrigger className="h-8 w-full sm:w-[220px] border-[#e8e5de] text-xs">
                     <SelectValue placeholder={t('dashboard.placeholders.selectActiveIcp')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -557,9 +557,14 @@ export default function Dashboard() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleAnalyzeSignalsVisible}
-                disabled={isMockMode || isAnalyzingSignalsVisible || isReanalyzing || isScoringIcpVisible}
-                title={isMockMode ? t('dashboard.actions.requiresInternet', { defaultValue: 'Action désactivée en local: elle nécessite Internet.' }) : undefined}
+                onClick={() => {
+                  if (isMockMode) {
+                    toast.info('Requires ANTHROPIC_API_KEY — add it to your .env and restart the server.');
+                    return;
+                  }
+                  handleAnalyzeSignalsVisible();
+                }}
+                disabled={isAnalyzingSignalsVisible || isReanalyzing || isScoringIcpVisible}
                 className="h-8 gap-1.5 rounded-md border-[#e8e5de] px-2.5 text-[11.5px]"
               >
                 {isAnalyzingSignalsVisible ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
@@ -573,9 +578,13 @@ export default function Dashboard() {
                 id="research-lead-trigger"
                 size="sm"
                 variant="outline"
-                onClick={() => setResearchDialogOpen(true)}
-                disabled={isMockMode}
-                title={isMockMode ? t('dashboard.actions.requiresInternet', { defaultValue: 'Action désactivée en local: elle nécessite Internet.' }) : undefined}
+                onClick={() => {
+                  if (isMockMode) {
+                    toast.info('Requires ANTHROPIC_API_KEY — add it to your .env and restart the server.');
+                    return;
+                  }
+                  setResearchDialogOpen(true);
+                }}
                 className="h-8 gap-1.5 rounded-md border-[#e8e5de] px-2.5 text-[11.5px]"
               >
                 <Sparkles className="h-3.5 w-3.5" />
@@ -611,9 +620,9 @@ export default function Dashboard() {
         )}
 
         {!isLoading && totalLeads > 0 && priorityLead && (
-          <section className="w-full rounded-xl border border-[#e6e4df] bg-white px-6 py-5 shadow-sm">
+          <section className="w-full rounded-xl border border-[#e6e4df] bg-white px-4 py-4 sm:px-6 sm:py-5 shadow-sm">
             <div className="grid gap-6 xl:grid-cols-[136px_minmax(0,1fr)_auto] xl:items-center">
-              <div className="relative h-[118px] w-[118px]">
+              <div className="relative h-[118px] w-[118px] mx-auto xl:mx-0">
                 <div
                   className="h-full w-full rounded-full"
                   style={{
@@ -630,7 +639,7 @@ export default function Dashboard() {
                 <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-amber-700">
                   {t('dashboard.priority.today', { defaultValue: 'Priorité du jour' })}
                 </span>
-                <h2 className="mt-1.5 truncate text-[30px] font-bold leading-tight tracking-tight text-[#1a1200]">{priorityLead.company_name}</h2>
+                <h2 className="mt-1.5 truncate text-xl sm:text-[30px] font-bold leading-tight tracking-tight text-[#1a1200]">{priorityLead.company_name}</h2>
                 <p className="mt-1 truncate text-sm text-slate-600">{priorityLead.contact_name || t('common.contact')} · {priorityLead.contact_role || t('common.contact')}</p>
 
                 <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-slate-600">
@@ -762,10 +771,11 @@ export default function Dashboard() {
         {!isLoading && nextPriorityLeads.length > 0 && (
           <section id="dashboard-leads-table" className="overflow-hidden rounded-xl border border-[#e6e4df] bg-white shadow-sm">
             <div className="flex items-center justify-between border-b border-[#ece9e2] px-4 py-2.5">
-              <h3 className="text-[23px] font-semibold tracking-tight text-[#1a1200]">{t('dashboard.priority.nextInLine', { defaultValue: 'Suite de la file' })}</h3>
+              <h3 className="text-lg sm:text-[23px] font-semibold tracking-tight text-[#1a1200]">{t('dashboard.priority.nextInLine', { defaultValue: 'Suite de la file' })}</h3>
               <Button variant="ghost" size="sm" onClick={() => navigate(ROUTES.pipeline)}>{t('dashboard.priority.openPipeline', { defaultValue: 'Ouvrir le pipeline' })}</Button>
             </div>
-            <div className="grid grid-cols-[82px_minmax(190px,1.9fr)_minmax(150px,1fr)_minmax(140px,0.9fr)_minmax(180px,1fr)_172px] items-center gap-4 bg-[#faf9f7] px-4 py-2 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+            <div className="overflow-x-auto -webkit-overflow-scrolling-touch">
+            <div className="min-w-[860px] grid grid-cols-[82px_minmax(190px,1.9fr)_minmax(150px,1fr)_minmax(140px,0.9fr)_minmax(180px,1fr)_172px] items-center gap-4 bg-[#faf9f7] px-4 py-2 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">
               <span>{t('dashboard.priority.score', { defaultValue: 'Score' })}</span>
               <span>{t('dashboard.priority.lead', { defaultValue: 'Lead' })}</span>
               <span>{t('dashboard.priority.company', { defaultValue: 'Entreprise' })}</span>
@@ -780,7 +790,7 @@ export default function Dashboard() {
                 const emailAddress = String(lead.email || lead.contact_email || '').trim();
                 const phoneNumber = String(lead.phone || lead.contact_phone || '').trim();
                 return (
-                  <button key={lead.id} type="button" onClick={() => handleSelectLead(lead)} className="grid w-full grid-cols-[82px_minmax(190px,1.9fr)_minmax(150px,1fr)_minmax(140px,0.9fr)_minmax(180px,1fr)_172px] items-center gap-4 px-4 py-2.5 text-left hover:bg-[#fbfaf8]">
+                  <button key={lead.id} type="button" onClick={() => handleSelectLead(lead)} className="min-w-[860px] grid w-full grid-cols-[82px_minmax(190px,1.9fr)_minmax(150px,1fr)_minmax(140px,0.9fr)_minmax(180px,1fr)_172px] items-center gap-4 px-4 py-2.5 text-left hover:bg-[#fbfaf8]">
                     <div className="flex items-center gap-1.5">
                       <Circle className={`h-2.5 w-2.5 ${score >= 80 ? 'fill-rose-500 text-rose-500' : score >= 65 ? 'fill-amber-500 text-amber-500' : 'fill-slate-400 text-slate-400'}`} />
                       <span className="text-[28px] font-semibold leading-none text-slate-900">{score}</span>
@@ -851,6 +861,7 @@ export default function Dashboard() {
                   </button>
                 );
               })}
+            </div>
             </div>
           </section>
         )}
