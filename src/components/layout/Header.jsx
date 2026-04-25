@@ -6,6 +6,7 @@ import LanguageSwitcher from '@/components/ui/LanguageSwitcher';
 import { ROUTES } from '@/constants/routes';
 import { Search, UserCog, Zap } from 'lucide-react';
 import { dataClient } from '@/services/dataClient';
+import BrandLogo from '@/components/brand/BrandLogo';
 
 const formatCompactCount = (value) => {
   const parsed = Number(value);
@@ -127,7 +128,12 @@ export default function Header({ user, onSignOut, onOpenPalette, bannerOffset = 
     <header className="fixed left-0 md:left-64 right-0 h-16 border-b border-[#e6e4df] z-40" style={{ top: bannerOffset, background: 'rgba(247,247,245,0.92)', backdropFilter: 'blur(16px) saturate(1.2)', WebkitBackdropFilter: 'blur(16px) saturate(1.2)', boxShadow: '0 1px 0 rgba(26,18,0,0.05)' }}>
       <div className="h-full px-2 md:px-6 flex items-center justify-between gap-2 md:gap-3">
 
-        <div className="flex items-center gap-1 md:gap-2 min-w-0">
+        <div className="flex items-center gap-1 md:gap-3 min-w-0">
+          {/* Desktop: logo top-left */}
+          <Link to={ROUTES.dashboard} className="hidden md:flex items-center gap-2 flex-shrink-0 mr-1">
+            <img src="/brand/aimleads-mark.png" alt="AimLeads" style={{ height: 22, width: 'auto' }} />
+            <span className="text-sm font-bold text-slate-800 tracking-tight">AimLeads</span>
+          </Link>
           <button
             onClick={onOpenPalette}
             className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg bg-white hover:bg-[#fbfaf8] border border-[#e6e4df] text-slate-500 text-sm transition-all duration-150 group"
@@ -144,6 +150,14 @@ export default function Header({ user, onSignOut, onOpenPalette, bannerOffset = 
           >
             <Search className="w-4 h-4" />
           </button>
+        </div>
+
+        {/* Mobile: centered brand name */}
+        <div className="md:hidden absolute left-1/2 -translate-x-1/2 pointer-events-none select-none">
+          <Link to={ROUTES.dashboard} className="pointer-events-auto flex items-center gap-1.5">
+            <img src="/brand/aimleads-mark.png" alt="" aria-hidden="true" style={{ height: 20, width: 'auto' }} />
+            <span className="text-sm font-bold text-slate-800 tracking-tight">AimLeads</span>
+          </Link>
         </div>
 
         <div className="flex items-center gap-1 md:gap-1.5 min-w-0 flex-shrink-0">

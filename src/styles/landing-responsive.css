@@ -68,72 +68,63 @@
     position: sticky;
     top: 0;
     z-index: 240;
-    display: flex;
+    display: grid;
+    grid-template-columns: 44px 1fr auto;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    min-height: 72px;
-    padding: 14px 16px;
-    background: rgba(3, 13, 26, 0.92);
+    column-gap: 12px;
+    min-height: 64px;
+    padding: 10px 16px;
+    background: rgba(3, 13, 26, 0.95);
     backdrop-filter: blur(16px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .landing-mobile-menu-btn,
-  .landing-mobile-login,
-  .landing-mobile-brand {
-    border: none;
-    background: transparent;
-    padding: 0;
-    color: var(--white);
-    font-family: 'Aptos', 'Segoe UI', system-ui, sans-serif;
   }
 
   .landing-mobile-menu-btn {
     width: 44px;
     height: 44px;
     border-radius: 12px;
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: rgba(255, 255, 255, 0.82);
+    padding: 0;
+    cursor: pointer;
+    flex-shrink: 0;
   }
 
   .landing-mobile-brand {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
-    flex: 1;
+    overflow: hidden;
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
     min-width: 0;
   }
 
-  .landing-mobile-brand .sb-logo-brand {
-    justify-content: center;
-  }
-
-  .landing-mobile-brand .sb-logo-brand img:first-child {
-    height: 24px;
-  }
-
-  .landing-mobile-brand .sb-logo-brand img:last-child {
-    height: 16px;
+  .landing-mobile-brand img,
+  .landing-mobile-brand-img {
+    height: 26px !important;
+    width: auto !important;
+    max-width: 100%;
+    object-fit: contain;
+    display: block;
+    flex-shrink: 1 !important;
   }
 
   .landing-mobile-actions {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 10px;
     justify-content: flex-end;
-  }
-
-  .landing-mobile-language {
-    min-width: 72px;
+    gap: 8px;
   }
 
   .landing-mobile-login {
-    height: 40px;
+    height: 38px;
     padding: 0 14px;
     border-radius: 999px;
     background: rgba(58, 141, 255, 0.12);
@@ -142,9 +133,10 @@
     font-size: 13px;
     font-weight: 600;
     white-space: nowrap;
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 6px;
+    cursor: pointer;
   }
 
   .landing-mobile-login-icon {
@@ -226,15 +218,11 @@
 
 @media (max-width: 768px) {
   .landing-mobile-bar {
-    padding: 12px 14px;
-  }
-
-  .landing-mobile-language {
-    min-width: 64px;
+    padding: 10px 14px;
+    column-gap: 10px;
   }
 
   .landing-mobile-login {
-    display: inline-flex;
     height: 36px;
     padding: 0 11px;
     font-size: 12px;
@@ -356,15 +344,18 @@
 
 @media (max-width: 520px) {
   .landing-mobile-bar {
-    gap: 8px;
+    column-gap: 8px;
+    padding: 8px 12px;
+    grid-template-columns: 40px 1fr auto;
+  }
+
+  .landing-mobile-menu-btn {
+    width: 40px;
+    height: 40px;
   }
 
   .landing-mobile-actions {
     gap: 6px;
-  }
-
-  .landing-mobile-language {
-    min-width: 56px;
   }
 
   .landing-mobile-login {

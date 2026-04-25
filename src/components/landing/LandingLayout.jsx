@@ -199,11 +199,10 @@ export default function LandingLayout() {
           className="landing-mobile-brand"
           onClick={() => changePage('home')}
         >
-          <BrandLogo variant="full" className="sb-logo-brand" />
+          <BrandLogo variant="full" className="landing-mobile-brand-img" />
         </button>
 
         <div className="landing-mobile-actions">
-          <LanguageSwitcher className="landing-mobile-language" compact />
           <button
             type="button"
             className="landing-mobile-login"

@@ -240,10 +240,66 @@
   white-space: nowrap;
 }
 .lv2-nav-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 20px -4px rgba(58, 141, 255, 0.6); }
+.lv2-nav-hamburger { display: none; }
+.lv2-nav-mobile-menu { display: none; }
 
 @media (max-width: 720px) {
+  .lv2-nav {
+    min-width: 0;
+    width: calc(100vw - 32px);
+    gap: 0;
+    justify-content: space-between;
+    padding: 8px 8px 8px 16px;
+  }
+  .lv2-nav-brand {
+    white-space: nowrap;
+    flex-shrink: 0;
+    gap: 8px;
+  }
   .lv2-nav-links { display: none; }
-  .lv2-nav { min-width: 0; gap: 12px; }
+  .lv2-nav-cta {
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+  .lv2-nav-hamburger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+  .lv2-nav-mobile-menu {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 72px;
+    left: 16px;
+    right: 16px;
+    z-index: 99;
+    background: rgba(10, 14, 31, 0.97);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 8px;
+    backdrop-filter: blur(18px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+    gap: 2px;
+  }
+  .lv2-nav-mobile-menu .lv2-nav-link {
+    border-radius: 10px;
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 15px;
+    width: 100%;
+  }
 }
 
 /* ---------- Hero ---------- */
