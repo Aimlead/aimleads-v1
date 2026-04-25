@@ -280,7 +280,7 @@ export default function Lists() {
             className="w-full sm:max-w-xs"
           />
           <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-[190px]">
+            <SelectTrigger className="w-full sm:w-[190px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

@@ -112,10 +112,10 @@ function CreditBadge() {
     <Link
       to={badgeState.to}
       title={badgeState.title}
-      className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition-opacity hover:opacity-80 ${badgeState.tone}`}
+      className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-xs font-medium transition-opacity hover:opacity-80 ${badgeState.tone}`}
     >
-      <Zap className={`w-3 h-3 ${badgeState.iconTone}`} />
-      <span>{badgeState.label}</span>
+      <Zap className={`w-3.5 h-3.5 sm:w-3 sm:h-3 ${badgeState.iconTone}`} />
+      <span className="hidden sm:inline">{badgeState.label}</span>
     </Link>
   );
 }
@@ -127,7 +127,7 @@ export default function Header({ user, onSignOut, onOpenPalette, bannerOffset = 
     <header className="fixed left-0 md:left-64 right-0 h-16 border-b border-[#e6e4df] z-40" style={{ top: bannerOffset, background: 'rgba(247,247,245,0.92)', backdropFilter: 'blur(16px) saturate(1.2)', WebkitBackdropFilter: 'blur(16px) saturate(1.2)', boxShadow: '0 1px 0 rgba(26,18,0,0.05)' }}>
       <div className="h-full px-4 md:px-6 flex items-center justify-between gap-3">
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <button
             onClick={onOpenPalette}
             className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg bg-white hover:bg-[#fbfaf8] border border-[#e6e4df] text-slate-500 text-sm transition-all duration-150 group"
@@ -136,7 +136,14 @@ export default function Header({ user, onSignOut, onOpenPalette, bannerOffset = 
             <span className="text-xs pr-4">{t('nav.searchPlaceholder')}</span>
             <kbd className="text-[10px] bg-[#f7f5f0] border border-[#e6e4df] rounded px-1.5 py-0.5 font-medium text-slate-500">⌘K</kbd>
           </button>
-          <span className="md:hidden text-sm font-semibold text-slate-700 tracking-wide">AimLeads</span>
+          {/* Mobile: search icon button */}
+          <button
+            onClick={onOpenPalette}
+            className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl bg-white border border-[#e6e4df] text-slate-500 hover:bg-[#fbfaf8] transition-colors"
+            aria-label={t('nav.searchPlaceholder')}
+          >
+            <Search className="w-4 h-4" />
+          </button>
         </div>
 
         <div className="flex items-center gap-1.5">

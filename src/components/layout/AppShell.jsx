@@ -33,15 +33,15 @@ function BetaBanner({ onVisibilityChange }) {
 
   return (
     <div
-      className="fixed inset-x-0 z-[150] bg-gradient-to-r from-violet-600 via-brand-sky to-sky-500 text-white text-xs font-medium px-4 flex items-center justify-center gap-3 shadow-sm"
+      className="fixed inset-x-0 z-[150] bg-gradient-to-r from-violet-600 via-brand-sky to-sky-500 text-white text-xs font-medium px-3 flex items-center justify-center gap-2 shadow-sm"
       style={{ top: 0, height: BANNER_H }}
     >
-      <span className="inline-flex items-center gap-1.5">
-        <span className="bg-white/20 rounded px-1.5 py-0.5 font-bold text-[10px] tracking-wide">BÊTA</span>
-        AimLeads est en bêta — vos retours nous aident à améliorer le produit.
-        <a href="mailto:beta@aimlead.io" className="underline underline-offset-2 hover:opacity-80">Écrire à l&apos;équipe</a>
+      <span className="inline-flex items-center gap-1.5 min-w-0">
+        <span className="bg-white/20 rounded px-1.5 py-0.5 font-bold text-[10px] tracking-wide flex-shrink-0">BÊTA</span>
+        <span className="hidden sm:inline truncate">AimLeads est en bêta — vos retours nous aident à améliorer le produit.</span>
+        <a href="mailto:beta@aimlead.io" className="underline underline-offset-2 hover:opacity-80 whitespace-nowrap flex-shrink-0">Écrire à l&apos;équipe</a>
       </span>
-      <button onClick={dismiss} className="ml-2 opacity-70 hover:opacity-100 transition-opacity" aria-label="Fermer">
+      <button onClick={dismiss} className="ml-1 opacity-70 hover:opacity-100 transition-opacity flex-shrink-0" aria-label="Fermer">
         <X className="w-3.5 h-3.5" />
       </button>
     </div>
@@ -95,7 +95,7 @@ export default function AppShell({ children }) {
   const bannerOffset = bannerVisible ? BANNER_H : 0;
 
   return (
-    <div className="min-h-screen" style={{ background: 'hsl(var(--background))' }}>
+    <div className="min-h-screen overflow-x-hidden" style={{ background: 'hsl(var(--background))' }}>
       <BetaBanner onVisibilityChange={setBannerVisible} />
 
       {/* Skip to main */}

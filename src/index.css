@@ -57,8 +57,13 @@
 
 @layer base {
   * { @apply border-border outline-ring/50; }
-  body { @apply bg-background text-foreground; font-family: 'Aptos', 'Segoe UI', system-ui, sans-serif; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: hidden; }
+  body { @apply bg-background text-foreground; font-family: 'Aptos', 'Segoe UI', system-ui, sans-serif; overflow-x: hidden; }
   h1, h2, h3, h4, h5, h6 { font-family: 'Aptos Display', 'Aptos', 'Segoe UI Variable Display', 'Trebuchet MS', system-ui, sans-serif; letter-spacing: -0.02em; }
+  /* Prevent iOS Safari auto-zoom on input focus (requires font-size >= 16px) */
+  @media (max-width: 767px) {
+    input, select, textarea { font-size: 16px !important; }
+  }
 }
 
 @keyframes fadeInUp {

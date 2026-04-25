@@ -166,53 +166,57 @@ export default function PriorityList() {
       </header>
 
       <section className="overflow-hidden rounded-xl border border-[#e6e4df] bg-white shadow-sm">
-        <div className="px-4 sm:px-5 py-3 border-b border-[#ece9e2] flex flex-wrap items-center gap-2">
-          <Button variant={selectedHeat === 'all' ? 'default' : 'ghost'} size="sm" className="h-8" onClick={() => setSelectedHeat('all')}>{t('common.all', { defaultValue: 'Tous' })}</Button>
-          <Button variant={selectedHeat === 'hot' ? 'default' : 'ghost'} size="sm" className="h-8" onClick={() => setSelectedHeat('hot')}>
-            <Flame className="w-3.5 h-3.5 mr-1" /> {t('priorityList.heat.hot', { defaultValue: 'Chaud' })}
-          </Button>
-          <Button variant={selectedHeat === 'warm' ? 'default' : 'ghost'} size="sm" className="h-8" onClick={() => setSelectedHeat('warm')}>{t('priorityList.heat.warm', { defaultValue: 'Tiède' })}</Button>
-          <Button variant={selectedHeat === 'cold' ? 'default' : 'ghost'} size="sm" className="h-8" onClick={() => setSelectedHeat('cold')}>{t('priorityList.heat.cold', { defaultValue: 'Froid' })}</Button>
+        <div className="px-4 sm:px-5 py-3 border-b border-[#ece9e2] flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
+          {/* Heat filter row */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+            <Button variant={selectedHeat === 'all' ? 'default' : 'ghost'} size="sm" className="h-8 flex-shrink-0" onClick={() => setSelectedHeat('all')}>{t('common.all', { defaultValue: 'Tous' })}</Button>
+            <Button variant={selectedHeat === 'hot' ? 'default' : 'ghost'} size="sm" className="h-8 flex-shrink-0" onClick={() => setSelectedHeat('hot')}>
+              <Flame className="w-3.5 h-3.5 mr-1" /> {t('priorityList.heat.hot', { defaultValue: 'Chaud' })}
+            </Button>
+            <Button variant={selectedHeat === 'warm' ? 'default' : 'ghost'} size="sm" className="h-8 flex-shrink-0" onClick={() => setSelectedHeat('warm')}>{t('priorityList.heat.warm', { defaultValue: 'Tiède' })}</Button>
+            <Button variant={selectedHeat === 'cold' ? 'default' : 'ghost'} size="sm" className="h-8 flex-shrink-0" onClick={() => setSelectedHeat('cold')}>{t('priorityList.heat.cold', { defaultValue: 'Froid' })}</Button>
+          </div>
 
-          <div className="h-5 w-px bg-[#e6e4df] mx-1" />
+          <div className="hidden sm:block h-5 w-px bg-[#e6e4df] mx-1" />
 
-          <Select value={selectedContactStatus} onValueChange={setSelectedContactStatus}>
-            <SelectTrigger className="h-8 w-[180px] text-xs">
-              <SelectValue placeholder={t('priorityList.filters.contactStatus', { defaultValue: 'Statut contact' })} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={CONTACT_STATUS_FILTER.all}>{t('priorityList.filters.allStatus', { defaultValue: 'Tous les statuts' })}</SelectItem>
-              <SelectItem value={CONTACT_STATUS_FILTER.untouched}>{t('priorityList.filters.notContacted', { defaultValue: 'Non contactés' })}</SelectItem>
-              <SelectItem value={CONTACT_STATUS_FILTER.engaged}>{t('priorityList.filters.engaged', { defaultValue: 'Engagés' })}</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Selects row — full-width on mobile, fixed on sm+ */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:flex-wrap">
+            <Select value={selectedContactStatus} onValueChange={setSelectedContactStatus}>
+              <SelectTrigger className="h-8 w-full sm:w-[180px] text-xs">
+                <SelectValue placeholder={t('priorityList.filters.contactStatus', { defaultValue: 'Statut contact' })} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={CONTACT_STATUS_FILTER.all}>{t('priorityList.filters.allStatus', { defaultValue: 'Tous les statuts' })}</SelectItem>
+                <SelectItem value={CONTACT_STATUS_FILTER.untouched}>{t('priorityList.filters.notContacted', { defaultValue: 'Non contactés' })}</SelectItem>
+                <SelectItem value={CONTACT_STATUS_FILTER.engaged}>{t('priorityList.filters.engaged', { defaultValue: 'Engagés' })}</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <Select value={selectedSourceList} onValueChange={setSelectedSourceList}>
-            <SelectTrigger className="h-8 w-[210px] text-xs">
-              <SelectValue placeholder={t('priorityList.filters.sourceList', { defaultValue: 'Liste source' })} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('dashboard.lists.all', { defaultValue: 'Toutes les listes' })}</SelectItem>
-              {sourceListOptions.map((key) => (
-                <SelectItem key={key} value={key}>{getListLabel(key === '__unlisted__' ? '' : key, t)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <Select value={selectedSourceList} onValueChange={setSelectedSourceList}>
+              <SelectTrigger className="h-8 w-full sm:w-[210px] text-xs">
+                <SelectValue placeholder={t('priorityList.filters.sourceList', { defaultValue: 'Liste source' })} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('dashboard.lists.all', { defaultValue: 'Toutes les listes' })}</SelectItem>
+                {sourceListOptions.map((key) => (
+                  <SelectItem key={key} value={key}>{getListLabel(key === '__unlisted__' ? '' : key, t)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <div className="ml-auto" />
-
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="h-8 w-[170px] text-xs">
-              <ArrowUpDown className="w-3.5 h-3.5 mr-1.5" />
-              <SelectValue placeholder={t('priorityList.filters.sortBy', { defaultValue: 'Trier par' })} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="priority">{t('priorityList.sort.priority', { defaultValue: 'Tri: priorité' })}</SelectItem>
-              <SelectItem value="icp">{t('priorityList.sort.icp', { defaultValue: 'Tri: score ICP' })}</SelectItem>
-              <SelectItem value="ai">{t('priorityList.sort.ai', { defaultValue: 'Tri: score IA' })}</SelectItem>
-              <SelectItem value="company">{t('priorityList.sort.company', { defaultValue: 'Tri: entreprise' })}</SelectItem>
-            </SelectContent>
-          </Select>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="h-8 w-full sm:w-[170px] text-xs">
+                <ArrowUpDown className="w-3.5 h-3.5 mr-1.5" />
+                <SelectValue placeholder={t('priorityList.filters.sortBy', { defaultValue: 'Trier par' })} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="priority">{t('priorityList.sort.priority', { defaultValue: 'Tri: priorité' })}</SelectItem>
+                <SelectItem value="icp">{t('priorityList.sort.icp', { defaultValue: 'Tri: score ICP' })}</SelectItem>
+                <SelectItem value="ai">{t('priorityList.sort.ai', { defaultValue: 'Tri: score IA' })}</SelectItem>
+                <SelectItem value="company">{t('priorityList.sort.company', { defaultValue: 'Tri: entreprise' })}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="divide-y divide-[#eeece7]">
@@ -227,7 +231,7 @@ export default function PriorityList() {
               return (
                 <div key={lead.id} className="px-4 sm:px-5 py-4 hover:bg-[#fbfaf8] transition-colors">
                   <div className="flex flex-col xl:flex-row gap-4 xl:items-center">
-                    <div className="flex items-center gap-4 min-w-[180px]">
+                    <div className="flex items-center gap-4 min-w-0 sm:min-w-[180px]">
                       <div className="text-[44px] leading-none font-bold tracking-tight text-slate-900 tabular-nums">{priorityScore}</div>
                       <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${heat.className}`}>
                         {t(`priorityList.heat.${heat.key}`, { defaultValue: heat.label })}
