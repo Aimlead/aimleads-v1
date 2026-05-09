@@ -234,37 +234,59 @@ export const pickAnalysisModel = (icpScore) => {
     : aiConfig.haikuModel;
 };
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const callClaudeOnce = async (prompt, model, signal) => {
+  const aiConfig = getRuntimeConfig().ai;
+  const isQuickModel = model === aiConfig.haikuModel;
+  const message = await anthropicClient.messages.create(
+    {
+      model,
+      max_tokens: isQuickModel ? 800 : 1400,
+      system: CACHED_SYSTEM,
+      tools: [ANALYZE_LEAD_TOOL_CACHED],
+      tool_choice: { type: 'tool', name: 'analyze_lead' },
+      messages: [{ role: 'user', content: prompt }],
+    },
+    { signal }
+  );
+  const toolUse = message.content?.find(
+    (block) => block.type === 'tool_use' && block.name === 'analyze_lead'
+  );
+  return {
+    result: toolUse?.input ?? null,
+    usage: message.usage ? {
+      input_tokens: message.usage.input_tokens,
+      output_tokens: message.usage.output_tokens,
+      cache_read_input_tokens: message.usage.cache_read_input_tokens ?? 0,
+      cache_creation_input_tokens: message.usage.cache_creation_input_tokens ?? 0,
+    } : null,
+    model,
+  };
+};
+
+const RETRYABLE_STATUS_CODES = new Set([429, 500, 502, 503, 529]);
+const MAX_LLM_RETRIES = 2;
+
 const callClaude = async (prompt, model) => {
   const aiConfig = getRuntimeConfig().ai;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(new Error('LLM timeout')), aiConfig.llmTimeoutMs);
   try {
-    const isQuickModel = model === aiConfig.haikuModel;
-    const message = await anthropicClient.messages.create(
-      {
-        model,
-        max_tokens: isQuickModel ? 800 : 1400,
-        system: CACHED_SYSTEM,
-        tools: [ANALYZE_LEAD_TOOL_CACHED],
-        tool_choice: { type: 'tool', name: 'analyze_lead' },
-        messages: [{ role: 'user', content: prompt }],
-      },
-      { signal: controller.signal }
-    );
-    // With tool_choice forced, the SDK guarantees a tool_use block — no JSON parsing needed.
-    const toolUse = message.content?.find(
-      (block) => block.type === 'tool_use' && block.name === 'analyze_lead'
-    );
-    return {
-      result: toolUse?.input ?? null,
-      usage: message.usage ? {
-        input_tokens: message.usage.input_tokens,
-        output_tokens: message.usage.output_tokens,
-        cache_read_input_tokens: message.usage.cache_read_input_tokens ?? 0,
-        cache_creation_input_tokens: message.usage.cache_creation_input_tokens ?? 0,
-      } : null,
-      model,
-    };
+    let lastError;
+    for (let attempt = 0; attempt < MAX_LLM_RETRIES; attempt++) {
+      try {
+        return await callClaudeOnce(prompt, model, controller.signal);
+      } catch (err) {
+        lastError = err;
+        const status = err?.status ?? err?.error?.status;
+        if (!RETRYABLE_STATUS_CODES.has(status) || attempt === MAX_LLM_RETRIES - 1) throw err;
+        const backoffMs = (attempt + 1) * 1500;
+        logger.warn('llm_retry', { attempt: attempt + 1, status, backoffMs, model });
+        await sleep(backoffMs);
+      }
+    }
+    throw lastError;
   } finally {
     clearTimeout(timeoutId);
   }

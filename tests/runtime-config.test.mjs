@@ -100,6 +100,7 @@ test('production accepts strict supabase runtime when required keys are present'
       SUPABASE_PUBLISHABLE_KEY: 'publishable',
       SUPABASE_SERVICE_ROLE_KEY: 'service-role',
       ANTHROPIC_API_KEY: 'anthropic-test',
+      RESEND_API_KEY: 'resend-test',
     },
     async () => {
       const { validateRuntimeConfig } = await loadConfigModule();

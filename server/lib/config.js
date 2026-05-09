@@ -166,6 +166,7 @@ export const validateRuntimeConfig = () => {
 
   if (config.isProduction) {
     requireEnv('ANTHROPIC_API_KEY');
+    requireEnv('RESEND_API_KEY');
   }
 
   return config;

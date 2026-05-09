@@ -36,6 +36,10 @@ const persistLocalRecord = async (collection, record) => {
 };
 
 router.post('/demo-requests', demoRequestLimiter, validateBody(schemas.demoRequestCreateSchema), async (req, res) => {
+  // Honeypot: silently discard bot submissions
+  if (req.validatedBody.website) {
+    return res.status(201).json({ ok: true, data: { id: 'bot', message: 'Demo request received.' } });
+  }
   const payload = req.validatedBody;
 
   const record = {

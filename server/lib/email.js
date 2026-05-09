@@ -37,7 +37,9 @@ export const sendEmail = async ({ to, subject, html, text }) => {
   const client = getResendClient();
 
   if (!client) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV === 'production') {
+      logger.error('email_skipped_no_key_production', { to, subject });
+    } else {
       logger.info('email_skipped_no_key', { to, subject });
     }
     return false;

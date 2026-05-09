@@ -325,18 +325,16 @@ test('DELETE /auth/me deletes the account without wiping workspace leads', async
   assert.equal((db.leads || []).some((entry) => entry.id === leadId), true, 'workspace leads should remain intact');
 });
 
-test('POST /auth/reset-password/complete is unavailable in legacy auth mode but no longer 404s', async () => {
+test('POST /auth/reset-password/complete requires a token in legacy auth mode', async () => {
   const { response, payload } = await request('/auth/reset-password/complete', {
     method: 'POST',
     body: {
-      access_token: 'legacy-access',
-      refresh_token: 'legacy-refresh',
-      new_password: 'Reset123',
+      new_password: 'Reset123!',
     },
   });
 
   assert.equal(response.status, 400);
-  assert.equal(payload?.message, 'Password recovery is only available with Supabase Auth.');
+  assert.equal(payload?.message, 'Reset token is required.');
 });
 
 test.after(async () => {

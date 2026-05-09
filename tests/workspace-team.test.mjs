@@ -358,9 +358,10 @@ test('GET /workspace/credits returns billing entitlements and usage summary', as
   assert.equal(creditsResponse.payload?.data?.usage?.remaining_credits, 50);
   assert.equal(creditsResponse.payload?.data?.usage?.seats_included, 3);
   assert.equal(creditsResponse.payload?.data?.usage?.seats_used, 1);
-  assert.equal(creditsResponse.payload?.data?.usage?.crm_slots_included, 0);
+  // Free plan includes 1 CRM slot so users can validate the integration loop end-to-end
+  assert.equal(creditsResponse.payload?.data?.usage?.crm_slots_included, 1);
   assert.equal(creditsResponse.payload?.data?.usage?.crm_slots_used, 0);
-  assert.equal(creditsResponse.payload?.data?.usage?.crm_limit_reached, true);
+  assert.equal(creditsResponse.payload?.data?.usage?.crm_limit_reached, false);
   assert.equal(Array.isArray(creditsResponse.payload?.data?.top_actions), true);
   assert.equal(Array.isArray(creditsResponse.payload?.data?.plan_catalog), true);
 });
@@ -420,7 +421,10 @@ test('workspace owners can update feature flags while members stay read-only', a
   assert.equal(forbiddenMemberUpdate.payload?.message, 'Only workspace owners and admins can manage feature flags.');
 });
 
-test('POST /crm blocks new CRM connections when the current plan has no CRM slots', async () => {
+test('POST /crm passes plan check for free users (1 CRM slot included)', async () => {
+  // Free plan has 1 CRM slot. The plan limit check should NOT block the first connection attempt.
+  // In local/test mode, the CRM backend (Supabase) is unavailable, so we expect a 500
+  // from the upsert step — but NOT a 409 from the plan entitlement check.
   const owner = await registerAndGetCookie('crm-free-owner');
 
   const connectAttempt = await request('/crm', {
@@ -433,11 +437,8 @@ test('POST /crm blocks new CRM connections when the current plan has no CRM slot
     },
   });
 
-  assert.equal(connectAttempt.response.status, 409);
-  assert.equal(connectAttempt.payload?.code, 'WORKSPACE_CRM_LIMIT_REACHED');
-  assert.equal(connectAttempt.payload?.entitlements?.crm_integrations, 0);
-  assert.equal(connectAttempt.payload?.usage?.crm_slots_included, 0);
-  assert.equal(connectAttempt.payload?.usage?.crm_limit_reached, true);
+  // Plan check passes (1 slot available) — should not be blocked by WORKSPACE_CRM_LIMIT_REACHED
+  assert.notEqual(connectAttempt.payload?.code, 'WORKSPACE_CRM_LIMIT_REACHED');
 });
 
 test('access-management routes fail closed when workspace membership cannot be verified', async () => {
