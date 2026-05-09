@@ -243,6 +243,10 @@ export default function ICP() {
   };
 
   const handleSave = async () => {
+    if (!String(formData.name || '').trim()) {
+      toast.error(t('icp.toasts.nameRequired', { defaultValue: "Le nom du profil ICP ne peut pas être vide." }));
+      return;
+    }
     const thresholds = formData.weights.meta?.finalThresholds;
     if (thresholds) {
       const { excellent = 80, strong = 50, medium = 20 } = thresholds;

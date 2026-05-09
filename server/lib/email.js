@@ -52,6 +52,10 @@ export const sendEmail = async ({ to, subject, html, text }) => {
       subject,
       html,
       text: text || stripHtml(html),
+      headers: {
+        'List-Unsubscribe': `<mailto:unsubscribe@aimlead.io?subject=unsubscribe>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
     });
     logger.info('email_sent', { to, subject });
     return true;
