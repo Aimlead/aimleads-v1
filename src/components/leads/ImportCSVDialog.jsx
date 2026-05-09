@@ -371,6 +371,12 @@ export default function ImportCSVDialog({
     setFieldMapping({});
     setListName(buildDefaultListName(file.name));
 
+    const MAX_FILE_SIZE_MB = 10;
+    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+      setError(t('import.dialog.errors.fileTooLarge', { defaultValue: 'Fichier trop volumineux. La taille maximale acceptée est 10 Mo.', max: MAX_FILE_SIZE_MB }));
+      return;
+    }
+
     const isCsv = /\.csv$/i.test(file.name);
     const isXlsx = /\.xlsx$/i.test(file.name);
     const isLegacySpreadsheet = /\.(xls|ods)$/i.test(file.name);
@@ -583,7 +589,7 @@ export default function ImportCSVDialog({
             </p>
             <p className="mt-1">
               {t('import.dialog.formatBody', {
-                defaultValue: 'Formats acceptés: CSV et .xlsx. Colonne requise: company_name. Colonnes utiles: website_url, industry, company_size, country, contact_name, contact_role, contact_email, notes, source_list.',
+                defaultValue: 'Formats acceptés: CSV et .xlsx — taille max 10 Mo. Colonne requise: company_name. Colonnes utiles: website_url, industry, company_size, country, contact_name, contact_role, contact_email, notes, source_list.',
               })}
             </p>
           </div>
@@ -678,13 +684,13 @@ export default function ImportCSVDialog({
           ) : null}
 
           {!hasActiveIcp ? (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              <p className="font-semibold">
-                {t('import.dialog.icpMissing.title', { defaultValue: "ICP actif recommandé avant l'import" })}
+            <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <p className="font-semibold text-amber-800">
+                ⚠ {t('import.dialog.icpMissing.title', { defaultValue: "Aucun ICP actif — le scoring sera inutile" })}
               </p>
               <p className="mt-1">
                 {t('import.dialog.icpMissing.body', {
-                  defaultValue: "Vous pouvez importer maintenant, mais la première analyse sera plus utile avec un ICP actif. On vous redirigera vers ce setup juste après si besoin.",
+                  defaultValue: "Sans ICP actif, AimLeads ne peut pas scorer vos leads. Tous les scores seront à 0 et les analyses sans valeur. Configurez l'ICP d'abord pour obtenir des résultats exploitables.",
                 })}
               </p>
             </div>
