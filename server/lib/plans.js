@@ -8,6 +8,9 @@ const PLAN_ENTITLEMENTS = {
     crm_integrations: 1,
     includes_api_access: false,
     includes_priority_support: false,
+    includes_ai_sequences: true,
+    includes_signal_discovery: true,
+    includes_analytics: true,
   },
   starter: {
     plan_slug: 'starter',
@@ -17,6 +20,9 @@ const PLAN_ENTITLEMENTS = {
     crm_integrations: 1,
     includes_api_access: false,
     includes_priority_support: false,
+    includes_ai_sequences: true,
+    includes_signal_discovery: true,
+    includes_analytics: true,
   },
   team: {
     plan_slug: 'team',
@@ -26,6 +32,9 @@ const PLAN_ENTITLEMENTS = {
     crm_integrations: 2,
     includes_api_access: false,
     includes_priority_support: true,
+    includes_ai_sequences: true,
+    includes_signal_discovery: true,
+    includes_analytics: true,
   },
   scale: {
     plan_slug: 'scale',
@@ -35,8 +44,19 @@ const PLAN_ENTITLEMENTS = {
     crm_integrations: 5,
     includes_api_access: true,
     includes_priority_support: true,
+    includes_ai_sequences: true,
+    includes_signal_discovery: true,
+    includes_analytics: true,
   },
 };
+
+// Plan tier ordering for requirePlan middleware
+const PLAN_TIER = { free: 0, starter: 1, team: 2, scale: 3 };
+
+export const getPlanTier = (planSlug) => PLAN_TIER[String(planSlug || 'free').toLowerCase()] ?? 0;
+
+export const planMeetsMinimum = (workspacePlan, minPlan) =>
+  getPlanTier(workspacePlan) >= getPlanTier(minPlan);
 
 export const DEFAULT_PLAN_SLUG = 'free';
 

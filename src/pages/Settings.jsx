@@ -188,6 +188,8 @@ export default function Settings() {
   const runwayDays = usage?.projected_runway_days ?? null;
   const featureFlags = featureFlagsData?.flags || [];
   const canManageFeatureFlags = Boolean(featureFlagsData?.can_manage);
+  const currentUserRole = featureFlagsData?.current_role || creditsData?.current_role || null;
+  const isOwnerOrAdmin = currentUserRole === 'owner' || currentUserRole === 'admin' || import.meta.env.DEV;
 
   const readinessGroups = useMemo(() => {
     const critical = [];
@@ -462,7 +464,7 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        <Card>
+        {isOwnerOrAdmin && <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-100 to-blue-100 flex items-center justify-center">
@@ -514,7 +516,7 @@ export default function Settings() {
               {t('settings.cards.api.footer')}
             </p>
           </CardContent>
-        </Card>
+        </Card>}
 
         {import.meta.env.DEV && <Card>
           <CardHeader>

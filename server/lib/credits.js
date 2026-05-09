@@ -14,6 +14,7 @@ import { getDataProvider, getRuntimeConfig } from './config.js';
 import { getUserWorkspaceId } from './scope.js';
 import { logger } from './observability.js';
 import { recordCreditConsumptionMetric, recordLlmTokensUsedMetric } from './metrics.js';
+import { planMeetsMinimum } from './plans.js';
 
 // ─────────────────────────────────────────────────────────────────
 // Credit costs per action (must match SQL migration comments)
@@ -325,6 +326,37 @@ export const requireActiveBilling = async (req, res, next) => {
     return res.status(billingError.status).json(billingError);
   }
   return next();
+};
+
+/**
+ * requirePlan(minPlan) — blocks the request if the workspace is not on at least minPlan.
+ * No-op in local/dev mode (DATA_PROVIDER != supabase).
+ *
+ * Usage:
+ *   router.post('/api-endpoint', requireAuth, requirePlan('scale'), handler);
+ */
+export const requirePlan = (minPlan) => async (req, res, next) => {
+  if (!isSupabase()) return next();
+
+  const workspaceId = getUserWorkspaceId(req.user);
+  if (!workspaceId) return next();
+
+  try {
+    const plan = await getWorkspacePlan(workspaceId);
+    if (!planMeetsMinimum(plan.plan_slug, minPlan)) {
+      return res.status(403).json({
+        message: `This feature requires the ${minPlan} plan or higher. Please upgrade to continue.`,
+        code: 'PLAN_REQUIRED',
+        required_plan: minPlan,
+        current_plan: plan.plan_slug,
+      });
+    }
+    return next();
+  } catch (err) {
+    logger.warn('require_plan_check_error', { workspaceId, minPlan, error: err?.message });
+    // Fail open on unexpected errors
+    return next();
+  }
 };
 
 /**

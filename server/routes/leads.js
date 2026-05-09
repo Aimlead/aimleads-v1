@@ -1,6 +1,6 @@
 import express from 'express';
 import { requireAuth, wrapAsyncRoutes } from '../lib/middleware.js';
-import { requireCredits, logTokenUsage } from '../lib/credits.js';
+import { requireCredits, requirePlan, logTokenUsage } from '../lib/credits.js';
 import { dataStore } from '../lib/dataStore.js';
 import { sanitizeWebsite } from '../lib/utils.js';
 import { schemas, validateBody } from '../lib/validation.js';
@@ -1106,7 +1106,7 @@ router.post('/bulk-delete', validateBody(schemas.bulkDeleteSchema), async (req, 
 
 // ─── AI: Generate multi-touch outreach sequence ───────────────────────────────
 
-router.post('/:leadId/sequence', sequenceLimiter, requireCredits('sequence'), async (req, res) => {
+router.post('/:leadId/sequence', sequenceLimiter, requirePlan('starter'), requireCredits('sequence'), async (req, res) => {
   addBreadcrumb({
     category: 'ai',
     message: 'ai.sequence.requested',
@@ -1161,7 +1161,7 @@ const researchLimiter = createUserRateLimit({
   message: 'Too many web research requests, please wait.',
 });
 
-router.post('/research', researchLimiter, requireCredits('research_lead'), validateBody(schemas.leadResearchSchema), async (req, res) => {
+router.post('/research', researchLimiter, requirePlan('starter'), requireCredits('research_lead'), validateBody(schemas.leadResearchSchema), async (req, res) => {
   const { company_name, website_url, industry, country, auto_analyze } = req.validatedBody;
 
   addBreadcrumb({

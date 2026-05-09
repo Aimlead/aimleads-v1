@@ -7,7 +7,7 @@ import { writeAuditLog } from '../lib/auditLog.js';
 import { getUserWorkspaceId } from '../lib/scope.js';
 import { getCircuitBreakerStatus } from '../services/llmService.js';
 import { listCrmIntegrations } from '../services/crmService.js';
-import { getBalance, grantCredits, getTransactionHistory, getWorkspacePlan, CREDIT_COSTS } from '../lib/credits.js';
+import { getBalance, grantCredits, getTransactionHistory, getWorkspacePlan, CREDIT_COSTS, requirePlan } from '../lib/credits.js';
 import { sendEmail, EmailTemplates } from '../lib/email.js';
 import { bootstrapWorkspaceDemoData } from '../services/bootstrap.js';
 import { getPlanCatalog, getPlanEntitlements } from '../lib/plans.js';

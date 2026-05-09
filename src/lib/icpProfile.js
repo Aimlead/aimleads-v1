@@ -1,5 +1,5 @@
 export const createDefaultIcpFormData = () => ({
-  name: 'My ICP',
+  name: 'Mon profil ICP',
   description: '',
   weights: {
     industrie: {
@@ -77,7 +77,7 @@ export const buildQuickIcpPayload = ({
 
   return {
     ...base,
-    name: String(name || '').trim() || 'My ICP',
+    name: String(name || '').trim() || 'Mon profil ICP',
     description: String(description || '').trim(),
     weights: {
       ...base.weights,
