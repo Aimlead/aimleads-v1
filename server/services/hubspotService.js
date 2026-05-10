@@ -84,11 +84,13 @@ async function fetchHubSpot(token, path, { method = 'GET', body } = {}) {
 
 /**
  * Builds the HubSpot contact properties object from an AimLeads lead.
+ * If fieldMapping is provided (from CrmIntegration UI), overrides are applied
+ * on top of the default property set.
  */
-function buildContactProperties(lead) {
+function buildContactProperties(lead, fieldMapping = {}) {
   const nameParts = splitName(lead.contact_name);
 
-  return {
+  const base = {
     ...(nameParts ? { firstname: nameParts.first, lastname: nameParts.last } : {}),
     ...(lead.contact_email ? { email: lead.contact_email } : {}),
     ...(lead.contact_role ? { jobtitle: lead.contact_role } : {}),
@@ -101,6 +103,33 @@ function buildContactProperties(lead) {
       ? { aimlead_analysis: String(lead.analysis_summary).slice(0, 1000) }
       : {}),
   };
+
+  if (!fieldMapping || !Object.keys(fieldMapping).length) return base;
+
+  // Flat map of AimLeads field key → serialized value for custom mapping
+  const leadValues = {
+    company_name: lead.company_name,
+    contact_name: lead.contact_name,
+    contact_email: lead.contact_email,
+    contact_role: lead.contact_role,
+    industry: lead.industry,
+    country: lead.country,
+    company_size: lead.company_size != null ? String(lead.company_size) : undefined,
+    website_url: lead.website_url,
+    icp_score: lead.icp_score != null ? String(lead.icp_score) : undefined,
+    icp_category: lead.icp_category,
+    final_score: lead.final_score != null ? String(lead.final_score) : undefined,
+    status: lead.status,
+    notes: lead.notes,
+  };
+
+  const overrides = {};
+  for (const [aimKey, crmKey] of Object.entries(fieldMapping)) {
+    const val = leadValues[aimKey];
+    if (crmKey && val !== undefined && val !== null) overrides[crmKey] = val;
+  }
+
+  return { ...base, ...overrides };
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -123,10 +152,10 @@ export async function testHubSpotConnection(token) {
  * @param {Object} lead  - AimLeads lead object
  * @returns {Promise<{success: boolean, crmObjectId?: string, crmObjectType?: string, crmObjectUrl?: string, error?: string}>}
  */
-export async function upsertLeadAsContact(token, lead) {
+export async function upsertLeadAsContact(token, lead, fieldMapping = {}) {
   if (!token) return { success: false, error: 'no_token' };
 
-  const properties = buildContactProperties(lead);
+  const properties = buildContactProperties(lead, fieldMapping);
 
   // Step 1: search for an existing contact by email
   if (lead.contact_email) {

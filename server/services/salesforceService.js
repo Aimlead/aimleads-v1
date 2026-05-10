@@ -106,8 +106,10 @@ async function fetchSalesforce(token, instanceUrl, path, { method = 'GET', body 
 /**
  * Builds the Salesforce Lead body from an AimLeads lead.
  * Company and LastName are required fields in Salesforce.
+ * If fieldMapping is provided (from CrmIntegration UI), overrides are applied
+ * on top of the default field set.
  */
-function buildLeadBody(lead) {
+function buildLeadBody(lead, fieldMapping = {}) {
   const nameParts = splitName(lead.contact_name);
   const company = lead.company_name || 'Unknown';
 
@@ -115,7 +117,7 @@ function buildLeadBody(lead) {
   const lastName = nameParts ? nameParts.last : company;
   const firstName = nameParts ? nameParts.first : undefined;
 
-  return {
+  const base = {
     Company: company,
     LastName: lastName,
     ...(firstName ? { FirstName: firstName } : {}),
@@ -130,6 +132,33 @@ function buildLeadBody(lead) {
     ...(lead.final_score != null ? { AimLeads_Score__c: lead.final_score } : {}),
     ...(lead.final_category ? { AimLeads_Category__c: lead.final_category } : {}),
   };
+
+  if (!fieldMapping || !Object.keys(fieldMapping).length) return base;
+
+  // Flat map of AimLeads field key → serialized value for custom mapping
+  const leadValues = {
+    company_name: lead.company_name,
+    contact_name: lead.contact_name,
+    contact_email: lead.contact_email,
+    contact_role: lead.contact_role,
+    industry: lead.industry,
+    country: lead.country,
+    company_size: lead.company_size != null ? Number(lead.company_size) : undefined,
+    website_url: lead.website_url,
+    icp_score: lead.icp_score != null ? lead.icp_score : undefined,
+    icp_category: lead.icp_category,
+    final_score: lead.final_score != null ? lead.final_score : undefined,
+    status: lead.status,
+    notes: lead.notes,
+  };
+
+  const overrides = {};
+  for (const [aimKey, crmKey] of Object.entries(fieldMapping)) {
+    const val = leadValues[aimKey];
+    if (crmKey && val !== undefined && val !== null) overrides[crmKey] = val;
+  }
+
+  return { ...base, ...overrides };
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -157,7 +186,7 @@ export async function testSalesforceConnection(token, instanceUrl) {
  * @param {Object} lead        - AimLeads lead object
  * @returns {Promise<{success: boolean, crmObjectId?: string, crmObjectType?: string, crmObjectUrl?: string, error?: string}>}
  */
-export async function upsertLeadAsSfLead(token, instanceUrl, lead) {
+export async function upsertLeadAsSfLead(token, instanceUrl, lead, fieldMapping = {}) {
   if (!token || !instanceUrl) return { success: false, error: 'no_token_or_instance' };
 
   // Step 1: query for an existing Lead by email
@@ -172,7 +201,7 @@ export async function upsertLeadAsSfLead(token, instanceUrl, lead) {
       const updatePath = `/services/data/${SF_API_VERSION}/sobjects/Lead/${sfId}`;
       const updateResult = await fetchSalesforce(token, instanceUrl, updatePath, {
         method: 'PATCH',
-        body: buildLeadBody(lead),
+        body: buildLeadBody(lead, fieldMapping),
       });
 
       if (updateResult.ok) {
@@ -196,7 +225,7 @@ export async function upsertLeadAsSfLead(token, instanceUrl, lead) {
   const createPath = `/services/data/${SF_API_VERSION}/sobjects/Lead`;
   const createResult = await fetchSalesforce(token, instanceUrl, createPath, {
     method: 'POST',
-    body: buildLeadBody(lead),
+    body: buildLeadBody(lead, fieldMapping),
   });
 
   if (createResult.ok) {

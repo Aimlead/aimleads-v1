@@ -312,15 +312,18 @@ export async function syncLeadToCrm(workspaceId, lead, crmType) {
     return { success: false, error: 'not_configured' };
   }
 
+  const fieldMapping = integration.config?.field_mapping || {};
+
   let result;
   try {
     if (crmType === 'hubspot') {
-      result = await upsertLeadAsContact(integration.api_token, lead);
+      result = await upsertLeadAsContact(integration.api_token, lead, fieldMapping);
     } else if (crmType === 'salesforce') {
       result = await upsertLeadAsSfLead(
         integration.api_token,
         integration.config?.instance_url,
-        lead
+        lead,
+        fieldMapping
       );
     } else {
       result = { success: false, error: `unsupported_crm:${crmType}` };
