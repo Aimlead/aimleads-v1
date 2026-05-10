@@ -33,7 +33,16 @@ const normalizeWorkspaceRole = (value, fallback = 'member') => {
   return fallback;
 };
 
-const getMembershipUserId = (user) => String(user?.supabase_auth_id || user?.id || '').trim();
+const getMembershipUserId = (user) => {
+  const authId = String(user?.supabase_auth_id || '').trim();
+  if (authId) return authId;
+  // In local/mock mode supabase_auth_id is absent — fall back to app id with a warning
+  const appId = String(user?.id || '').trim();
+  if (appId) {
+    logger.warn('membership_id_fallback_to_app_id', { user_id: appId });
+  }
+  return appId;
+};
 
 const createStatusError = (status, message) => {
   const error = new Error(message);
@@ -69,12 +78,15 @@ const isCurrentWorkspaceMember = (member, user) => {
 };
 
 const toWorkspaceMemberView = (member, users = [], currentUser = null) => {
+  const memberUserId = String(member?.user_id || '').trim();
+  // Primary: match on supabase_auth_id (canonical per schema)
+  // Secondary: match on app id — needed in local/mock mode where supabase_auth_id is absent
+  // These two fields have different namespaces so collision risk is negligible in practice,
+  // but we prefer the auth-id path and only fall through when it yields nothing.
   const matchedUser =
-    users.find(
-      (candidate) =>
-        String(candidate?.supabase_auth_id || '').trim() === String(member?.user_id || '').trim() ||
-        String(candidate?.id || '').trim() === String(member?.user_id || '').trim()
-    ) || null;
+    users.find((c) => String(c?.supabase_auth_id || '').trim() === memberUserId && memberUserId) ||
+    users.find((c) => !c?.supabase_auth_id && String(c?.id || '').trim() === memberUserId) ||
+    null;
 
   return {
     user_id: String(member?.user_id || '').trim(),
@@ -509,6 +521,37 @@ const localStore = {
     }
 
     return members.map((member) => mapWorkspaceMember(member, db.users || [], user));
+  },
+
+  async getWorkspacePlan(user) {
+    const workspaceId = getUserWorkspaceId(user);
+    if (!workspaceId) return { plan_slug: 'free', billing_status: 'trial', trial_ends_at: null };
+    const db = await readDb();
+    const workspace = (db.workspaces || []).find((ws) => ws.id === workspaceId);
+    return {
+      plan_slug: workspace?.plan_slug || 'free',
+      billing_status: workspace?.billing_status || 'trial',
+      trial_ends_at: workspace?.trial_ends_at || null,
+    };
+  },
+
+  async updateWorkspacePlan(user, { plan_slug, billing_status, trial_ends_at }) {
+    const workspaceId = getUserWorkspaceId(user);
+    if (!workspaceId) throw createStatusError(400, 'No workspace found');
+    await withDb((current) => ({
+      ...current,
+      workspaces: (current.workspaces || []).map((ws) =>
+        ws.id === workspaceId
+          ? {
+              ...ws,
+              ...(plan_slug !== undefined && { plan_slug }),
+              ...(billing_status !== undefined && { billing_status }),
+              ...(trial_ends_at !== undefined && { trial_ends_at }),
+            }
+          : ws
+      ),
+    }));
+    return this.getWorkspacePlan(user);
   },
 
   async listWorkspaceInvites(user) {

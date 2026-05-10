@@ -1,5 +1,6 @@
 import { dataStore } from './dataStore.js';
 import { createId } from './utils.js';
+import { logger } from './observability.js';
 
 const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
 
@@ -81,6 +82,15 @@ export const ensureWorkspaceUserForAuth = async ({ authUser, fallbackFullName = 
   }
 
   if (appUser) {
+    // Email-based fallback hit: this is a one-time migration path for users created
+    // before supabase_auth_id was tracked. We immediately bind the auth ID so
+    // subsequent logins use the fast auth-id lookup. Log it so ops can monitor frequency.
+    logger.warn('auth_email_fallback_used', {
+      existing_user_id: appUser.id,
+      existing_auth_id: appUser.supabase_auth_id || null,
+      new_auth_id: authUser.id,
+    });
+
     const updates = {};
 
     if (fullName && normalizeEmail(appUser.full_name) !== normalizeEmail(fullName)) {

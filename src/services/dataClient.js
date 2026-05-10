@@ -577,6 +577,7 @@ const apiClient = {
       return apiRequest(`/workspace/credits${qs ? `?${qs}` : ''}`);
     },
     grantCredits: (payload) => apiRequest('/workspace/credits/grant', { method: 'POST', body: payload }),
+    updatePlan: (payload) => apiRequest('/workspace/plan', { method: 'PATCH', body: payload }),
   },
   crm: {
     list: () => apiRequest('/crm'),
@@ -596,6 +597,7 @@ const apiClient = {
     loadDemo: () => apiRequest('/dev/load-demo', { method: 'POST' }),
     reanalyze: (payload = {}) => apiRequest('/dev/reanalyze', { method: 'POST', body: payload }),
     checkup: () => apiRequest('/dev/checkup'),
+    connectivity: () => apiRequest('/dev/connectivity'),
   },
 };
 

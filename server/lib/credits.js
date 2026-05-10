@@ -225,7 +225,13 @@ export const getTransactionHistory = async (workspaceId, { limit = 20, offset = 
 export const getWorkspacePlan = async (workspaceId) => {
   if (!workspaceId) return { plan_slug: 'free', billing_status: 'trial', trial_ends_at: null };
   if (isSupabase()) return supabaseGetWorkspacePlan(workspaceId);
-  return { plan_slug: 'free', billing_status: 'trial', trial_ends_at: null };
+  // Local mode: read from JSON store via dataStore (avoids circular import by using dynamic import)
+  const { dataStore } = await import('./dataStore.js');
+  return dataStore.getWorkspacePlan({ workspace_id: workspaceId }).catch(() => ({
+    plan_slug: 'free',
+    billing_status: 'trial',
+    trial_ends_at: null,
+  }));
 };
 
 /**

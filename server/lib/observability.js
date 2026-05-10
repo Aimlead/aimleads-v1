@@ -64,27 +64,46 @@ export const securityHeadersMiddleware = (req, res, next) => {
   const connectSrc = config.isProduction
     ? ["'self'", 'https://*.supabase.co', 'https://*.sentry.io']
     : ["'self'", 'http://localhost:*', 'ws://localhost:*', 'https://*.supabase.co', 'https://*.sentry.io'];
-  const csp = [
+
+  // img-src: restrict to self, data URIs and our known CDNs in production
+  const imgSrc = config.isProduction
+    ? ["'self'", 'data:', 'https://avatars.githubusercontent.com', 'https://lh3.googleusercontent.com']
+    : ["'self'", 'data:', 'https:'];
+
+  const cspDirectives = [
     "default-src 'self'",
     `script-src ${scriptSrc.join(' ')}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: https:",
+    `img-src ${imgSrc.join(' ')}`,
     "font-src 'self' data:",
     `connect-src ${connectSrc.join(' ')}`,
+    "media-src 'none'",
+    "object-src 'none'",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-  ].join('; ');
+  ];
+
+  if (config.isProduction) {
+    cspDirectives.push('upgrade-insecure-requests');
+    cspDirectives.push('block-all-mixed-content');
+  }
+
+  const csp = cspDirectives.join('; ');
 
   res.setHeader('x-content-type-options', 'nosniff');
   res.setHeader('x-frame-options', 'DENY');
   res.setHeader('referrer-policy', 'strict-origin-when-cross-origin');
   res.setHeader('x-xss-protection', '0');
-  res.setHeader('permissions-policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('permissions-policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
   res.setHeader('cross-origin-opener-policy', 'same-origin');
   res.setHeader('cross-origin-resource-policy', 'same-origin');
   res.setHeader('content-security-policy', csp);
-  if (req.secure) {
+
+  // HSTS: set regardless of req.secure when behind a trusted proxy in production
+  if (config.isProduction) {
+    res.setHeader('strict-transport-security', 'max-age=63072000; includeSubDomains; preload');
+  } else if (req.secure) {
     res.setHeader('strict-transport-security', 'max-age=31536000; includeSubDomains');
   }
   next();

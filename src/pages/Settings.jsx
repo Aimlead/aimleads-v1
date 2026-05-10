@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, CreditCard, Database, KeyRound, Loader2, Save, ShieldCheck, Target, Users, Wand2 } from 'lucide-react';
+import { Activity, AlertTriangle, CreditCard, Database, KeyRound, Loader2, Save, ShieldCheck, Target, Users, Wand2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -119,6 +119,66 @@ const ScoringNumberInput = ({ label, value, onChange, disabled, min = 0, max = 1
     />
   </div>
 );
+
+function ConnectivityPanel() {
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const run = async () => {
+    setLoading(true);
+    try {
+      const data = await dataClient.dev.connectivity();
+      setResult(data);
+    } catch {
+      setResult({ ok: false, error: 'Failed to reach /dev/connectivity' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const statusColor = (p) => {
+    if (!p) return 'text-slate-400';
+    if (!p.configured) return 'text-slate-400';
+    if (p.reachable === null) return 'text-slate-400';
+    return p.reachable ? 'text-emerald-600' : 'text-rose-600';
+  };
+  const statusLabel = (p) => {
+    if (!p || !p.configured) return 'Not configured';
+    if (p.reachable === null) return 'Key present';
+    return p.reachable ? `OK (${p.latency_ms}ms)` : `Error: ${p.error}`;
+  };
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Activity className="h-4 w-4 text-slate-500" />
+          <p className="text-xs font-semibold text-slate-700">Provider connectivity</p>
+        </div>
+        <button
+          onClick={run}
+          disabled={loading}
+          className="text-[11px] font-medium text-brand-sky hover:underline disabled:opacity-50"
+        >
+          {loading ? 'Testing…' : 'Run check'}
+        </button>
+      </div>
+      {result?.providers && (
+        <div className="grid gap-1.5">
+          {Object.entries(result.providers).map(([name, p]) => (
+            <div key={name} className="flex items-center justify-between text-xs">
+              <span className="text-slate-600 capitalize">{name}</span>
+              <span className={statusColor(p)}>{statusLabel(p)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {result && !result.providers && (
+        <p className="text-xs text-rose-600">{result.error || 'Unknown error'}</p>
+      )}
+    </div>
+  );
+}
 
 export default function Settings() {
   const { user, appPublicSettings } = useAuth();
@@ -597,6 +657,8 @@ export default function Settings() {
                 <p key={flag} className="text-sm text-slate-600">• {flag}</p>
               ))}
             </div>
+
+            <ConnectivityPanel />
           </CardContent>
         </Card>}
 

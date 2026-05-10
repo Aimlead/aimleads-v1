@@ -761,4 +761,28 @@ router.get('/integration-status', requireAuth, async (req, res) => {
   });
 });
 
+// PATCH /workspace/plan — owner-only plan state update (RevOps / ops use)
+router.patch('/plan', requireAuth, async (req, res) => {
+  const workspaceId = getUserWorkspaceId(req.user);
+  if (!workspaceId) return res.status(400).json({ message: 'No active workspace.' });
+
+  const { currentRole } = await resolveCurrentWorkspaceAccess(req.user);
+  if (!MANAGE_ROLES_ROLES.has(currentRole)) {
+    return res.status(403).json({ message: 'Only workspace owners can update plan state.' });
+  }
+
+  const { plan_slug, billing_status, trial_ends_at } = req.body || {};
+  const updated = await dataStore.updateWorkspacePlan(req.user, { plan_slug, billing_status, trial_ends_at });
+
+  writeAuditLog({
+    user: req.user,
+    action: 'update',
+    resourceType: 'workspace_plan',
+    resourceId: workspaceId,
+    changes: { plan_slug, billing_status, trial_ends_at },
+  }).catch(() => {});
+
+  return res.json({ ok: true, plan: updated });
+});
+
 export default router;

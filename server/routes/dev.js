@@ -212,6 +212,94 @@ router.get('/checkup', async (req, res) => {
   return res.json({ data: await buildCheckup(req.user) });
 });
 
+/**
+ * GET /api/dev/connectivity
+ * Live connectivity check for all external providers.
+ * Returns per-provider status with latency and error details.
+ * Restricted to authenticated users and non-production environments.
+ */
+router.get('/connectivity', requireNonProduction, requireAuth, async (_req, res) => {
+  const results = {};
+
+  // --- Anthropic ---
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (!anthropicKey) {
+    results.anthropic = { configured: false, reachable: null, latency_ms: null, error: 'ANTHROPIC_API_KEY not set' };
+  } else {
+    const t0 = Date.now();
+    try {
+      const { default: Anthropic } = await import('@anthropic-ai/sdk');
+      const client = new Anthropic({ apiKey: anthropicKey });
+      await client.messages.create({
+        model: process.env.LLM_MODEL || 'claude-haiku-4-5-20251001',
+        max_tokens: 1,
+        messages: [{ role: 'user', content: 'ping' }],
+      });
+      results.anthropic = { configured: true, reachable: true, latency_ms: Date.now() - t0, error: null };
+    } catch (error) {
+      results.anthropic = { configured: true, reachable: false, latency_ms: Date.now() - t0, error: error.message || String(error) };
+    }
+  }
+
+  // --- Hunter ---
+  const hunterKey = process.env.HUNTER_API_KEY;
+  if (!hunterKey) {
+    results.hunter = { configured: false, reachable: null, latency_ms: null, error: 'HUNTER_API_KEY not set' };
+  } else {
+    const t0 = Date.now();
+    try {
+      const resp = await fetch(`https://api.hunter.io/v2/account?api_key=${hunterKey}`);
+      const body = await resp.json().catch(() => null);
+      results.hunter = {
+        configured: true,
+        reachable: resp.ok,
+        latency_ms: Date.now() - t0,
+        plan: body?.data?.plan_name || null,
+        requests_remaining: body?.data?.requests?.searches?.available ?? null,
+        error: resp.ok ? null : (body?.errors?.[0]?.details || `HTTP ${resp.status}`),
+      };
+    } catch (error) {
+      results.hunter = { configured: true, reachable: false, latency_ms: Date.now() - t0, error: error.message || String(error) };
+    }
+  }
+
+  // --- NewsAPI ---
+  const newsKey = process.env.NEWS_API_KEY;
+  if (!newsKey) {
+    results.newsApi = { configured: false, reachable: null, latency_ms: null, error: 'NEWS_API_KEY not set' };
+  } else {
+    const t0 = Date.now();
+    try {
+      const resp = await fetch(`https://newsapi.org/v2/sources?language=en&apiKey=${newsKey}`);
+      const body = await resp.json().catch(() => null);
+      results.newsApi = {
+        configured: true,
+        reachable: resp.ok,
+        latency_ms: Date.now() - t0,
+        error: resp.ok ? null : (body?.message || `HTTP ${resp.status}`),
+      };
+    } catch (error) {
+      results.newsApi = { configured: true, reachable: false, latency_ms: Date.now() - t0, error: error.message || String(error) };
+    }
+  }
+
+  // --- Resend (email) ---
+  const resendKey = process.env.RESEND_API_KEY;
+  results.resend = { configured: Boolean(resendKey), reachable: null, latency_ms: null, error: resendKey ? null : 'RESEND_API_KEY not set' };
+
+  const allConfigured = Object.values(results).every((r) => r.configured);
+  const allReachable = Object.values(results).filter((r) => r.reachable !== null).every((r) => r.reachable);
+
+  return res.json({
+    ok: allConfigured && allReachable,
+    providers: results,
+    summary: {
+      all_configured: allConfigured,
+      all_reachable: allReachable,
+    },
+  });
+});
+
 export default router;
 
 

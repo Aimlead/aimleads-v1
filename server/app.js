@@ -108,11 +108,20 @@ const apiRateLimit = createRateLimit({
 app.use('/api', apiRateLimit);
 app.use('/api', csrfProtection);
 
+// Health endpoint has its own strict rate limit — prevents enumeration/DDoS
+const healthRateLimit = createRateLimit({
+  namespace: 'health',
+  windowMs: 60 * 1000,
+  max: 30,
+  keyGenerator: (req) => req.ip,
+  message: 'Too many health check requests.',
+});
+
 if (config.apiDocsEnabled) {
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
 }
 
-app.get('/api/health', async (_req, res) => {
+app.get('/api/health', healthRateLimit, async (_req, res) => {
   let dbStatus = 'ok';
   try {
     // Lightweight DB ping: find a non-existent user — succeeds if DB is reachable
@@ -121,20 +130,26 @@ app.get('/api/health', async (_req, res) => {
     dbStatus = 'error';
   }
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  const response = {
+
+  // Production: only expose liveness signal — no build metadata or internal details
+  if (config.isProduction) {
+    return res.json({
+      status: dbStatus === 'ok' ? 'ok' : 'degraded',
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // Non-production: expose debug info for operator convenience
+  return res.json({
     status: dbStatus === 'ok' ? 'ok' : 'degraded',
     timestamp: new Date().toISOString(),
     build: buildMetadata,
-  };
-  // Only expose provider config in non-production environments
-  if (!config.isProduction) {
-    response.providers = {
+    providers: {
       claude: Boolean(process.env.ANTHROPIC_API_KEY),
       hunter: Boolean(process.env.HUNTER_API_KEY),
       newsApi: Boolean(process.env.NEWS_API_KEY),
-    };
-  }
-  return res.json(response);
+    },
+  });
 });
 
 app.use('/metrics', metricsRoutes);

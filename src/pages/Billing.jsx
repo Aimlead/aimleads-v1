@@ -28,8 +28,11 @@ const resolveRunwayLabel = (days, t) => {
 };
 
 const openBillingAction = (url, intent) => {
-  const fallback = `mailto:billing@aimlead.io?subject=${encodeURIComponent(`AimLead ${intent}`)}`;
-  window.open(url || fallback, '_blank', 'noopener,noreferrer');
+  if (url) {
+    window.open(url, '_blank', 'noopener,noreferrer');
+    return;
+  }
+  dataClient.public.submitDemoRequest({ intent, source: 'billing_page' }).catch(() => {});
 };
 
 const formatActionLabel = (action, t) => {
