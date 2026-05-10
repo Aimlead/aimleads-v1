@@ -357,9 +357,14 @@ export default function Onboarding() {
         <section className="rounded-3xl border border-brand-sky/15 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6 text-white shadow-xl">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl space-y-3">
-              <Badge className="w-fit bg-white/10 text-white hover:bg-white/10">
-                {t('onboarding.badge', { defaultValue: 'Première mise en route' })}
-              </Badge>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className="w-fit bg-white/10 text-white hover:bg-white/10">
+                  {t('onboarding.badge', { defaultValue: 'Première mise en route' })}
+                </Badge>
+                <Badge className="w-fit border border-emerald-400/30 bg-emerald-400/10 text-emerald-300 hover:bg-emerald-400/10">
+                  {t('onboarding.trialBadge', { defaultValue: 'Essai gratuit · 14 jours · 50 crédits inclus' })}
+                </Badge>
+              </div>
               <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
                 {t('onboarding.title', { defaultValue: 'Activez votre workspace en quelques étapes utiles.' })}
               </h1>

@@ -149,10 +149,10 @@ const getCategoryBadge = (category) => {
 };
 
 const MATCH_META = {
-  parfait: { label: 'Parfait', cls: 'bg-emerald-50 text-emerald-700' },
-  partiel: { label: 'Partiel', cls: 'bg-amber-50 text-amber-700' },
-  aucun: { label: 'Aucun', cls: 'bg-slate-100 text-slate-500' },
-  exclu: { label: 'Exclu', cls: 'bg-rose-50 text-rose-700' },
+  parfait: { label: 'Parfait', cls: 'bg-emerald-50 text-emerald-700', title: 'Correspondance parfaite — ce critère ICP est entièrement satisfait' },
+  partiel: { label: 'Partiel', cls: 'bg-amber-50 text-amber-700', title: 'Correspondance partielle — ce critère ICP est partiellement satisfait' },
+  aucun: { label: 'Aucun', cls: 'bg-slate-100 text-slate-500', title: 'Aucune correspondance — ce critère ICP n\'est pas satisfait' },
+  exclu: { label: 'Exclu', cls: 'bg-rose-50 text-rose-700', title: 'Critère d\'exclusion — ce lead ne correspond pas à votre ICP' },
 };
 
 function CriterionRow({ criterion }) {
@@ -171,7 +171,7 @@ function CriterionRow({ criterion }) {
       <div className="flex items-center justify-between gap-2 mb-1">
         <div className="flex items-center gap-1.5 min-w-0">
           <span className="text-sm font-medium text-slate-800 truncate">{criterion.label}</span>
-          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${match.cls}`}>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 cursor-help ${match.cls}`} title={match.title}>
             {match.label}
           </span>
         </div>

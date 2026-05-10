@@ -1,13 +1,15 @@
 import express from 'express';
 import { requireAuth, wrapAsyncRoutes } from '../lib/middleware.js';
+import { createRateLimit } from '../lib/rateLimit.js';
 import { dataStore, getDataStoreRuntime } from '../lib/dataStore.js';
 import { getAuthProvider, getDataProvider, getRuntimeConfig } from '../lib/config.js';
 import { schemas, validateBody } from '../lib/validation.js';
 import { writeAuditLog } from '../lib/auditLog.js';
+import { logger } from '../lib/observability.js';
 import { getUserWorkspaceId } from '../lib/scope.js';
 import { getCircuitBreakerStatus } from '../services/llmService.js';
 import { listCrmIntegrations } from '../services/crmService.js';
-import { getBalance, grantCredits, getTransactionHistory, getWorkspacePlan, CREDIT_COSTS } from '../lib/credits.js';
+import { getBalance, grantCredits, getTransactionHistory, getWorkspacePlan, CREDIT_COSTS, requirePlan } from '../lib/credits.js';
 import { sendEmail, EmailTemplates } from '../lib/email.js';
 import { bootstrapWorkspaceDemoData } from '../services/bootstrap.js';
 import { getPlanCatalog, getPlanEntitlements } from '../lib/plans.js';
@@ -16,6 +18,14 @@ import { listWorkspaceFeatureFlags, setWorkspaceFeatureFlag } from '../lib/featu
 
 const router = express.Router();
 wrapAsyncRoutes(router);
+
+const inviteLimiter = createRateLimit({
+  namespace: 'workspace_invite',
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 20,
+  keyGenerator: (req) => String(req.user?.workspace_id || req.ip),
+  message: 'Too many invitations sent. Please wait before sending more.',
+});
 
 const MANAGE_INVITES_ROLES = new Set(['owner', 'admin']);
 const MANAGE_ROLES_ROLES = new Set(['owner']);
@@ -206,7 +216,7 @@ router.get('/invites', requireAuth, async (req, res) => {
   return res.json({ data: invites });
 });
 
-router.post('/invites', requireAuth, validateBody(schemas.workspaceInviteCreateSchema), async (req, res) => {
+router.post('/invites', inviteLimiter, requireAuth, validateBody(schemas.workspaceInviteCreateSchema), async (req, res) => {
   const { currentRole, members } = await resolveCurrentWorkspaceAccess(req.user);
   if (!currentRole) {
     return deny(res, 'Unable to verify your workspace membership.');
@@ -267,6 +277,42 @@ router.post('/invites', requireAuth, validateBody(schemas.workspaceInviteCreateS
   })).catch(() => {}); // ignore email errors — never block the response
 
   return res.status(201).json({ data: invite });
+});
+
+router.post('/invites/:inviteId/resend', inviteLimiter, requireAuth, async (req, res) => {
+  const { currentRole } = await resolveCurrentWorkspaceAccess(req.user);
+  if (!currentRole) {
+    return deny(res, 'Unable to verify your workspace membership.');
+  }
+  if (!MANAGE_INVITES_ROLES.has(currentRole)) {
+    return deny(res, 'Only workspace owners and admins can resend invites.');
+  }
+
+  const invites = await dataStore.listWorkspaceInvites(req.user).catch(() => []);
+  const invite = invites.find((i) => i.id === req.params.inviteId);
+  if (!invite) {
+    return res.status(404).json({ message: 'Invite not found' });
+  }
+
+  const appUrl = String(process.env.APP_ORIGIN || process.env.CORS_ORIGIN || 'https://app.aimlead.io').replace(/\/$/, '');
+  const inviteUrl = `${appUrl}/login?mode=signup&email=${encodeURIComponent(invite.email)}&invite_id=${invite.id}`;
+  const workspaceName = req.user?.workspace_name || req.user?.full_name?.split(' ')[0] + "'s workspace" || 'your workspace';
+  sendEmail(EmailTemplates.workspaceInvite({
+    toEmail: invite.email,
+    inviterName: req.user?.full_name || req.user?.email || 'A teammate',
+    workspaceName,
+    inviteUrl,
+    role: invite.role,
+  })).catch(() => {});
+
+  logger.info('workspace_invite_resent', {
+    invite_id: invite.id,
+    email: invite.email,
+    resent_by: req.user?.id,
+    workspace_id: getUserWorkspaceId(req.user),
+  });
+
+  return res.json({ ok: true });
 });
 
 router.delete('/invites/:inviteId', requireAuth, async (req, res) => {
@@ -642,6 +688,14 @@ router.post('/credits/grant', requireAuth, async (req, res) => {
   if (!result.success) {
     return res.status(500).json({ message: result.error || 'Failed to grant credits' });
   }
+
+  writeAuditLog({
+    user: req.user,
+    action: 'update',
+    resourceType: 'credit_transaction',
+    resourceId: workspaceId,
+    changes: { type: 'grant', amount, description, granted_by: req.user.id },
+  }).catch(() => {});
 
   return res.json({ data: result });
 });

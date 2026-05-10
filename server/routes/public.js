@@ -36,6 +36,10 @@ const persistLocalRecord = async (collection, record) => {
 };
 
 router.post('/demo-requests', demoRequestLimiter, validateBody(schemas.demoRequestCreateSchema), async (req, res) => {
+  // Honeypot: silently discard bot submissions
+  if (req.validatedBody.website) {
+    return res.status(201).json({ ok: true, data: { id: 'bot', message: 'Demo request received.' } });
+  }
   const payload = req.validatedBody;
 
   const record = {
@@ -86,6 +90,9 @@ router.post('/analytics-events', analyticsEventLimiter, optionalAuth, validateBo
 
   await persistLocalRecord('productEvents', record);
 
+  // Fire-and-forget: prune local events older than 30 days to prevent unbounded growth
+  purgeOldLocalEvents().catch(() => {});
+
   logger.info('product_event_tracked', {
     event: record.event,
     path: record.path,
@@ -96,5 +103,20 @@ router.post('/analytics-events', analyticsEventLimiter, optionalAuth, validateBo
 
   return res.status(202).json({ ok: true });
 });
+
+const PRODUCT_EVENT_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+const purgeOldLocalEvents = async () => {
+  if (getDataProvider() !== 'local') return;
+  const cutoff = new Date(Date.now() - PRODUCT_EVENT_RETENTION_MS).toISOString();
+  await withDb((current) => {
+    const events = current.productEvents;
+    if (!Array.isArray(events)) return current;
+    return {
+      ...current,
+      productEvents: events.filter((e) => (e.created_at || '') >= cutoff),
+    };
+  });
+};
 
 export default router;

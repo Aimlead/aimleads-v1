@@ -47,7 +47,7 @@ describe('Login SSO fallback', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('heading', { name: 'Content de vous revoir' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Accédez à votre espace' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Continuer avec Google' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Continuer avec GitHub' })).not.toBeInTheDocument();
   });

@@ -36,6 +36,17 @@ import { addBreadcrumb } from '../lib/sentry.js';
 const router = express.Router();
 wrapAsyncRoutes(router);
 
+// In-memory store for legacy-auth password reset tokens (dev/test only)
+// Token → { email, expiresAt }
+const legacyResetTokens = new Map();
+const LEGACY_RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+const generateLegacyResetToken = () => {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+};
+
 const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
 const resolveAppOrigin = () =>
   String(process.env.APP_ORIGIN || process.env.CORS_ORIGIN || 'http://localhost:5173').replace(/\/$/, '');
@@ -171,7 +182,7 @@ router.post('/register', authLimiter, validateBody(schemas.authRegisterSchema), 
   if (!isAuthProviderSupabase()) {
     const existingUser = await dataStore.findUserByEmail(email);
     if (existingUser) {
-      return res.status(409).json({ message: 'An account with this email already exists. Please sign in.' });
+      return res.status(409).json({ message: 'Invalid credentials. Please check your information and try again.' });
     }
 
     const pendingInvite = await dataStore.findActiveWorkspaceInviteByEmail(email).catch(() => null);
@@ -321,19 +332,46 @@ router.post('/reset-password', authLimiter, validateBody(schemas.authResetPasswo
     return res.json({ ok: true });
   }
 
-  // For legacy auth: no email service wired.
-  // Return a clear message so the user knows what to do.
-  return res.json({ ok: true, message: 'If this email is registered, a reset link has been sent. Check your inbox or contact your administrator.' });
+  // For legacy auth: generate a short-lived token and send the reset email.
+  const user = await dataStore.findUserByEmail(email).catch(() => null);
+  if (user) {
+    const token = generateLegacyResetToken();
+    legacyResetTokens.set(token, { email, expiresAt: Date.now() + LEGACY_RESET_TOKEN_TTL_MS });
+    const resetUrl = `${resolveAppOrigin()}/reset-password?token=${token}&legacy=true`;
+    sendEmail(EmailTemplates.passwordReset({ toEmail: email, resetUrl })).catch(() => {});
+  }
+  // Always return the same response to prevent email enumeration
+  return res.json({ ok: true });
 });
 
 router.post('/reset-password/complete', authLimiter, validateBody(schemas.authCompletePasswordResetSchema), async (req, res) => {
+  const newPassword = String(req.validatedBody.new_password || '');
+
+  // Legacy auth path: validate the in-memory token
   if (!isAuthProviderSupabase()) {
-    return res.status(400).json({ message: 'Password recovery is only available with Supabase Auth.' });
+    const token = String(req.validatedBody.token || '').trim();
+    if (!token) {
+      return res.status(400).json({ message: 'Reset token is required.' });
+    }
+    const entry = legacyResetTokens.get(token);
+    if (!entry || Date.now() > entry.expiresAt) {
+      legacyResetTokens.delete(token);
+      return res.status(400).json({ message: 'Reset link is invalid or has expired. Please request a new one.' });
+    }
+    const user = await dataStore.findUserByEmail(entry.email).catch(() => null);
+    if (!user) {
+      return res.status(400).json({ message: 'Reset link is invalid or has expired. Please request a new one.' });
+    }
+    await dataStore.updateUser(user.id, { password_hash: hashPassword(newPassword) });
+    legacyResetTokens.delete(token);
+    const sessionToken = createSessionToken(user.id, getSessionSecret());
+    res.cookie(SESSION_COOKIE_NAME, sessionToken, getCookieOptions());
+    setCsrfCookie(res);
+    return res.json({ ok: true, user: sanitizeUser(user) });
   }
 
   const accessToken = String(req.validatedBody.access_token || '').trim();
   const refreshToken = String(req.validatedBody.refresh_token || '').trim();
-  const newPassword = String(req.validatedBody.new_password || '');
 
   try {
     await updateAuthUserPassword({

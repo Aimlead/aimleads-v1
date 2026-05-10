@@ -538,7 +538,8 @@ export default function Dashboard() {
                 variant="outline"
                 size="sm"
                 onClick={handleReanalyzeVisible}
-                disabled={isReanalyzing}
+                disabled={isReanalyzing || !activeIcp}
+                title={!activeIcp ? t('dashboard.noIcpTooltip', { defaultValue: 'Configurez un ICP actif pour activer cette action' }) : undefined}
                 className="h-8 gap-1.5 rounded-md border-[#e8e5de] px-2.5 text-[11.5px]"
               >
                 {isReanalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />}
@@ -564,7 +565,8 @@ export default function Dashboard() {
                   }
                   handleAnalyzeSignalsVisible();
                 }}
-                disabled={isAnalyzingSignalsVisible || isReanalyzing || isScoringIcpVisible}
+                disabled={isAnalyzingSignalsVisible || isReanalyzing || isScoringIcpVisible || !activeIcp}
+                title={!activeIcp ? t('dashboard.noIcpTooltip', { defaultValue: 'Configurez un ICP actif pour activer cette action' }) : undefined}
                 className="h-8 gap-1.5 rounded-md border-[#e8e5de] px-2.5 text-[11.5px]"
               >
                 {isAnalyzingSignalsVisible ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}

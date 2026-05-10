@@ -121,16 +121,20 @@ app.get('/api/health', async (_req, res) => {
     dbStatus = 'error';
   }
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  return res.json({
+  const response = {
     status: dbStatus === 'ok' ? 'ok' : 'degraded',
     timestamp: new Date().toISOString(),
     build: buildMetadata,
-    providers: {
+  };
+  // Only expose provider config in non-production environments
+  if (!config.isProduction) {
+    response.providers = {
       claude: Boolean(process.env.ANTHROPIC_API_KEY),
       hunter: Boolean(process.env.HUNTER_API_KEY),
       newsApi: Boolean(process.env.NEWS_API_KEY),
-    },
-  });
+    };
+  }
+  return res.json(response);
 });
 
 app.use('/metrics', metricsRoutes);

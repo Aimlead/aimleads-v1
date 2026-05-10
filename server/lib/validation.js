@@ -303,8 +303,11 @@ const authResetPasswordSchema = z.object({
 });
 
 const authCompletePasswordResetSchema = z.object({
-  access_token: z.string().trim().min(1),
-  refresh_token: z.string().trim().min(1),
+  // Supabase auth fields
+  access_token: z.string().trim().min(1).optional(),
+  refresh_token: z.string().trim().min(1).optional(),
+  // Legacy auth fields
+  token: z.string().trim().min(1).optional(),
   new_password: passwordSchema,
 });
 
@@ -316,6 +319,8 @@ const demoRequestCreateSchema = z.object({
   interest: z.string().trim().max(200).optional().default(''),
   notes: z.string().trim().max(2000).optional().default(''),
   source: z.string().trim().max(120).optional().default('booking_modal'),
+  // Honeypot: must be absent or empty — bots fill it, humans don't
+  website: z.string().max(0).optional(),
 });
 
 const productEventSchema = z.object({

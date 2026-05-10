@@ -14,6 +14,8 @@ import { getDataProvider, getRuntimeConfig } from './config.js';
 import { getUserWorkspaceId } from './scope.js';
 import { logger } from './observability.js';
 import { recordCreditConsumptionMetric, recordLlmTokensUsedMetric } from './metrics.js';
+import { planMeetsMinimum } from './plans.js';
+import { writeAuditLog } from './auditLog.js';
 
 // ─────────────────────────────────────────────────────────────────
 // Credit costs per action (must match SQL migration comments)
@@ -328,6 +330,37 @@ export const requireActiveBilling = async (req, res, next) => {
 };
 
 /**
+ * requirePlan(minPlan) — blocks the request if the workspace is not on at least minPlan.
+ * No-op in local/dev mode (DATA_PROVIDER != supabase).
+ *
+ * Usage:
+ *   router.post('/api-endpoint', requireAuth, requirePlan('scale'), handler);
+ */
+export const requirePlan = (minPlan) => async (req, res, next) => {
+  if (!isSupabase()) return next();
+
+  const workspaceId = getUserWorkspaceId(req.user);
+  if (!workspaceId) return next();
+
+  try {
+    const plan = await getWorkspacePlan(workspaceId);
+    if (!planMeetsMinimum(plan.plan_slug, minPlan)) {
+      return res.status(403).json({
+        message: `This feature requires the ${minPlan} plan or higher. Please upgrade to continue.`,
+        code: 'PLAN_REQUIRED',
+        required_plan: minPlan,
+        current_plan: plan.plan_slug,
+      });
+    }
+    return next();
+  } catch (err) {
+    logger.warn('require_plan_check_error', { workspaceId, minPlan, error: err?.message });
+    // Fail open on unexpected errors
+    return next();
+  }
+};
+
+/**
  * requireCredits(action) — deducts CREDIT_COSTS[action] credits before the handler runs.
  * Also checks billing status (trial expiry, subscription inactive) before deducting.
  * Returns 402 with { code: 'INSUFFICIENT_CREDITS', balance, required } if not enough credits.
@@ -368,5 +401,14 @@ export const requireCredits = (action) => async (req, res, next) => {
 
   req.creditsDeducted = amount;
   req.creditsBalance = result.balance;
+
+  writeAuditLog({
+    user: req.user,
+    action: 'update',
+    resourceType: 'credit_transaction',
+    resourceId: workspaceId,
+    changes: { type: 'deduct', action, amount, balance_after: result.balance ?? null },
+  }).catch(() => {});
+
   return next();
 };

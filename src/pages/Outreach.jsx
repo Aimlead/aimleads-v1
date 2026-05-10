@@ -28,35 +28,35 @@ const CHANNEL_ICONS = {
 const INITIAL_TEMPLATES = [
   {
     id: '1',
-    name: 'SaaS Decision Maker',
+    name: 'Email prospection B2B',
     channel: 'email',
     tags: ['saas', 'b2b'],
-    content: `Hi {{contact_name}},
+    content: `Bonjour {{contact_name}},
 
-I came across {{company_name}} and was impressed by your work in {{industry}}.
+En étudiant {{company_name}}, j'ai été frappé par votre approche dans le secteur {{industry}}.
 
-We help companies like yours reduce manual SDR research by 80% using AI-powered lead scoring and automated icebreakers.
+Nous aidons des équipes comme la vôtre à réduire de 80 % le temps passé sur la recherche manuelle, grâce au scoring IA et à des icebreakers personnalisés.
 
-Would it make sense to connect for 15 minutes this week to explore if there's a fit?
+Seriez-vous disponible 15 minutes cette semaine pour voir si cela peut vous apporter de la valeur ?
 
-Best,
+Cordialement,
 {{sender_name}}`,
     variables: ['contact_name', 'company_name', 'industry', 'sender_name'],
   },
   {
     id: '2',
-    name: 'LinkedIn Connection Note',
+    name: 'Note de connexion LinkedIn',
     channel: 'linkedin',
     tags: ['cold', 'growth'],
-    content: `Hi {{contact_name}}, noticed your work at {{company_name}} in the {{industry}} space. Our AI scoring platform has helped similar teams 3x their qualified pipeline. Worth a quick chat?`,
+    content: `Bonjour {{contact_name}}, j'ai remarqué votre travail chez {{company_name}} dans le secteur {{industry}}. Notre plateforme de scoring IA a aidé des équipes similaires à tripler leur pipeline qualifié. Un échange rapide vous intéresse ?`,
     variables: ['contact_name', 'company_name', 'industry'],
   },
   {
     id: '3',
-    name: 'Cold Call Opener',
+    name: 'Accroche appel à froid',
     channel: 'call',
     tags: ['cold', 'senior'],
-    content: `Hi {{contact_name}}, this is [name] from AimLeads. I'll be direct — I'm calling because we help {{industry}} teams like {{company_name}} identify their highest-value leads using AI, so you can stop guessing and start closing. Do you have 90 seconds?`,
+    content: `Bonjour {{contact_name}}, je suis [prénom] d'AimLeads. Je vais être direct : j'appelle parce que nous aidons les équipes {{industry}} comme {{company_name}} à identifier leurs leads à plus forte valeur grâce à l'IA, pour arrêter de deviner et commencer à conclure. Vous avez 90 secondes ?`,
     variables: ['contact_name', 'industry', 'company_name'],
   },
 ];
@@ -376,7 +376,10 @@ export default function Outreach() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const [templates, setTemplates] = useState(loadTemplates);
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState(() => {
+    const tpls = loadTemplates();
+    return tpls.length > 0 ? tpls[0] : null;
+  });
   const [editing, setEditing] = useState(null);
   const [isNew, setIsNew] = useState(false);
   const [channelFilter, setChannelFilter] = useState('all');
@@ -439,11 +442,20 @@ export default function Outreach() {
       toast.success(t('outreach.sequenceGenerated', { defaultValue: 'Sequence generated.' }));
     },
     onError: (error) => {
+      const code = error?.payload?.code || error?.code || null;
       const msg = error?.payload?.message || error?.message || null;
-      if (msg) {
-        toast.error(t('outreach.toasts.sequenceFailedWithMessage', { defaultValue: 'Sequence generation failed: {{message}}', message: msg }));
+      const status = error?.status || error?.payload?.status || null;
+
+      if (code === 'INSUFFICIENT_CREDITS' || status === 402) {
+        toast.error(t('outreach.toasts.insufficientCredits', { defaultValue: 'Crédits insuffisants pour générer une séquence. Rechargez vos crédits.' }));
+      } else if (code === 'NO_ACTIVE_ICP' || (msg && /icp/i.test(msg))) {
+        toast.error(t('outreach.toasts.noActiveIcp', { defaultValue: 'Aucun ICP actif — configurez un profil client idéal avant de générer une séquence.' }));
+      } else if (code === 'ANTHROPIC_NOT_CONFIGURED' || (msg && /api.?key|anthropic|claude/i.test(msg))) {
+        toast.error(t('outreach.toasts.apiKeyMissing', { defaultValue: 'Clé API Anthropic manquante — contactez votre administrateur.' }));
+      } else if (msg) {
+        toast.error(t('outreach.toasts.sequenceFailedWithMessage', { defaultValue: 'Séquence non générée : {{message}}', message: msg }));
       } else {
-        toast.error(t('outreach.toasts.sequenceFailed', { defaultValue: 'Sequence generation failed. Check that ANTHROPIC_API_KEY is configured and an active ICP exists.' }));
+        toast.error(t('outreach.toasts.sequenceFailed', { defaultValue: 'Génération de séquence échouée. Vérifiez que ANTHROPIC_API_KEY est configurée et qu\'un ICP actif existe.' }));
       }
     },
   });

@@ -5,7 +5,7 @@ describe('icpProfile helpers', () => {
   it('creates the baseline ICP structure', () => {
     const payload = createDefaultIcpFormData();
 
-    expect(payload.name).toBe('My ICP');
+    expect(payload.name).toBe('Mon profil ICP');
     expect(payload.weights.industrie.primaires).toEqual([]);
     expect(payload.weights.structure.primaire.min).toBeGreaterThan(0);
     expect(payload.weights.meta.finalScoreWeights.icp).toBe(60);
