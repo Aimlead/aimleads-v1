@@ -192,6 +192,7 @@
     "heroTitleLine1": "Score your B2B leads.",
     "heroTitleLine2": "Close faster.",
     "heroSubtitle": "AimLeads qualifies, prioritizes and enriches your prospects with AI — custom ICP, intent signals, outreach sequences in one click.",
+    "trustedBy": "Used by B2B sales teams",
     "heroProof": {
       "one": {
         "title": "Fast setup without dead-end steps",
@@ -1188,8 +1189,10 @@
     "weightScale": {
       "ignored": "0% (ignored)",
       "normal": "100% (normal)",
-      "critical": "150% (critical)"
+      "critical": "150% (critical)",
+      "criticalTooltip": "150% = the impact of this criterion is multiplied by 1.5"
     },
+    "weightPreview": "Weight distribution preview",
     "errors": {
       "credit": "Generation unavailable: Anthropic credits are too low. Top up the account and try again.",
       "apiKey": "Generation unavailable: the Anthropic key is not configured on the backend.",
@@ -1296,7 +1299,10 @@
       "templateDeleted": "Template deleted.",
       "sequenceUnavailable": "Sequence generation is unavailable. Check that an active ICP and ANTHROPIC_API_KEY are configured.",
       "sequenceFailed": "Sequence generation failed. Check that ANTHROPIC_API_KEY is configured and an active ICP exists.",
-      "sequenceFailedWithMessage": "Sequence generation failed: {{message}}"
+      "sequenceFailedWithMessage": "Sequence generation failed: {{message}}",
+      "insufficientCredits": "Insufficient credits to generate a sequence. Top up your credits.",
+      "noActiveIcp": "No active ICP — set up an ideal customer profile before generating a sequence.",
+      "apiKeyMissing": "Anthropic API key missing — contact your administrator."
     }
   },
   "settings": {

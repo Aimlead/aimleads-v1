@@ -256,6 +256,7 @@
     "heroTitleLine1": "Scorez vos leads B2B.",
     "heroTitleLine2": "Signez plus vite.",
     "heroSubtitle": "AimLeads qualifie, priorise et enrichit vos prospects avec l'IA — ICP sur mesure, signaux d'intention, séquences outreach en un clic.",
+    "trustedBy": "Utilisé par des équipes commerciales B2B",
     "heroProof": {
       "one": {
         "title": "Setup rapide, sans tunnel mort",
@@ -1091,8 +1092,10 @@
     "weightScale": {
       "ignored": "0 % (ignoré)",
       "normal": "100 % (normal)",
-      "critical": "150 % (critique)"
+      "critical": "150 % (critique)",
+      "criticalTooltip": "150 % = l'impact de ce critère est multiplié par 1,5"
     },
+    "weightPreview": "Aperçu de la distribution des pondérations",
     "errors": {
       "credit": "Génération impossible : crédits Anthropic insuffisants. Rechargez le compte puis réessayez.",
       "apiKey": "Génération impossible : la clé Anthropic n’est pas configurée côté backend.",
@@ -1574,8 +1577,11 @@
       "templateUpdated": "Template mis à jour.",
       "templateDeleted": "Template supprimé.",
       "sequenceUnavailable": "Génération impossible. Vérifiez qu’un ICP actif et ANTHROPIC_API_KEY sont configurés.",
-      "sequenceFailed": "La génération a échoué. Vérifiez ANTHROPIC_API_KEY et l’existence d’un ICP actif.",
-      "sequenceFailedWithMessage": "La génération a échoué : {{message}}"
+      "sequenceFailed": "Génération de séquence échouée. Vérifiez que ANTHROPIC_API_KEY est configurée et qu’un ICP actif existe.",
+      "sequenceFailedWithMessage": "Séquence non générée : {{message}}",
+      "insufficientCredits": "Crédits insuffisants pour générer une séquence. Rechargez vos crédits.",
+      "noActiveIcp": "Aucun ICP actif — configurez un profil client idéal avant de générer une séquence.",
+      "apiKeyMissing": "Clé API Anthropic manquante — contactez votre administrateur."
     }
   },
   "audit": {
