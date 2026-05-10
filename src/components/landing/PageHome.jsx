@@ -551,6 +551,110 @@ export default function PageHome({ ctx }) {
         </div>
       </div>
 
+      {/* Product features section */}
+      <div className="home-product-features">
+        <div className="hpf-header rv">
+          <div className="hpf-eyebrow">{t('landing.features.eyebrow')}</div>
+          <h2 className="hpf-title">
+            {t('landing.features.titleLine1')}<br />
+            <em>{t('landing.features.titleLine2')}</em>
+          </h2>
+          <p className="hpf-subtitle">{t('landing.features.subtitle')}</p>
+        </div>
+
+        <div className="hpf-grid">
+          {[
+            {
+              color: 'sky',
+              tag: t('landing.features.cards.icp.tag'),
+              title: t('landing.features.cards.icp.title'),
+              desc: t('landing.features.cards.icp.desc'),
+              icon: (
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--sky)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+                  <path d="M8 12l2.5 2.5L16 9"/>
+                </svg>
+              ),
+            },
+            {
+              color: 'violet',
+              tag: t('landing.features.cards.scoring.tag'),
+              title: t('landing.features.cards.scoring.title'),
+              desc: t('landing.features.cards.scoring.desc'),
+              icon: (
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="12" width="4" height="9" rx="1"/>
+                  <rect x="10" y="7" width="4" height="14" rx="1"/>
+                  <rect x="17" y="3" width="4" height="18" rx="1"/>
+                  <polyline points="3,10 10,5 17,1" strokeOpacity=".5"/>
+                </svg>
+              ),
+            },
+            {
+              color: 'mint',
+              tag: t('landing.features.cards.signals.tag'),
+              title: t('landing.features.cards.signals.title'),
+              desc: t('landing.features.cards.signals.desc'),
+              icon: (
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--mint)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                </svg>
+              ),
+            },
+            {
+              color: 'coral',
+              tag: t('landing.features.cards.outreach.tag'),
+              title: t('landing.features.cards.outreach.title'),
+              desc: t('landing.features.cards.outreach.desc'),
+              icon: (
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--coral)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  <line x1="9" y1="10" x2="15" y2="10"/>
+                  <line x1="9" y1="14" x2="13" y2="14"/>
+                </svg>
+              ),
+            },
+            {
+              color: 'indigo',
+              tag: t('landing.features.cards.team.tag'),
+              title: t('landing.features.cards.team.title'),
+              desc: t('landing.features.cards.team.desc'),
+              icon: (
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+              ),
+            },
+            {
+              color: 'slate',
+              tag: t('landing.features.cards.audit.tag'),
+              title: t('landing.features.cards.audit.title'),
+              desc: t('landing.features.cards.audit.desc'),
+              icon: (
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgba(148,163,184,.85)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="9" y1="13" x2="15" y2="13"/>
+                  <line x1="9" y1="17" x2="13" y2="17"/>
+                </svg>
+              ),
+            },
+          ].map((feat, i) => (
+            <div key={feat.color + i} className={`hpf-card hpf-card-${feat.color} rv${i > 0 ? ` d${Math.min(i, 4)}` : ''}`}>
+              <div className="hpf-card-body">
+                <div className={`hpf-icon hpf-icon-${feat.color}`}>{feat.icon}</div>
+                <div className={`hpf-tag hpf-tag-${feat.color}`}>{feat.tag}</div>
+                <h3>{feat.title}</h3>
+                <p>{feat.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="home-cta-final rv">
         <div className="hcf-pill hcf-p1" />
         <div className="hcf-pill hcf-p2" />

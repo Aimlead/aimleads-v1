@@ -308,6 +308,44 @@
     "finalSubtitle": "30 minutes pour identifier vos 3 priorités IA et repartir avec un plan d'action concret.",
     "finalPrimaryCta": "Réserver mon audit gratuit",
     "finalSecondaryCta": "Voir le Lead-Scoreur",
+    "features": {
+      "eyebrow": "Fonctionnalités",
+      "titleLine1": "Tout ce qu'il faut pour",
+      "titleLine2": "qualifier vite et agir juste",
+      "subtitle": "AimLeads couvre l'intégralité du cycle : de la définition de votre cible idéale au message envoyé au bon moment, pour chaque lead.",
+      "cards": {
+        "icp": {
+          "tag": "ICP",
+          "title": "Profil client idéal sur mesure",
+          "desc": "Définissez votre cible avec des critères fins — secteur, taille, rôles, géographie. Le scoring suit votre stratégie commerciale réelle, pas un modèle générique."
+        },
+        "scoring": {
+          "tag": "Scoring IA",
+          "title": "Score automatique par Claude",
+          "desc": "Chaque lead est analysé et scoré par l'IA. Le résultat reste lisible pour toute l'équipe — founder, SDR ou manager — sans boîte noire opaque."
+        },
+        "signals": {
+          "tag": "Signaux",
+          "title": "Signaux d'intention en temps réel",
+          "desc": "Détectez les déclencheurs positifs et négatifs : levées de fonds, recrutements clés, expansion géographique, publications stratégiques."
+        },
+        "outreach": {
+          "tag": "Outreach",
+          "title": "Séquences personnalisées en un clic",
+          "desc": "Générez des messages outreach depuis les leads qualifiés, alignés sur votre ICP et les signaux détectés. Prêts à envoyer depuis votre CRM."
+        },
+        "team": {
+          "tag": "Équipe",
+          "title": "Workspace collaboratif",
+          "desc": "Partagez l'ICP, les leads et les analyses avec toute l'équipe. Rôles, invitations, transfert de propriété — tout géré en quelques secondes."
+        },
+        "audit": {
+          "tag": "Gouvernance",
+          "title": "Audit et traçabilité complète",
+          "desc": "Journal d'audit, logs d'activité et exportation de données. Chaque action sensible est tracée — des crédits aux rôles en passant par les invitations."
+        }
+      }
+    },
     "workflow": {
       "eyebrow": "Comment ça marche",
       "titleLine1": "Un parcours simple.",
@@ -2202,6 +2240,20 @@
   },
   "priorityList": {
     "title": "Liste prioritaire",
-    "subtitle": "File classée des leads à traiter en priorité."
+    "subtitle": "File classée des leads à traiter en priorité.",
+    "emptyNoLeads": {
+      "title": "Aucun lead importé",
+      "desc": "Importez votre premier fichier CSV pour commencer à scorer et prioriser vos prospects.",
+      "cta": "Importer un CSV"
+    }
+  },
+  "upgrade": {
+    "title": "Crédits insuffisants",
+    "detail": "Votre solde de crédits est épuisé. Passez à un plan supérieur pour continuer à scorer, analyser et contacter vos leads.",
+    "detailWithRequired": "Cette action nécessite {{required}} crédit(s) mais votre solde est de {{balance}}. Passez à un plan supérieur pour continuer.",
+    "balance": "Solde actuel",
+    "required": "Requis",
+    "cta": "Voir les plans",
+    "dismiss": "Pas maintenant"
   }
 }
