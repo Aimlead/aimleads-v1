@@ -244,6 +244,44 @@
     "finalSubtitle": "30 minutes to identify your top 3 AI priorities and leave with a concrete action plan.",
     "finalPrimaryCta": "Book my free audit",
     "finalSecondaryCta": "See the Lead Scorer",
+    "features": {
+      "eyebrow": "Features",
+      "titleLine1": "Everything you need to",
+      "titleLine2": "qualify fast and act right",
+      "subtitle": "AimLeads covers the full cycle: from defining your ideal customer profile to sending the right message at the right moment, for every lead.",
+      "cards": {
+        "icp": {
+          "tag": "ICP",
+          "title": "Custom ideal customer profile",
+          "desc": "Define your target with precise criteria — industry, size, roles, geography. Scoring follows your real commercial strategy, not a generic template."
+        },
+        "scoring": {
+          "tag": "AI Scoring",
+          "title": "Automatic score by Claude",
+          "desc": "Every lead is analyzed and scored by AI. The result stays readable for the whole team — founder, SDR or manager — with no opaque black box."
+        },
+        "signals": {
+          "tag": "Signals",
+          "title": "Real-time intent signals",
+          "desc": "Detect positive and negative triggers: funding rounds, key hires, geographic expansion, strategic publications."
+        },
+        "outreach": {
+          "tag": "Outreach",
+          "title": "Personalized sequences in one click",
+          "desc": "Generate outreach messages from qualified leads, aligned with your ICP and detected signals. Ready to send from your CRM."
+        },
+        "team": {
+          "tag": "Team",
+          "title": "Collaborative workspace",
+          "desc": "Share the ICP, leads and analyses with the whole team. Roles, invitations, ownership transfer — all managed in seconds."
+        },
+        "audit": {
+          "tag": "Governance",
+          "title": "Full audit and traceability",
+          "desc": "Audit log, activity logs and data export. Every sensitive action is traced — from credits to roles and invitations."
+        }
+      }
+    },
     "workflow": {
       "eyebrow": "How it works",
       "titleLine1": "A simple path.",
@@ -2069,6 +2107,20 @@
   },
   "priorityList": {
     "title": "Priority List",
-    "subtitle": "Ranked lead queue to focus on the highest-impact outreach next."
+    "subtitle": "Ranked lead queue to focus on the highest-impact outreach next.",
+    "emptyNoLeads": {
+      "title": "No leads imported yet",
+      "desc": "Import your first CSV file to start scoring and prioritizing your prospects.",
+      "cta": "Import CSV"
+    }
+  },
+  "upgrade": {
+    "title": "Insufficient credits",
+    "detail": "Your credit balance is empty. Upgrade to a higher plan to continue scoring, analyzing and contacting your leads.",
+    "detailWithRequired": "This action requires {{required}} credit(s) but your balance is {{balance}}. Upgrade to continue.",
+    "balance": "Current balance",
+    "required": "Required",
+    "cta": "View plans",
+    "dismiss": "Not now"
   }
 }

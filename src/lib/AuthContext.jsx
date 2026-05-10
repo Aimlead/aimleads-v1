@@ -58,6 +58,37 @@ export function AuthProvider({ children }) {
     checkAppState();
   }, []);
 
+  // Silently re-verify the session after the user returns to the tab (if they were away > 5 min)
+  // or on a periodic 12-minute heartbeat while the page is active.
+  useEffect(() => {
+    let hiddenAt = null;
+    const AWAY_THRESHOLD_MS = 5 * 60 * 1000;
+    const HEARTBEAT_MS = 12 * 60 * 1000;
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now();
+      } else if (document.visibilityState === 'visible' && hiddenAt !== null) {
+        if (Date.now() - hiddenAt >= AWAY_THRESHOLD_MS) {
+          checkAppState();
+        }
+        hiddenAt = null;
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    const heartbeat = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        checkAppState();
+      }
+    }, HEARTBEAT_MS);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      clearInterval(heartbeat);
+    };
+  }, []);
+
   const login = async ({ email, password }) => {
     loginGenerationRef.current += 1;
     const result = await dataClient.auth.login({ email, password });

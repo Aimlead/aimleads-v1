@@ -3,6 +3,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter as Router, Navigate, Outlet, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import AppShell from '@/components/layout/AppShell';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import UpgradeModal from '@/components/UpgradeModal';
 import { Toaster } from '@/components/ui/toaster';
 import { ROUTES } from '@/constants/routes';
 import NavigationTracker from '@/lib/NavigationTracker';
@@ -152,6 +153,7 @@ function App() {
           </Router>
         </AuthProvider>
         <Toaster />
+        <UpgradeModal />
       </QueryClientProvider>
     </ErrorBoundary>
   );
