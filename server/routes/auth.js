@@ -31,6 +31,8 @@ import {
 } from '../lib/supabaseAuth.js';
 import { ensureWorkspaceUserForAuth } from '../lib/workspaceUser.js';
 import { sendEmail, EmailTemplates } from '../lib/email.js';
+import { grantCredits, CREDIT_COSTS } from '../lib/credits.js';
+import { getPlanEntitlements } from '../lib/plans.js';
 import { addBreadcrumb } from '../lib/sentry.js';
 
 const router = express.Router();
@@ -165,10 +167,33 @@ router.patch('/me', requireAuth, async (req, res) => {
   return res.json({ user: sanitizeUser(updated || req.user) });
 });
 
+const VALID_PLAN_SLUGS = new Set(['free', 'starter', 'team', 'scale']);
+const TRIAL_BASE_CREDITS = 50;
+
+const resolvePlanSlug = (raw) => {
+  const slug = String(raw || '').trim().toLowerCase();
+  return VALID_PLAN_SLUGS.has(slug) ? slug : 'free';
+};
+
+const applyPlanToWorkspace = async (workspaceId, planSlug, user) => {
+  if (planSlug === 'free') return;
+  try {
+    const entitlements = getPlanEntitlements(planSlug);
+    const bonusCredits = Math.max(0, (entitlements.credits_included || 0) - TRIAL_BASE_CREDITS);
+    if (bonusCredits > 0) {
+      await grantCredits(workspaceId, bonusCredits, 'plan_trial', `${planSlug} trial grant`, { plan_slug: planSlug });
+    }
+    await dataStore.updateWorkspacePlan(user, { plan_slug: planSlug, billing_status: 'trial' }).catch(() => {});
+  } catch (err) {
+    logger.warn('apply_plan_failed', { workspaceId, planSlug, error: err?.message });
+  }
+};
+
 router.post('/register', authLimiter, validateBody(schemas.authRegisterSchema), async (req, res) => {
   const email = normalizeEmail(req.validatedBody.email);
   const password = String(req.validatedBody.password || '');
   const fullName = String(req.validatedBody.full_name || req.validatedBody.fullName || '').trim() || 'New User';
+  const planSlug = resolvePlanSlug(req.validatedBody.selected_plan);
   addBreadcrumb({
     category: 'auth',
     message: 'auth.register.attempt',
@@ -176,6 +201,7 @@ router.post('/register', authLimiter, validateBody(schemas.authRegisterSchema), 
       auth_provider: isAuthProviderSupabase() ? 'supabase' : 'legacy',
       has_full_name: Boolean(fullName),
       email_domain: email.split('@')[1] || null,
+      plan_slug: planSlug,
     },
   });
 
@@ -186,10 +212,11 @@ router.post('/register', authLimiter, validateBody(schemas.authRegisterSchema), 
     }
 
     const pendingInvite = await dataStore.findActiveWorkspaceInviteByEmail(email).catch(() => null);
+    const workspaceId = pendingInvite?.workspace_id || createId('ws');
 
     const newUser = await dataStore.createUser({
       id: createId('user'),
-      workspace_id: pendingInvite?.workspace_id || createId('ws'),
+      workspace_id: workspaceId,
       workspace_role: pendingInvite?.role || 'owner',
       email,
       full_name: fullName,
@@ -203,15 +230,20 @@ router.post('/register', authLimiter, validateBody(schemas.authRegisterSchema), 
       }).catch(() => null);
     }
 
+    // Apply plan credits and workspace plan state
+    if (!pendingInvite) {
+      await applyPlanToWorkspace(workspaceId, planSlug, newUser);
+    }
+
     const token = createSessionToken(newUser.id, getSessionSecret());
     res.cookie(SESSION_COOKIE_NAME, token, getCookieOptions());
     setCsrfCookie(res);
 
-    // Welcome email (fire-and-forget)
     sendEmail(EmailTemplates.welcome({
       toEmail: email,
       fullName: fullName,
       workspaceName: null,
+      planSlug,
     })).catch(() => {});
 
     return res.status(201).json({ user: sanitizeUser(newUser) });
@@ -234,11 +266,16 @@ router.post('/register', authLimiter, validateBody(schemas.authRegisterSchema), 
       fallbackFullName: fullName,
     });
 
-    // Welcome email (fire-and-forget)
+    const supabaseWorkspaceId = appUser?.workspace_id;
+    if (supabaseWorkspaceId) {
+      await applyPlanToWorkspace(supabaseWorkspaceId, planSlug, appUser);
+    }
+
     sendEmail(EmailTemplates.welcome({
       toEmail: email,
       fullName: appUser?.full_name || fullName,
       workspaceName: null,
+      planSlug,
     })).catch(() => {});
 
     return res.status(201).json({ user: sanitizeUser(appUser) });

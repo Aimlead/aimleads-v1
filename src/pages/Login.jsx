@@ -98,7 +98,7 @@ export default function Login() {
 
     try {
       if (isSignup) {
-        await register(formData);
+        await register({ ...formData, selected_plan: selectedPlan || undefined });
       } else {
         await login({ email: formData.email, password: formData.password });
       }

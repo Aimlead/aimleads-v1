@@ -647,6 +647,10 @@ router.get('/credits', requireAuth, async (req, res) => {
     integrations,
   });
 
+  const appOrigin = String(process.env.APP_ORIGIN || process.env.CORS_ORIGIN || '').replace(/\/$/, '');
+  const billingPortalUrl = process.env.STRIPE_BILLING_PORTAL_URL || null;
+  const upgradeUrl = process.env.STRIPE_UPGRADE_URL || null;
+
   return res.json({
     data: {
       balance,
@@ -661,6 +665,12 @@ router.get('/credits', requireAuth, async (req, res) => {
       },
       top_actions: summary.top_actions,
       plan_catalog: getPlanCatalog(),
+      // Billing portal links — populated when Stripe is configured
+      manage_billing_url: billingPortalUrl,
+      upgrade_url: upgradeUrl,
+      buy_credits_url: upgradeUrl,
+      // Contact sales fallback for assisted upgrade (no Stripe yet)
+      contact_sales_url: appOrigin ? `${appOrigin}/pricing` : null,
     },
   });
 });

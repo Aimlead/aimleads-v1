@@ -173,27 +173,39 @@ export const EmailTemplates = {
   /**
    * Welcome email sent after successful registration.
    */
-  welcome: ({ toEmail, fullName, workspaceName }) => ({
-    to: toEmail,
-    subject: `Bienvenue sur AimLeads${workspaceName ? ` — ${workspaceName}` : ''}`,
-    html: emailLayout(
-      `
-      ${h1(`Bienvenue, ${fullName || 'sur AimLeads'} 👋`)}
-      ${p('Ton espace de travail est prêt. Voici les premières étapes pour démarrer :')}
-      <ol style="margin:0 0 24px;padding-left:20px;font-size:15px;line-height:1.8;color:#1e293b;">
-        <li><strong>Configure ton ICP</strong> (profil client idéal) pour paramétrer le scoring</li>
-        <li><strong>Importe tes leads</strong> depuis un fichier CSV ou XLSX</li>
-        <li><strong>Lance une analyse</strong> pour scorer tes leads avec l'IA</li>
-      </ol>
-      <div style="text-align:center;margin:32px 0;">
-        ${btnPrimary(`${getAppUrl()}/dashboard`, 'Accéder à mon espace')}
-      </div>
-      ${divider()}
-      ${p(`Des questions ? Consulte notre <a href="${getAppUrl()}/help" style="color:#6366f1;">centre d'aide</a> ou réponds directement à cet email.`, 'font-size:13px;color:#64748b;')}
-      `,
-      'Ton espace AimLeads est prêt'
-    ),
-  }),
+  welcome: ({ toEmail, fullName, workspaceName, planSlug }) => {
+    const planNames = { free: 'Free', starter: 'Starter', team: 'Team', scale: 'Scale' };
+    const planCredits = { free: 50, starter: 1000, team: 3500, scale: 10000 };
+    const plan = String(planSlug || 'free').toLowerCase();
+    const planName = planNames[plan] || 'Free';
+    const credits = planCredits[plan] || 50;
+    const isPaid = plan !== 'free';
+    return {
+      to: toEmail,
+      subject: `Bienvenue sur AimLeads${workspaceName ? ` — ${workspaceName}` : ''} — plan ${planName}`,
+      html: emailLayout(
+        `
+        ${h1(`Bienvenue, ${fullName || 'sur AimLeads'} 👋`)}
+        ${isPaid
+          ? p(`Merci d'avoir choisi le plan <strong>${planName}</strong>. Tu disposes de <strong>${credits.toLocaleString('fr-FR')} crédits IA</strong> pour commencer.`)
+          : p(`Ton essai gratuit est activé — <strong>${credits} crédits IA</strong> disponibles immédiatement, sans carte bancaire.`)
+        }
+        ${p('Voici les premières étapes pour démarrer :')}
+        <ol style="margin:0 0 24px;padding-left:20px;font-size:15px;line-height:1.8;color:#1e293b;">
+          <li><strong>Configure ton ICP</strong> (profil client idéal) pour paramétrer le scoring</li>
+          <li><strong>Importe tes leads</strong> depuis un fichier CSV ou XLSX</li>
+          <li><strong>Lance une analyse</strong> pour scorer tes leads avec l'IA</li>
+        </ol>
+        <div style="text-align:center;margin:32px 0;">
+          ${btnPrimary(`${getAppUrl()}/dashboard`, 'Accéder à mon espace')}
+        </div>
+        ${divider()}
+        ${p(`Des questions ? Consulte notre <a href="${getAppUrl()}/help" style="color:#6366f1;">centre d'aide</a> ou réponds directement à cet email.`, 'font-size:13px;color:#64748b;')}
+        `,
+        'Ton espace AimLeads est prêt'
+      ),
+    };
+  },
 
   /**
    * Sent 3 days before trial expiry.

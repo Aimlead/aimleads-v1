@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { AlertTriangle, Clock3, CreditCard, ExternalLink, Rocket, Sparkles, Users } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { AlertTriangle, Check, Clock3, CreditCard, ExternalLink, Loader2, Rocket, Sparkles, Users } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -28,8 +28,11 @@ const resolveRunwayLabel = (days, t) => {
 };
 
 const openBillingAction = (url, intent) => {
-  const fallback = `mailto:billing@aimlead.io?subject=${encodeURIComponent(`AimLead ${intent}`)}`;
-  window.open(url || fallback, '_blank', 'noopener,noreferrer');
+  if (url) {
+    window.open(url, '_blank', 'noopener,noreferrer');
+    return;
+  }
+  dataClient.public.submitDemoRequest({ intent, source: 'billing_page' }).catch(() => {});
 };
 
 const formatActionLabel = (action, t) => {
@@ -66,6 +69,24 @@ function ProgressBar({ value = 0, label }) {
 export default function Billing() {
   const { t, i18n } = useTranslation();
   const locale = getLocale(i18n.language);
+  const [upgradeRequested, setUpgradeRequested] = useState(false);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
+
+  const handleUpgradeRequest = async (url, intent) => {
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    setUpgradeLoading(true);
+    try {
+      await dataClient.public.submitDemoRequest({ intent, source: 'billing_page' });
+    } catch {
+      // best effort
+    } finally {
+      setUpgradeLoading(false);
+      setUpgradeRequested(true);
+    }
+  };
 
   const { data: creditsData = null, isLoading } = useQuery({
     queryKey: ['workspace-credits-billing'],
@@ -187,18 +208,27 @@ export default function Billing() {
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">{t('billing.renewalOrTrial', { defaultValue: "Renouvellement / fin d'essai" })}</p>
             <p className="mt-1 text-sm font-medium text-slate-900">{formatDate(renewalDate, locale)}</p>
             <div className="mt-4 space-y-2">
-              <Button size="sm" className="w-full gap-1.5" onClick={() => openBillingAction(upgradeUrl, 'plan upgrade')}>
-                <Rocket className="h-3.5 w-3.5" />
-                {t('billing.actions.upgradePlan', { defaultValue: 'Changer de plan' })}
-              </Button>
-              <Button size="sm" variant="outline" className="w-full gap-1.5" onClick={() => openBillingAction(buyCreditsUrl, 'credit purchase')}>
-                <Sparkles className="h-3.5 w-3.5" />
-                {t('billing.actions.buyCredits', { defaultValue: 'Acheter des crédits' })}
-              </Button>
-              <Button size="sm" variant="outline" className="w-full gap-1.5" onClick={() => openBillingAction(manageBillingUrl, 'billing portal')}>
-                <CreditCard className="h-3.5 w-3.5" />
-                {t('billing.actions.manageBilling', { defaultValue: 'Gérer la facturation' })}
-              </Button>
+              {upgradeRequested ? (
+                <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700">
+                  <Check className="h-4 w-4 shrink-0" />
+                  <span>{t('billing.actions.upgradeRequestSent', { defaultValue: 'Demande envoyée — notre équipe vous contacte sous 24h.' })}</span>
+                </div>
+              ) : (
+                <>
+                  <Button size="sm" className="w-full gap-1.5" disabled={upgradeLoading} onClick={() => handleUpgradeRequest(upgradeUrl, 'plan upgrade')}>
+                    {upgradeLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}
+                    {t('billing.actions.upgradePlan', { defaultValue: 'Changer de plan' })}
+                  </Button>
+                  <Button size="sm" variant="outline" className="w-full gap-1.5" disabled={upgradeLoading} onClick={() => handleUpgradeRequest(buyCreditsUrl, 'credit purchase')}>
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {t('billing.actions.buyCredits', { defaultValue: 'Acheter des crédits' })}
+                  </Button>
+                  <Button size="sm" variant="outline" className="w-full gap-1.5" onClick={() => openBillingAction(manageBillingUrl, 'billing portal')}>
+                    <CreditCard className="h-3.5 w-3.5" />
+                    {t('billing.actions.manageBilling', { defaultValue: 'Gérer la facturation' })}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </CardContent>

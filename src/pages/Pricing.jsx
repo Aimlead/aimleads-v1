@@ -88,13 +88,24 @@ export default function Pricing() {
   const [annual, setAnnual] = useState(false);
 
   const openPlanReview = async () => {
-    await dataClient.public.trackEvent({
-      event: 'pricing_review_requested',
-      path: ROUTES.pricing,
-      source: 'pricing_page',
-      properties: { authenticated: Boolean(isAuthenticated) },
-    }).catch(() => {});
-    window.open('mailto:hello@aimlead.io?subject=AimLeads%20plan%20review', '_blank');
+    await Promise.allSettled([
+      dataClient.public.trackEvent({
+        event: 'pricing_review_requested',
+        path: ROUTES.pricing,
+        source: 'pricing_page',
+        properties: { authenticated: Boolean(isAuthenticated) },
+      }),
+      dataClient.public.submitDemoRequest({
+        intent: 'plan_review',
+        source: 'pricing_page',
+        message: 'Interested in a plan review.',
+      }),
+    ]);
+    if (isAuthenticated) {
+      navigate(ROUTES.billing);
+    } else {
+      navigate(`${ROUTES.login}?mode=signup`);
+    }
   };
 
   const openSelectedPlan = async (plan) => {
