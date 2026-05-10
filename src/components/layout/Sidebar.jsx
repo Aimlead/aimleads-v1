@@ -160,7 +160,10 @@ export default function Sidebar({ mobile = false, onNavigate, onOpenPalette, onS
 
       {/* AI Badge */}
       <div className="px-3 py-4 border-t border-white/[0.06]">
-        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+        <div
+          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 cursor-help"
+          title={t('nav.aiScoringTooltip', { defaultValue: "Le scoring IA est actif — AimLeads analyse vos leads via Claude (ICP, signaux internet, intention d'achat) pour les prioriser automatiquement." })}
+        >
           <div className="w-6 h-6 rounded-lg bg-brand-sky/20 flex items-center justify-center flex-shrink-0">
             <Sparkles className="w-3.5 h-3.5 text-brand-sky" />
           </div>

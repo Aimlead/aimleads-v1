@@ -107,12 +107,19 @@ function TagInput({ label, values = [], onChange, placeholder, disabled, variant
 function WeightSlider({ label, value, onChange, disabled, description }) {
   const { t } = useTranslation();
   const color = value >= 80 ? 'text-emerald-600' : value >= 50 ? 'text-amber-600' : 'text-rose-500';
+  const weightTooltip = value === 0
+    ? t('icp.weightTooltip.ignored', { defaultValue: 'Ce critère est ignoré dans le scoring' })
+    : value <= 80
+      ? t('icp.weightTooltip.low', { defaultValue: 'Poids réduit — ce critère a moins d\'importance' })
+      : value === 100
+        ? t('icp.weightTooltip.normal', { defaultValue: 'Poids normal (référence 100%)' })
+        : t('icp.weightTooltip.boosted', { value, defaultValue: 'Critère prioritaire — impact multiplié par {{value}}%' });
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium text-slate-700">{label}</Label>
-        <span className={`text-sm font-bold tabular-nums ${color}`}>{value}%</span>
+        <span className={`text-sm font-bold tabular-nums cursor-help ${color}`} title={weightTooltip}>{value}%</span>
       </div>
       {description && <p className="text-xs text-slate-500">{description}</p>}
       <Slider
@@ -127,7 +134,7 @@ function WeightSlider({ label, value, onChange, disabled, description }) {
       <div className="flex justify-between text-[10px] text-slate-400">
         <span>{t('icp.weightScale.ignored')}</span>
         <span>{t('icp.weightScale.normal')}</span>
-        <span>{t('icp.weightScale.critical')}</span>
+        <span title={t('icp.weightScale.criticalTooltip', { defaultValue: '150% = l\'impact de ce critère est multiplié par 1,5' })} className="cursor-help">{t('icp.weightScale.critical')}</span>
       </div>
     </div>
   );
@@ -417,6 +424,10 @@ export default function ICP() {
           <p className="text-xs text-slate-500">
             {t('icp.dialog.hint')}
           </p>
+          <div className="flex items-center gap-2 rounded-lg border border-brand-sky/20 bg-brand-sky/5 px-3 py-2 text-xs text-brand-sky">
+            <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
+            {t('icp.dialog.creditConfirmation', { defaultValue: 'Cette action consomme 3 crédits depuis votre solde de workspace.' })}
+          </div>
           {generateError ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-sm text-amber-900">
               {generateError}
@@ -671,6 +682,43 @@ export default function ICP() {
               />
             </CardContent>
           </Card>
+
+          {/* Weight distribution preview */}
+          {(() => {
+            const sectionWeights = [
+              { key: 'industrie', label: t('icp.industries'), color: 'bg-violet-500', w: formData.weights.industrie.weight ?? 100 },
+              { key: 'roles', label: t('icp.targetRoles'), color: 'bg-blue-500', w: formData.weights.roles.weight ?? 100 },
+              { key: 'typeClient', label: t('icp.labels.clientTypeSection'), color: 'bg-amber-500', w: formData.weights.typeClient.weight ?? 100 },
+              { key: 'structure', label: t('icp.companySize'), color: 'bg-emerald-500', w: formData.weights.structure.weight ?? 100 },
+              { key: 'geo', label: t('icp.geography'), color: 'bg-rose-400', w: formData.weights.geo.weight ?? 100 },
+            ];
+            const total = sectionWeights.reduce((sum, s) => sum + s.w, 0) || 1;
+            return (
+              <Card className="border border-slate-200 shadow-sm bg-slate-50">
+                <CardContent className="pt-4 pb-4">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">{t('icp.weightPreview', { defaultValue: 'Aperçu de la distribution des pondérations' })}</p>
+                  <div className="flex h-4 rounded-full overflow-hidden gap-px">
+                    {sectionWeights.map((s) => (
+                      <div
+                        key={s.key}
+                        className={`${s.color} transition-all duration-300`}
+                        style={{ width: `${(s.w / total) * 100}%` }}
+                        title={`${s.label}: ${s.w}% (${Math.round((s.w / total) * 100)}% du total)`}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                    {sectionWeights.map((s) => (
+                      <span key={s.key} className="flex items-center gap-1 text-[10px] text-slate-500">
+                        <span className={`inline-block w-2 h-2 rounded-full ${s.color}`} />
+                        {s.label} <span className="font-semibold text-slate-700">{Math.round((s.w / total) * 100)}%</span>
+                      </span>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {/* AI vs ICP blend */}
           <Card className="border border-slate-200 shadow-sm">

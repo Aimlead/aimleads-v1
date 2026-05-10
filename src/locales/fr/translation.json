@@ -31,6 +31,7 @@
     "configuration": "Configuration",
     "aiScoringActive": "Scoring IA actif",
     "aiScoringSubtitle": "ICP · Signaux · Priorisation",
+    "aiScoringTooltip": "Le scoring IA est actif — AimLeads analyse vos leads via Claude (ICP, signaux internet, intention d'achat) pour les prioriser automatiquement.",
     "badges": {
       "noCredits": "0 crédit",
       "noCreditsTitle": "Votre workspace n'a plus de crédits disponibles.",
@@ -1025,6 +1026,7 @@
       "description": "Décrivez votre client idéal en langage naturel. Claude remplira automatiquement les industries, rôles, taille d'entreprise et géographie.",
       "placeholder": "Ex : PME SaaS B2B française de 50 à 500 employés, décideur IT, secteurs finance ou industrie, budget annuel > 50 k€, déjà équipée d'un CRM…",
       "hint": "Si la génération échoue, vérifiez d’abord Anthropic : clé backend, crédits disponibles, ou circuit breaker temporaire.",
+      "creditConfirmation": "Cette action consomme 3 crédits depuis votre solde de workspace.",
       "generate": "Générer",
       "creditCost": "3 crédits"
     },
@@ -1142,6 +1144,9 @@
     "singleMemberDescription": "Vous êtes actuellement le seul membre de ce workspace.",
     "membersDescription": "Gérez qui peut collaborer sur la qualification, le pipeline et la prospection.",
     "createdOn": "Créée le {{date}}",
+    "expiresOn": "expire le {{date}}",
+    "inviteResent": "Invitation renvoyée.",
+    "resendInviteTitle": "Renvoyer l'email d'invitation",
     "transferOwnershipConfirm": "Transférer la propriété du workspace à {{member}} ? Vous deviendrez administrateur.",
     "ownerRemovalHint": "Transférez d'abord la propriété avant de retirer ce propriétaire",
     "roleManagedAbove": "Rôle géré ci-dessus",
@@ -1185,6 +1190,7 @@
       "updateRole": "Échec de la mise à jour du rôle.",
       "transferOwnership": "Échec du transfert de propriété.",
       "revokeInvite": "Échec de la révocation de l'invitation.",
+      "resendInvite": "Impossible de renvoyer l'invitation.",
       "enterInviteEmail": "Saisissez une adresse email.",
       "loadInvites": "Échec du chargement des invitations.",
       "loadMembers": "Échec du chargement des membres du workspace."

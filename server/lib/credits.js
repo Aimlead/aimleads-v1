@@ -15,6 +15,7 @@ import { getUserWorkspaceId } from './scope.js';
 import { logger } from './observability.js';
 import { recordCreditConsumptionMetric, recordLlmTokensUsedMetric } from './metrics.js';
 import { planMeetsMinimum } from './plans.js';
+import { writeAuditLog } from './auditLog.js';
 
 // ─────────────────────────────────────────────────────────────────
 // Credit costs per action (must match SQL migration comments)
@@ -400,5 +401,14 @@ export const requireCredits = (action) => async (req, res, next) => {
 
   req.creditsDeducted = amount;
   req.creditsBalance = result.balance;
+
+  writeAuditLog({
+    user: req.user,
+    action: 'update',
+    resourceType: 'credit_transaction',
+    resourceId: workspaceId,
+    changes: { type: 'deduct', action, amount, balance_after: result.balance ?? null },
+  }).catch(() => {});
+
   return next();
 };

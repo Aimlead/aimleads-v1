@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, Check, Copy, Crown, Loader2, Mail, Shield, UserPlus, Users } from 'lucide-react';
+import { AlertTriangle, Check, Copy, Crown, Loader2, Mail, RefreshCw, Shield, UserPlus, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -189,6 +189,16 @@ export default function Team() {
     },
     onError: (error) => {
       toast.error(error?.message || t('team.errors.revokeInvite'));
+    },
+  });
+
+  const resendInviteMutation = useMutation({
+    mutationFn: (inviteId) => dataClient.workspace.resendInvite(inviteId),
+    onSuccess: () => {
+      toast.success(t('team.inviteResent', { defaultValue: 'Invitation renvoyée.' }));
+    },
+    onError: (error) => {
+      toast.error(error?.message || t('team.errors.resendInvite', { defaultValue: "Impossible de renvoyer l'invitation." }));
     },
   });
 
@@ -396,12 +406,24 @@ export default function Team() {
             <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white">
               {invites.map((invite) => {
                 const isRevoking = revokeInviteMutation.isPending && revokeInviteMutation.variables === invite.id;
+                const isResending = resendInviteMutation.isPending && resendInviteMutation.variables === invite.id;
+                const expiresAt = invite.created_at
+                  ? new Date(new Date(invite.created_at).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
+                  : null;
 
                 return (
                   <div key={invite.id} className="grid gap-3 p-4 md:grid-cols-[minmax(0,1.5fr)_140px_120px_auto] md:items-center">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-slate-900">{invite.email}</p>
-                      <p className="text-xs text-slate-500">{t('team.createdOn', { date: formatDate(invite.created_at, i18n.language) })}</p>
+                      <p className="text-xs text-slate-500">
+                        {t('team.createdOn', { date: formatDate(invite.created_at, i18n.language) })}
+                        {expiresAt && (
+                          <span className="ml-1">
+                            {'· '}
+                            {t('team.expiresOn', { date: formatDate(expiresAt, i18n.language), defaultValue: 'expire le {{date}}' })}
+                          </span>
+                        )}
+                      </p>
                     </div>
                     <RoleBadge role={invite.role} />
                     <span className="text-xs font-medium uppercase tracking-wide text-amber-600">{t('common.pending')}</span>
@@ -414,6 +436,16 @@ export default function Team() {
                       >
                         {copiedInviteKey === invite.id ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
                         {copiedInviteKey === invite.id ? t('common.copied') : t('team.copyInviteLink')}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={isResending}
+                        onClick={() => resendInviteMutation.mutate(invite.id)}
+                        title={t('team.resendInviteTitle', { defaultValue: "Renvoyer l'email d'invitation" })}
+                      >
+                        {isResending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                       </Button>
                       <Button
                         variant="outline"

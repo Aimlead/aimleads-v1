@@ -101,6 +101,7 @@
     "configuration": "Configuration",
     "aiScoringActive": "AI scoring active",
     "aiScoringSubtitle": "ICP · Signals · Prioritization",
+    "aiScoringTooltip": "AI scoring is active — AimLeads analyzes your leads via Claude (ICP match, internet signals, purchase intent) to automatically prioritize them.",
     "badges": {
       "noCredits": "0 credits",
       "noCreditsTitle": "This workspace has no credits left.",
@@ -1122,6 +1123,7 @@
       "description": "Describe your ideal customer in natural language. Claude will fill industries, roles, company size, and geography automatically.",
       "placeholder": "Example: French B2B SaaS companies with 50 to 500 employees, IT decision-makers, finance or industry verticals, yearly budget above 50k, already using a CRM…",
       "hint": "If generation fails, check Anthropic first: backend key, available credits, or a temporary circuit breaker.",
+      "creditConfirmation": "This action consumes 3 credits from your workspace balance.",
       "generate": "Generate",
       "creditCost": "3 credits"
     },
@@ -1572,6 +1574,9 @@
     "singleMemberDescription": "You're currently the only member in this workspace.",
     "membersDescription": "Manage who can collaborate on qualification, pipeline reviews, and outreach.",
     "createdOn": "Created {{date}}",
+    "expiresOn": "expires {{date}}",
+    "inviteResent": "Invitation resent.",
+    "resendInviteTitle": "Resend invitation email",
     "transferOwnershipConfirm": "Transfer workspace ownership to {{member}}? You will become an admin.",
     "ownerRemovalHint": "Transfer ownership before removing this owner",
     "roleManagedAbove": "Role managed above",
@@ -1615,6 +1620,7 @@
       "updateRole": "Failed to update role.",
       "transferOwnership": "Failed to transfer ownership.",
       "revokeInvite": "Failed to revoke invite.",
+      "resendInvite": "Failed to resend invite.",
       "enterInviteEmail": "Enter an email address.",
       "loadInvites": "Failed to load invites.",
       "loadMembers": "Failed to load workspace members."

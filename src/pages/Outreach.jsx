@@ -376,7 +376,10 @@ export default function Outreach() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const [templates, setTemplates] = useState(loadTemplates);
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState(() => {
+    const tpls = loadTemplates();
+    return tpls.length > 0 ? tpls[0] : null;
+  });
   const [editing, setEditing] = useState(null);
   const [isNew, setIsNew] = useState(false);
   const [channelFilter, setChannelFilter] = useState('all');
@@ -439,11 +442,20 @@ export default function Outreach() {
       toast.success(t('outreach.sequenceGenerated', { defaultValue: 'Sequence generated.' }));
     },
     onError: (error) => {
+      const code = error?.payload?.code || error?.code || null;
       const msg = error?.payload?.message || error?.message || null;
-      if (msg) {
-        toast.error(t('outreach.toasts.sequenceFailedWithMessage', { defaultValue: 'Sequence generation failed: {{message}}', message: msg }));
+      const status = error?.status || error?.payload?.status || null;
+
+      if (code === 'INSUFFICIENT_CREDITS' || status === 402) {
+        toast.error(t('outreach.toasts.insufficientCredits', { defaultValue: 'Crédits insuffisants pour générer une séquence. Rechargez vos crédits.' }));
+      } else if (code === 'NO_ACTIVE_ICP' || (msg && /icp/i.test(msg))) {
+        toast.error(t('outreach.toasts.noActiveIcp', { defaultValue: 'Aucun ICP actif — configurez un profil client idéal avant de générer une séquence.' }));
+      } else if (code === 'ANTHROPIC_NOT_CONFIGURED' || (msg && /api.?key|anthropic|claude/i.test(msg))) {
+        toast.error(t('outreach.toasts.apiKeyMissing', { defaultValue: 'Clé API Anthropic manquante — contactez votre administrateur.' }));
+      } else if (msg) {
+        toast.error(t('outreach.toasts.sequenceFailedWithMessage', { defaultValue: 'Séquence non générée : {{message}}', message: msg }));
       } else {
-        toast.error(t('outreach.toasts.sequenceFailed', { defaultValue: 'Sequence generation failed. Check that ANTHROPIC_API_KEY is configured and an active ICP exists.' }));
+        toast.error(t('outreach.toasts.sequenceFailed', { defaultValue: 'Génération de séquence échouée. Vérifiez que ANTHROPIC_API_KEY est configurée et qu\'un ICP actif existe.' }));
       }
     },
   });

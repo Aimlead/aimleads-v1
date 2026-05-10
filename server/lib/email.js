@@ -26,6 +26,16 @@ const getFromAddress = () =>
 const getAppUrl = () =>
   String(process.env.APP_ORIGIN || process.env.CORS_ORIGIN || 'https://app.aimlead.io').replace(/\/$/, '');
 
+const getUnsubscribeAddress = () => {
+  const override = String(process.env.RESEND_UNSUBSCRIBE_ADDRESS || '').trim();
+  if (override) return override;
+  try {
+    return `unsubscribe@${new URL(getAppUrl()).hostname}`;
+  } catch {
+    return 'unsubscribe@aimlead.io';
+  }
+};
+
 /**
  * Send a transactional email.
  * Silently skips if RESEND_API_KEY is not configured.
@@ -53,7 +63,7 @@ export const sendEmail = async ({ to, subject, html, text }) => {
       html,
       text: text || stripHtml(html),
       headers: {
-        'List-Unsubscribe': `<mailto:unsubscribe@aimlead.io?subject=unsubscribe>`,
+        'List-Unsubscribe': `<mailto:${getUnsubscribeAddress()}?subject=unsubscribe>`,
         'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
       },
     });
@@ -109,7 +119,7 @@ const emailLayout = (content, previewText = '') => `
             <td style="padding:20px 32px;background:#f8fafc;border-top:1px solid #e2e8f0;">
               <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">
                 AimLeads · Lead intelligence for B2B teams<br />
-                <a href="${getAppUrl()}" style="color:#6366f1;text-decoration:none;">app.aimlead.io</a>
+                <a href="${getAppUrl()}" style="color:#6366f1;text-decoration:none;">${getAppUrl().replace(/^https?:\/\//, '')}</a>
               </p>
             </td>
           </tr>

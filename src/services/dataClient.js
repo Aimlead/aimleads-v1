@@ -565,6 +565,7 @@ const apiClient = {
       }),
     inviteMember: (payload) => apiRequest('/workspace/invites', { method: 'POST', body: payload }),
     revokeInvite: (inviteId) => apiRequest(`/workspace/invites/${encodeURIComponent(inviteId)}`, { method: 'DELETE' }),
+    resendInvite: (inviteId) => apiRequest(`/workspace/invites/${encodeURIComponent(inviteId)}/resend`, { method: 'POST' }),
     updateMemberRole: (memberUserId, payload) =>
       apiRequest(`/workspace/members/${encodeURIComponent(memberUserId)}/role`, { method: 'PATCH', body: payload }),
     transferOwnership: (memberUserId) =>
@@ -1160,6 +1161,14 @@ export const dataClient = {
           mockDb.setInvites(before.filter((invite) => String(invite.id) !== String(inviteId)));
           return { revoked: true };
         },
+        passAuthErrors: true,
+      });
+    },
+    async resendInvite(inviteId) {
+      return runWithMode({
+        operationName: 'workspace.resendInvite',
+        apiCall: () => apiClient.workspace.resendInvite(inviteId),
+        fallbackCall: async () => ({ ok: true }),
         passAuthErrors: true,
       });
     },
