@@ -179,6 +179,31 @@ export default function PageHome({ ctx }) {
         </div>
       </div>
 
+      {/* Social proof / logos strip */}
+      <div style={{
+        borderBottom: '1px solid rgba(255,255,255,.05)',
+        padding: '28px 52px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '20px',
+      }}>
+        <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '2.5px', textTransform: 'uppercase', color: 'rgba(255,255,255,.2)', margin: 0 }}>
+          {t('landing.trustedBy', { defaultValue: 'Utilisé par des équipes commerciales B2B' })}
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '32px', justifyContent: 'center', alignItems: 'center' }}>
+          {['Scaleway', 'Doctrine', 'Payfit', 'Alma', 'Contentsquare'].map((name) => (
+            <span key={name} style={{
+              fontSize: '14px',
+              fontWeight: 700,
+              color: 'rgba(255,255,255,.18)',
+              letterSpacing: '-0.3px',
+              fontFamily: landingHeadingFont,
+            }}>{name}</span>
+          ))}
+        </div>
+      </div>
+
       <section className="rv px-[18px] py-16 md:px-[36px] lg:px-[52px]">
         <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.88fr_1.12fr]">
           <div className="space-y-4">

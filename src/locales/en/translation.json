@@ -188,10 +188,10 @@
     "leadScorer": "Lead Scorer",
     "automatedBdr": "Automated BDR",
     "news": "News",
-    "heroBadge": "AI made accessible for SMBs and mid-market teams",
-    "heroTitleLine1": "AI that gets the work done.",
-    "heroTitleLine2": "While you keep scaling.",
-    "heroSubtitle": "Aimlead makes AI concrete and profitable, from Claude training to full outbound automation.",
+    "heroBadge": "B2B lead scoring — powered by Claude AI",
+    "heroTitleLine1": "Score your B2B leads.",
+    "heroTitleLine2": "Close faster.",
+    "heroSubtitle": "AimLeads qualifies, prioritizes and enriches your prospects with AI — custom ICP, intent signals, outreach sequences in one click.",
     "heroProof": {
       "one": {
         "title": "Fast setup without dead-end steps",
