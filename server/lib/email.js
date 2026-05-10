@@ -163,6 +163,8 @@ export const EmailTemplates = {
         ${btnPrimary(inviteUrl, 'Accepter l\'invitation')}
       </div>
       ${p('Ce lien est valable 7 jours. Si tu n\'attendais pas cette invitation, tu peux ignorer cet email.', 'color:#64748b;font-size:13px;')}
+      ${divider()}
+      ${p(`Des questions ? Consulte notre <a href="${getAppUrl()}/help" style="color:#6366f1;">centre d'aide</a> ou réponds directement à cet email.`, 'font-size:13px;color:#64748b;')}
       `,
       `${inviterName} t'invite à rejoindre ${workspaceName}`
     ),
@@ -187,7 +189,7 @@ export const EmailTemplates = {
         ${btnPrimary(`${getAppUrl()}/dashboard`, 'Accéder à mon espace')}
       </div>
       ${divider()}
-      ${p('Des questions ? Réponds directement à cet email ou consulte notre <a href="${getAppUrl()}/help" style="color:#6366f1;">centre d\'aide</a>.', 'font-size:13px;color:#64748b;')}
+      ${p(`Des questions ? Consulte notre <a href="${getAppUrl()}/help" style="color:#6366f1;">centre d'aide</a> ou réponds directement à cet email.`, 'font-size:13px;color:#64748b;')}
       `,
       'Ton espace AimLeads est prêt'
     ),

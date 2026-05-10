@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUpDown, ExternalLink, Flame, Loader2, Mail, Phone, Sparkles, Target, UserRoundSearch } from 'lucide-react';
+import { ArrowUpDown, ExternalLink, Flame, Loader2, Mail, Phone, Sparkles, Target, UploadCloud, UserRoundSearch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import ImportCSVDialog from '@/components/leads/ImportCSVDialog';
 import LeadSlideOver from '@/components/leads/LeadSlideOver';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -44,6 +45,7 @@ export default function PriorityList() {
   const [sortBy, setSortBy] = useState('priority');
   const [selectedLead, setSelectedLead] = useState(null);
   const [slideOverOpen, setSlideOverOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ['leads'],
@@ -221,7 +223,34 @@ export default function PriorityList() {
 
         <div className="divide-y divide-[#eeece7]">
           {rankedLeads.length === 0 ? (
-            <div className="px-5 py-12 text-center text-slate-500 text-sm">{t('priorityList.empty', { defaultValue: 'Aucun lead ne correspond aux filtres actuels.' })}</div>
+            leads.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 px-6 text-center gap-5">
+                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200">
+                  <UploadCloud className="w-7 h-7 text-slate-400" />
+                </div>
+                <div>
+                  <p className="text-base font-semibold text-slate-800 mb-1">
+                    {t('priorityList.emptyNoLeads.title', { defaultValue: 'Aucun lead importé' })}
+                  </p>
+                  <p className="text-sm text-slate-500 max-w-sm">
+                    {t('priorityList.emptyNoLeads.desc', { defaultValue: 'Importez votre premier fichier CSV pour commencer à scorer et prioriser vos prospects.' })}
+                  </p>
+                </div>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="gap-2 bg-brand-sky hover:bg-sky-600 text-white"
+                  onClick={() => setImportOpen(true)}
+                >
+                  <UploadCloud className="w-4 h-4" />
+                  {t('priorityList.emptyNoLeads.cta', { defaultValue: 'Importer un CSV' })}
+                </Button>
+              </div>
+            ) : (
+              <div className="px-5 py-12 text-center text-slate-500 text-sm">
+                {t('priorityList.empty', { defaultValue: 'Aucun lead ne correspond aux filtres actuels.' })}
+              </div>
+            )
           ) : (
             rankedLeads.map(({ lead, priorityScore, icpScore, aiScore, heat, nextAction }) => {
               const email = String(lead?.contact_email || lead?.email || '').trim();
@@ -330,6 +359,15 @@ export default function PriorityList() {
         open={slideOverOpen}
         onOpenChange={setSlideOverOpen}
         onLeadUpdated={onLeadUpdated}
+      />
+
+      <ImportCSVDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImportSuccess={() => {
+          setImportOpen(false);
+          queryClient.invalidateQueries({ queryKey: ['leads'] });
+        }}
       />
     </div>
   );
