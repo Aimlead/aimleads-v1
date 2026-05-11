@@ -23,6 +23,7 @@ export function AuthProvider({ children }) {
       // If login() was called while we were waiting, discard stale result
       if (loginGenerationRef.current !== generation) return;
 
+      // { user: null } from the server is a valid unauthenticated state, not an error
       if (!authed) {
         setIsAuthenticated(false);
         setUser(null);
@@ -33,14 +34,22 @@ export function AuthProvider({ children }) {
 
       if (loginGenerationRef.current !== generation) return;
 
-      setUser(currentUser || null);
-      setIsAuthenticated(Boolean(currentUser));
+      // getCurrentUser returning null means the session dissolved between the two calls
+      if (!currentUser) {
+        setIsAuthenticated(false);
+        setUser(null);
+        return;
+      }
+
+      setUser(currentUser);
+      setIsAuthenticated(true);
     } catch (error) {
       if (loginGenerationRef.current !== generation) return;
 
       const status = error?.status || error?.response?.status;
+      // 401/403 are expected when the user is logged out — not a product error
       if (status === 401 || status === 403) {
-        setAuthError({ type: 'auth_required', message: 'Authentication required' });
+        setAuthError(null);
       } else {
         setAuthError({ type: 'unknown', message: error?.message || 'Unable to initialize app state' });
       }
