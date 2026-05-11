@@ -1,7 +1,7 @@
 import { scoreAiSignals } from './aiSignalService.js';
 import { analyzeDeep, analyzeQuick } from './llmService.js';
 import { discoverInternetSignals } from './internetSignalDiscoveryService.js';
-import { ICP_CATEGORY, DEFAULT_CATEGORY_THRESHOLDS, clamp, normalizeText, resolveCategoryThresholds } from '../lib/serviceUtils.js';
+import { ICP_CATEGORY, DEFAULT_CATEGORY_THRESHOLDS, clamp, normalizeText, resolveCategoryThresholds, expandWithSynonyms } from '../lib/serviceUtils.js';
 import { getRuntimeConfig } from '../lib/config.js';
 
 const LEAD_STATUS = {
@@ -12,7 +12,7 @@ const LEAD_STATUS = {
 const DEFAULT_SCORE_WEIGHTS = {
   industrie: { parfait: 30, partiel: 15, aucun: -30, exclu: -100 },
   roles: { parfait: 25, partiel: 10, exclu: -100, aucun: -25 },
-  typeClient: { parfait: 25, partiel: 10, aucun: -40 },
+  typeClient: { parfait: 25, partiel: 10, aucun: -25 },
   structure: { parfait: 15, partiel: 10, aucun: -20 },
   geo: { parfait: 15, partiel: 5, aucun: -10 },
 };
@@ -25,19 +25,32 @@ const SCORE_LIMITS = {
 const listIncludesExact = (list = [], value = '') => {
   const needle = normalizeText(value);
   if (!needle) return false;
-  return list.some((entry) => normalizeText(entry) === needle);
+  // Check the expanded list so that FR/EN synonyms match on both sides.
+  const expanded = expandWithSynonyms(list);
+  return expanded.includes(needle) || expandWithSynonyms([value]).some((syn) => expanded.includes(syn));
 };
+
+// Normalize hyphens and slashes to spaces so 'VP-Sales' === 'VP Sales' for matching.
+const normalizeSeparators = (text) => text.replace(/[-/]+/g, ' ').replace(/\s+/g, ' ').trim();
 
 const listIncludesPartial = (list = [], value = '') => {
   const needle = normalizeText(value);
   if (!needle) return false;
-  return list.some((entry) => {
-    const e = normalizeText(entry);
+  // Expand list with synonyms so FR/EN equivalences are covered.
+  const expanded = expandWithSynonyms(list);
+  // Expand the needle too so a FR lead role can match an EN ICP entry and vice-versa.
+  const needles = [needle, ...expandWithSynonyms([value])];
+  // Normalize separators in all candidates for comparison.
+  const normalizedNeedles = [...new Set(needles.map(normalizeSeparators))];
+  return expanded.some((e) => {
     if (!e) return false;
+    // Normalize separators in the entry too (handles 'VP-Sales' in ICP matching 'VP Sales' on lead).
+    const entry = normalizeSeparators(e);
     // Require whole-word / whole-phrase match to prevent false positives.
     // Example: 'CTO' must NOT match inside 'director' ('dire**cto**r').
-    const escaped = e.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return new RegExp(`(?:^|\\s)${escaped}(?:\\s|$)`).test(needle);
+    const escaped = entry.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`(?:^|\\s)${escaped}(?:\\s|$)`);
+    return normalizedNeedles.some((n) => re.test(n));
   });
 };
 
@@ -533,6 +546,10 @@ export async function analyzeLead({ lead, icpProfile, skipLlm = false }) {
     baseResult.llm_provider = llmResult.provider;
     baseResult.llm_score_adjustment = adjustment;
     baseResult.llm_confidence = llmResult.confidence_level;
+    baseResult.score_details = {
+      ...baseResult.score_details,
+      llm_adjustment: { value: adjustment, confidence: llmResult.confidence_level, provider: llmResult.provider },
+    };
     baseResult.suggested_action = llmResult.suggested_action;
     baseResult._token_usage = llmResult._usage || null;
     baseResult.analysis_summary = buildAnalysisSummary({

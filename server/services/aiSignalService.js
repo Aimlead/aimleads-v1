@@ -1,6 +1,6 @@
 import { ICP_CATEGORY, DEFAULT_CATEGORY_THRESHOLDS, clamp, normalizeText, resolveCategoryThresholds } from '../lib/serviceUtils.js';
 
-const DEFAULT_BLEND_WEIGHTS = { icp: 0.75, ai: 0.25 };
+const DEFAULT_BLEND_WEIGHTS = { icp: 0.6, ai: 0.4 };
 const BASELINE_AI_SCORE = 12;
 const MAX_AI_BOOST = 15;
 const MIN_AI_BOOST = -20;
@@ -209,7 +209,7 @@ const getStatusFromCategory = (category) => {
 };
 
 const getCompletenessConfidence = (lead) => {
-  const requiredFields = ['industry', 'contact_role', 'client_type', 'company_size', 'country', 'website_url', 'contact_name'];
+  const requiredFields = ['industry', 'contact_role', 'client_type', 'company_size', 'country', 'website_url', 'contact_name', 'contact_email', 'company_name'];
   const filled = requiredFields.filter((field) => {
     const value = lead?.[field];
     if (typeof value === 'number') return Number.isFinite(value);

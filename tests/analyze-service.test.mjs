@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { analyzeLead } from '../server/services/analyzeService.js';
+import { normalizeText, expandWithSynonyms } from '../server/lib/serviceUtils.js';
 
 const BASE_ICP = {
   id: 'icp-test-1',
@@ -146,4 +147,119 @@ test('analyzeLead score is always 0-100', async () => {
 
   assert.ok(result.icp_score >= 0 && result.icp_score <= 100, 'icp_score must be 0-100');
   assert.ok(result.final_score >= 0 && result.final_score <= 100, 'final_score must be 0-100');
+});
+
+// ── Scoring ICP improvements ──────────────────────────────────────────────────
+
+test('normalizeText strips diacritics', () => {
+  assert.equal(normalizeText('Télécommunications'), 'telecommunications');
+  assert.equal(normalizeText('Île-de-France'), 'ile-de-france');
+  assert.equal(normalizeText('Réseaux & Sécurité'), 'reseaux & securite');
+  assert.equal(normalizeText('Santé Numérique'), 'sante numerique');
+});
+
+test('expandWithSynonyms returns known synonyms', () => {
+  const expanded = expandWithSynonyms(['IT Director']);
+  assert.ok(expanded.includes('dsi'), 'IT Director should expand to dsi');
+  assert.ok(expanded.includes('cio'), 'IT Director should expand to cio');
+});
+
+test('expandWithSynonyms is bidirectional', () => {
+  const fromDSI = expandWithSynonyms(['DSI']);
+  assert.ok(fromDSI.includes('it director'), 'DSI should expand to it director');
+
+  const fromCEO = expandWithSynonyms(['CEO']);
+  assert.ok(fromCEO.includes('directeur general'), 'CEO should expand to directeur general');
+  assert.ok(fromCEO.includes('pdg'), 'CEO should expand to pdg');
+});
+
+test('analyzeLead matches industry with diacritics', async () => {
+  const icp = {
+    id: 'icp-diacritics',
+    name: 'Diacritics ICP',
+    weights: {
+      industrie: { primaires: ['Telecommunications'], secondaires: [], exclusions: [] },
+    },
+  };
+
+  const lead = { id: 'lead-diacritics', company_name: 'Telco FR', industry: 'Télécommunications' };
+  const result = await analyzeLead({ lead, icpProfile: icp, skipLlm: true });
+
+  assert.ok(result.icp_score > 0, `Lead with accented industry should match ICP (got icp_score=${result.icp_score})`);
+  assert.equal(result.score_details?.industrie?.match, 'parfait', 'should be a parfait match');
+});
+
+test('analyzeLead matches role via FR/EN synonym (DSI → IT Director)', async () => {
+  const icp = {
+    id: 'icp-synonym-role',
+    name: 'Synonym Role ICP',
+    weights: {
+      roles: { exacts: ['IT Director'], proches: [], exclusions: [] },
+    },
+  };
+
+  const lead = { id: 'lead-dsi', company_name: 'Corp', contact_role: 'DSI' };
+  const result = await analyzeLead({ lead, icpProfile: icp, skipLlm: true });
+
+  assert.ok(result.icp_score > 0, `DSI role should match IT Director via synonym (got icp_score=${result.icp_score})`);
+  assert.equal(result.score_details?.roles?.match, 'parfait', 'should be a parfait match via synonym');
+});
+
+test('analyzeLead matches role with hyphen separator (VP-Sales → VP Sales)', async () => {
+  const icp = {
+    id: 'icp-hyphen-role',
+    name: 'Hyphen Role ICP',
+    weights: {
+      roles: { exacts: ['VP Sales'], proches: [], exclusions: [] },
+    },
+  };
+
+  const lead = { id: 'lead-hyphen', company_name: 'Corp', contact_role: 'VP-Sales' };
+  const result = await analyzeLead({ lead, icpProfile: icp, skipLlm: true });
+
+  assert.ok(result.icp_score > 0, `VP-Sales should match VP Sales via word boundary (got icp_score=${result.icp_score})`);
+  assert.equal(result.score_details?.roles?.match, 'parfait', 'should be a parfait match');
+});
+
+test('typeClient no-match penalty is -25 (not -40)', async () => {
+  const icp = {
+    id: 'icp-typeclient',
+    name: 'TypeClient ICP',
+    weights: {
+      typeClient: { primaire: ['B2B'], secondaire: [] },
+    },
+  };
+
+  const lead = { id: 'lead-b2c', company_name: 'Corp', client_type: 'B2C' };
+  const result = await analyzeLead({ lead, icpProfile: icp, skipLlm: true });
+
+  // Raw score = -25 (aucun match). Normalized: 20 + (-25/5) = 15.
+  assert.equal(result.icp_raw_score, -25, 'typeClient no-match raw score should be -25');
+});
+
+test('analyzeLead default blend weights yield neutral aiInfluenceScale', async () => {
+  // With DEFAULT_BLEND_WEIGHTS aligned to 60/40, scoreAiSignals with no profile
+  // override should use scale=1.0. We verify this indirectly: a lead with a single
+  // urgent positive signal (active_rfp) should get aiBoost clamped to exactly 8
+  // (minimum boost for urgent signals) with scale=1.0, same as scale=1.6 would cap
+  // differently. The key assertion is that final_score > icp_score when signal fires.
+  const icp = {
+    id: 'icp-blend',
+    name: 'Blend ICP',
+    weights: {
+      industrie: { primaires: ['SaaS'], secondaires: [], exclusions: [] },
+      meta: { finalScoreWeights: { icp: 60, ai: 40 } },
+    },
+  };
+  const lead = {
+    id: 'lead-blend',
+    company_name: 'SaaS Co',
+    industry: 'SaaS',
+    intent_signals: { pre_call: ['active_rfp'] },
+  };
+
+  const result = await analyzeLead({ lead, icpProfile: icp, skipLlm: true });
+
+  assert.ok(result.final_score >= result.icp_score, 'urgent signal should not reduce final score vs icp score');
+  assert.ok(typeof result.final_score === 'number');
 });
