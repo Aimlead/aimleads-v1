@@ -684,18 +684,18 @@ export default function Dashboard() {
         )}
 
         {!isLoading && totalLeads > 0 && (
-          <section className="grid overflow-hidden rounded-xl border border-[#e6e4df] bg-white shadow-sm sm:grid-cols-4">
-            <div className="border-b border-r border-[#ece9e2] px-4 py-3.5 sm:border-b-0">
+          <section className="grid overflow-hidden rounded-xl border border-[#e6e4df] bg-white shadow-sm grid-cols-2 lg:grid-cols-4">
+            <div className="border-b border-r border-[#ece9e2] px-4 py-3.5 lg:border-b-0">
               <p className="text-[10.75px] font-semibold uppercase tracking-[0.1em] text-slate-500">{t('dashboard.priority.focusList', { defaultValue: 'Liste active' })}</p>
               <p className="mt-0.5 text-[27px] font-bold leading-none text-[#1a1200]">{totalLeads}</p>
               <p className="mt-1 text-[11px] text-slate-500">{sourceListLabel(selectedSourceList === LIST_KEYS.ALL ? LIST_KEYS.ALL : selectedSourceList, t)}</p>
             </div>
-            <div className="border-b border-r border-[#ece9e2] px-4 py-3.5 sm:border-b-0">
+            <div className="border-b border-[#ece9e2] px-4 py-3.5 lg:border-b-0 lg:border-r">
               <p className="text-[10.75px] font-semibold uppercase tracking-[0.1em] text-slate-500">{t('dashboard.priority.highPriority', { defaultValue: 'Haute priorité' })}</p>
               <p className="mt-0.5 text-[27px] font-bold leading-none text-[#1a1200]">{highPriority}</p>
               <p className="mt-1 text-[11px] text-slate-500">{t('dashboard.priority.score80', { defaultValue: 'Score 80+' })}</p>
             </div>
-            <div className="border-b border-r border-[#ece9e2] px-4 py-3.5 sm:border-b-0">
+            <div className="border-r border-[#ece9e2] px-4 py-3.5">
               <p className="text-[10.75px] font-semibold uppercase tracking-[0.1em] text-slate-500">{t('dashboard.priority.pipelineReady', { defaultValue: 'Prêts pipeline' })}</p>
               <p className="mt-0.5 text-[27px] font-bold leading-none text-[#1a1200]">{qualifiedLeads}</p>
               <p className="mt-1 text-[11px] text-slate-500">{t('dashboard.priority.qualifiedLeads', { defaultValue: 'Leads qualifiés' })}</p>

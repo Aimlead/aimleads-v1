@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import EmptyState from '@/components/ui/EmptyState';
 import { ROUTES } from '@/constants/routes';
 import { dataClient } from '@/services/dataClient';
 import { useAuth } from '@/lib/AuthContext';
@@ -56,6 +57,7 @@ export default function Team() {
   const { user } = useAuth();
   const { t, i18n } = useTranslation();
   const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteEmailError, setInviteEmailError] = useState('');
   const [inviteRole, setInviteRole] = useState('member');
   const [lastCreatedInvite, setLastCreatedInvite] = useState(null);
   const [copiedInviteKey, setCopiedInviteKey] = useState('');
@@ -206,10 +208,15 @@ export default function Team() {
     event.preventDefault();
     const email = String(inviteEmail || '').trim().toLowerCase();
     if (!email) {
-      toast.error(t('team.errors.enterInviteEmail'));
+      setInviteEmailError(t('team.errors.enterInviteEmail'));
       return;
     }
-
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+      setInviteEmailError(t('team.errors.invalidEmail', { defaultValue: 'Adresse email invalide' }));
+      return;
+    }
+    setInviteEmailError('');
     await inviteMutation.mutateAsync({
       email,
       role: inviteRole,
@@ -290,14 +297,20 @@ export default function Team() {
           {canManageInvites ? (
             <>
               <form onSubmit={handleInviteSubmit} className="grid gap-3 md:grid-cols-[1.6fr_0.8fr_auto]">
-                <Input
-                  type="email"
-                  placeholder={t('team.inviteEmailPlaceholder')}
-                  aria-label={t('team.inviteEmailPlaceholder')}
-                  value={inviteEmail}
-                  onChange={(event) => setInviteEmail(event.target.value)}
-                  disabled={inviteMutation.isPending || seatLimitReached}
-                />
+                <div className="space-y-1">
+                  <Input
+                    type="email"
+                    placeholder={t('team.inviteEmailPlaceholder')}
+                    aria-label={t('team.inviteEmailPlaceholder')}
+                    value={inviteEmail}
+                    onChange={(event) => { setInviteEmail(event.target.value); if (inviteEmailError) setInviteEmailError(''); }}
+                    disabled={inviteMutation.isPending || seatLimitReached}
+                    className={inviteEmailError ? 'border-rose-400 focus-visible:ring-rose-400' : ''}
+                  />
+                  {inviteEmailError && (
+                    <p className="text-xs text-rose-600">{inviteEmailError}</p>
+                  )}
+                </div>
                 <select
                   value={inviteRole}
                   onChange={(event) => setInviteRole(event.target.value)}
@@ -485,9 +498,11 @@ export default function Team() {
           ) : membersError ? (
             <p className="text-sm text-rose-600">{membersError.message || t('team.errors.loadMembers')}</p>
           ) : members.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-200 p-4 text-sm text-slate-500">
-              {t('team.noMembers')}
-            </div>
+            <EmptyState
+              icon={Users}
+              title={t('team.noMembers', { defaultValue: 'Aucun membre pour le moment' })}
+              description={t('team.noMembersDescription', { defaultValue: "Invitez vos coéquipiers ci-dessus pour collaborer sur vos leads et partager l'accès à l'espace de travail." })}
+            />
           ) : (
             <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white">
               {members.map((member) => {

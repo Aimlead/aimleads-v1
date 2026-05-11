@@ -249,6 +249,14 @@ export default function Settings() {
     [scoringForm.blendWeights]
   );
 
+  const activePresetKey = useMemo(() => {
+    const normalized = normalizeBlendWeights(scoringForm.blendWeights);
+    const match = SCORING_PRESETS.find(
+      (p) => p.blendWeights.icp === normalized.icp && p.blendWeights.ai === normalized.ai
+    );
+    return match?.key ?? null;
+  }, [scoringForm.blendWeights]);
+
   const normalizedIcpThresholdPreview = useMemo(
     () => normalizeThresholds(scoringForm.icpThresholds),
     [scoringForm.icpThresholds]
@@ -889,9 +897,10 @@ export default function Settings() {
                 <Button
                   key={preset.key}
                   size="sm"
-                  variant="outline"
+                  variant={activePresetKey === preset.key ? 'default' : 'outline'}
                   disabled={isSavingScoring}
                   onClick={() => applyPreset(preset.key)}
+                  className={activePresetKey === preset.key ? 'bg-brand-sky hover:bg-brand-sky/90 text-white' : ''}
                 >
                   {t(preset.labelKey)}
                 </Button>

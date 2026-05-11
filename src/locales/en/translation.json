@@ -2122,5 +2122,117 @@
     "required": "Required",
     "cta": "View plans",
     "dismiss": "Not now"
+  },
+  "landingV2": {
+    "nav": {
+      "products": "Products",
+      "workflow": "Workflow",
+      "pricing": "Pricing",
+      "login": "Log in",
+      "auditCta": "Free Audit",
+      "ariaLabel": "Main navigation",
+      "brandAriaLabel": "AimLeads — home",
+      "menuAriaLabel": "Menu"
+    },
+    "products": {
+      "eyebrow": "Three levers, one ecosystem",
+      "title": "An AI stack that",
+      "titleHighlight": "replaces 80%",
+      "titleSuffix": "of your manual prospecting.",
+      "subtitle": "Each module works alone. Together they cover the full cycle: identify, engage, convert — while your teams focus on closing.",
+      "ariaLabel": "Our products",
+      "lead": {
+        "tag": "SaaS",
+        "title": "Lead-Scorer",
+        "description": "ICP scoring + real-time buying signals. Your reps only call the ones that matter.",
+        "stepTitle": "01 — Lead-Scorer",
+        "stepBody": "Import your leads, define your ICP, let AI prioritize. Internet buying signals elevate the right accounts, not the others."
+      },
+      "bdr": {
+        "tag": "AI Agent",
+        "title": "Automated BDR",
+        "description": "An agent that qualifies, personalizes and follows up 24/7 on LinkedIn, email and WhatsApp.",
+        "stepTitle": "02 — Automated BDR",
+        "stepBody": "Your first AI sales rep. It works while you sleep, learns from your feedback and never gets tired."
+      },
+      "conseil": {
+        "tag": "Consulting",
+        "title": "Claude Consulting & Training",
+        "description": "3-pillar training, AI audit and guided deployment for your SME & mid-market teams.",
+        "stepTitle": "03 — Consulting & Training",
+        "stepBody": "We don't sell a tool, we install a capability. Your teams leave autonomous on Claude, with workflows that pay off from week 2."
+      }
+    },
+    "workflow": {
+      "eyebrow": "End-to-end workflow",
+      "title": "From raw data to",
+      "titleHighlight": "signed meetings",
+      "subtitle": "No bloat: four steps, automated across the entire journey.",
+      "ariaLabel": "How it works",
+      "steps": {
+        "import": { "title": "Import", "body": "CSV, CRM, LinkedIn export. We ingest and clean in under 60 seconds." },
+        "score": { "title": "Score", "body": "Claude evaluates each lead against your ICP and cross-references internet buying signals." },
+        "outreach": { "title": "Outreach", "body": "Personalized multi-channel sequences generated and sent automatically." },
+        "close": { "title": "Close", "body": "Your reps take over only on qualified warm leads." }
+      },
+      "stats": {
+        "meetings": { "value": "4×", "label": "More qualified meetings" },
+        "setup": { "value": "72h", "label": "To activate your workspace" },
+        "bdr": { "value": "24/7", "label": "Your BDR never sleeps" },
+        "time": { "value": "80%", "label": "Time saved per rep" }
+      }
+    },
+    "pricing": {
+      "eyebrow": "Transparent pricing",
+      "title": "Choose your",
+      "titleHighlight": "execution speed",
+      "subtitle": "All plans include Claude scoring, internet signals and onboarding support.",
+      "ariaLabel": "Pricing",
+      "popular": "Most popular",
+      "perMonth": "/ month",
+      "viewFull": "View full pricing",
+      "plans": {
+        "starter": {
+          "name": "Starter",
+          "target": "Solo founders & small teams",
+          "cta": "Start with Starter",
+          "features": ["1,000 scoring credits", "3 seats included", "1 CRM integration", "Basic internet signals", "Email support"]
+        },
+        "team": {
+          "name": "Team",
+          "target": "SMEs & sales teams 5-20",
+          "cta": "Go Team",
+          "features": ["3,500 scoring credits", "10 seats included", "2 CRM integrations", "Advanced internet signals", "Billing API", "Priority support"]
+        },
+        "scale": {
+          "name": "Scale",
+          "target": "Mid-market & multi-workspace orgs",
+          "cta": "Contact Scale",
+          "features": ["10,000 scoring credits", "25 seats included", "5 CRM integrations", "Full API", "Enterprise audit log", "Dedicated CSM"]
+        }
+      }
+    },
+    "cta": {
+      "ariaLabel": "Final call to action",
+      "eyebrow": "Ready to accelerate?",
+      "title": "Your AI sales engine",
+      "titleHighlight": "starts next Monday",
+      "subtitle": "Free 30-minute audit. We map your pipeline, identify the 3 highest-ROI AI levers, and send you a costed plan within 48h.",
+      "bookAudit": "Book my audit"
+    },
+    "footer": {
+      "description": "The AI that works while your teams scale. Lead-Scorer, Automated BDR and Claude training — built for French SMEs & mid-market.",
+      "products": "Products",
+      "resources": "Resources",
+      "legal": "Legal",
+      "helpCenter": "Help Center",
+      "login": "Log in",
+      "requestAudit": "Request an audit",
+      "legalNotices": "Legal notices",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "copyright": "© {{year}} AimLeads. All rights reserved.",
+      "madeIn": "Made in France — with Claude."
+    }
   }
 }

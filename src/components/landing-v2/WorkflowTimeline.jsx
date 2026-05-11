@@ -1,47 +1,35 @@
-const STEPS = [
-  {
-    num: '01',
-    title: 'Import',
-    body: "CSV, CRM, LinkedIn export. On ingère et on nettoie en moins de 60 secondes.",
-  },
-  {
-    num: '02',
-    title: 'Score',
-    body: "Claude évalue chaque lead sur votre ICP et croise les signaux d'achat internet.",
-  },
-  {
-    num: '03',
-    title: 'Outreach',
-    body: "Séquences personnalisées multi-canal générées et envoyées automatiquement.",
-  },
-  {
-    num: '04',
-    title: 'Close',
-    body: "Vos commerciaux reprennent la main uniquement sur les leads chauds qualifiés.",
-  },
-];
-
-const STATS = [
-  { value: '4×', label: "Plus de RDV qualifiés" },
-  { value: '72h', label: "Pour activer votre workspace" },
-  { value: '24/7', label: "Votre BDR ne dort jamais" },
-  { value: '80%', label: 'Temps récupéré par commercial' },
-];
+import { useTranslation } from 'react-i18next';
 
 export default function WorkflowTimeline() {
+  const { t } = useTranslation();
+
+  const STEPS = [
+    { num: '01', key: 'import' },
+    { num: '02', key: 'score' },
+    { num: '03', key: 'outreach' },
+    { num: '04', key: 'close' },
+  ];
+
+  const STATS = [
+    { key: 'meetings' },
+    { key: 'setup' },
+    { key: 'bdr' },
+    { key: 'time' },
+  ];
+
   return (
-    <section id="workflow" className="lv2-section" aria-label="Comment ça marche">
+    <section id="workflow" className="lv2-section" aria-label={t('landingV2.workflow.ariaLabel')}>
       <div className="lv2-section-inner">
         <div className="lv2-section-head">
           <span className="lv2-eyebrow">
             <span className="lv2-eyebrow-dot" />
-            <span>Workflow de bout en bout</span>
+            <span>{t('landingV2.workflow.eyebrow')}</span>
           </span>
           <h2 className="lv2-h2">
-            De la donnée brute au <span className="lv2-h1-gradient">rendez-vous signé</span>.
+            {t('landingV2.workflow.title')} <span className="lv2-h1-gradient">{t('landingV2.workflow.titleHighlight')}</span>.
           </h2>
           <p className="lv2-sub">
-            Pas d'usine à gaz : quatre étapes, automatisées sur la totalité du parcours.
+            {t('landingV2.workflow.subtitle')}
           </p>
         </div>
 
@@ -50,8 +38,8 @@ export default function WorkflowTimeline() {
             {STEPS.map((s) => (
               <div key={s.num} className="lv2-timeline-step">
                 <div className="lv2-timeline-dot">{s.num}</div>
-                <h4>{s.title}</h4>
-                <p>{s.body}</p>
+                <h4>{t(`landingV2.workflow.steps.${s.key}.title`)}</h4>
+                <p>{t(`landingV2.workflow.steps.${s.key}.body`)}</p>
               </div>
             ))}
           </div>
@@ -59,9 +47,9 @@ export default function WorkflowTimeline() {
 
         <div className="lv2-stats" role="list">
           {STATS.map((st) => (
-            <div key={st.label} className="lv2-stat" role="listitem">
-              <div className="lv2-stat-value">{st.value}</div>
-              <div className="lv2-stat-label">{st.label}</div>
+            <div key={st.key} className="lv2-stat" role="listitem">
+              <div className="lv2-stat-value">{t(`landingV2.workflow.stats.${st.key}.value`)}</div>
+              <div className="lv2-stat-label">{t(`landingV2.workflow.stats.${st.key}.label`)}</div>
             </div>
           ))}
         </div>

@@ -1,56 +1,38 @@
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
 
-const PLANS = [
-  {
-    slug: 'starter',
-    name: 'Starter',
-    price: 49,
-    target: 'Solo founders & petites équipes',
-    features: [
-      '1 000 crédits de scoring',
-      '3 sièges inclus',
-      '1 intégration CRM',
-      'Signaux internet de base',
-      'Support email',
-    ],
-    cta: 'Démarrer le Starter',
-  },
-  {
-    slug: 'team',
-    name: 'Team',
-    price: 149,
-    popular: true,
-    target: "PME & équipes sales 5-20",
-    features: [
-      '3 500 crédits de scoring',
-      '10 sièges inclus',
-      '2 intégrations CRM',
-      'Signaux internet avancés',
-      'API de facturation',
-      'Support prioritaire',
-    ],
-    cta: 'Passer au Team',
-  },
-  {
-    slug: 'scale',
-    name: 'Scale',
-    price: 399,
-    target: "ETI & organisations multi-workspace",
-    features: [
-      '10 000 crédits de scoring',
-      '25 sièges inclus',
-      '5 intégrations CRM',
-      'API complète',
-      'Audit log entreprise',
-      'CSM dédié',
-    ],
-    cta: 'Contacter Scale',
-  },
-];
-
 export default function PricingPreview() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
+
+  const PLANS = [
+    {
+      slug: 'starter',
+      name: t('landingV2.pricing.plans.starter.name'),
+      price: 49,
+      target: t('landingV2.pricing.plans.starter.target'),
+      features: t('landingV2.pricing.plans.starter.features', { returnObjects: true }),
+      cta: t('landingV2.pricing.plans.starter.cta'),
+    },
+    {
+      slug: 'team',
+      name: t('landingV2.pricing.plans.team.name'),
+      price: 149,
+      popular: true,
+      target: t('landingV2.pricing.plans.team.target'),
+      features: t('landingV2.pricing.plans.team.features', { returnObjects: true }),
+      cta: t('landingV2.pricing.plans.team.cta'),
+    },
+    {
+      slug: 'scale',
+      name: t('landingV2.pricing.plans.scale.name'),
+      price: 399,
+      target: t('landingV2.pricing.plans.scale.target'),
+      features: t('landingV2.pricing.plans.scale.features', { returnObjects: true }),
+      cta: t('landingV2.pricing.plans.scale.cta'),
+    },
+  ];
 
   const goToSignup = (plan) => () => {
     const params = new URLSearchParams({ mode: 'signup', plan: plan.slug });
@@ -58,18 +40,18 @@ export default function PricingPreview() {
   };
 
   return (
-    <section id="pricing" className="lv2-section" aria-label="Tarifs">
+    <section id="pricing" className="lv2-section" aria-label={t('landingV2.pricing.ariaLabel')}>
       <div className="lv2-section-inner">
         <div className="lv2-section-head">
           <span className="lv2-eyebrow">
             <span className="lv2-eyebrow-dot" />
-            <span>Tarifs transparents</span>
+            <span>{t('landingV2.pricing.eyebrow')}</span>
           </span>
           <h2 className="lv2-h2">
-            Choisissez votre <span className="lv2-h1-gradient">vitesse d'exécution</span>.
+            {t('landingV2.pricing.title')} <span className="lv2-h1-gradient">{t('landingV2.pricing.titleHighlight')}</span>.
           </h2>
           <p className="lv2-sub">
-            Tous les plans incluent le scoring Claude, les signaux internet et l'accompagnement d'onboarding.
+            {t('landingV2.pricing.subtitle')}
           </p>
         </div>
 
@@ -79,7 +61,7 @@ export default function PricingPreview() {
               {plan.popular ? (
                 <span className="lv2-eyebrow">
                   <span className="lv2-eyebrow-dot" />
-                  <span>Le plus populaire</span>
+                  <span>{t('landingV2.pricing.popular')}</span>
                 </span>
               ) : null}
               <div>
@@ -88,10 +70,10 @@ export default function PricingPreview() {
               </div>
               <div className="lv2-price-amount">
                 <strong>{plan.price}€</strong>
-                <span>/ mois</span>
+                <span>{t('landingV2.pricing.perMonth')}</span>
               </div>
               <ul className="lv2-price-features">
-                {plan.features.map((f) => <li key={f}>{f}</li>)}
+                {Array.isArray(plan.features) && plan.features.map((f) => <li key={f}>{f}</li>)}
               </ul>
               <button
                 type="button"
@@ -114,7 +96,7 @@ export default function PricingPreview() {
             className="lv2-btn lv2-btn-ghost"
             onClick={() => navigate(ROUTES.pricing)}
           >
-            <span>Voir la grille complète</span>
+            <span>{t('landingV2.pricing.viewFull')}</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="5" y1="12" x2="19" y2="12" />
               <polyline points="12 5 19 12 12 19" />

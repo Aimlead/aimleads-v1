@@ -2,8 +2,9 @@ import React, { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BarChart3, Calendar, Loader2, Target, TrendingUp, Users, X, Zap } from 'lucide-react';
+import { BarChart3, Calendar, Loader2, Target, TrendingUp, Upload, Users, X, Zap } from 'lucide-react';
 import {
   Area,
   AreaChart,
@@ -21,7 +22,9 @@ import {
 } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import EmptyState from '@/components/ui/EmptyState';
 import { LEAD_STATUS } from '@/constants/leads';
+import { ROUTES } from '@/constants/routes';
 import { dataClient } from '@/services/dataClient';
 
 const CATEGORY_COLORS = {
@@ -63,6 +66,7 @@ const StatCard = ({ icon: Icon, value, label, sub, color, delay = 0 }) => (
 
 export default function Analytics() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [dateRangeDays, setDateRangeDays] = useState(null); // null = all time
 
   const dateRanges = [
@@ -163,6 +167,31 @@ export default function Analytics() {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-brand-sky animate-spin" />
+      </div>
+    );
+  }
+
+  if (allLeads.length === 0) {
+    return (
+      <div className="mx-auto w-full max-w-[1160px]">
+        <div className="rounded-xl border border-[#e6e4df] bg-white px-5 py-4 shadow-sm mb-6">
+          <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+            {t('analytics.eyebrow', { defaultValue: 'Pilotage' })}
+          </p>
+          <h1 className="mt-1 text-2xl sm:text-3xl font-bold text-[#1a1200]">{t('analytics.title', { defaultValue: 'Analytiques' })}</h1>
+          <p className="text-slate-500 mt-1 text-sm">{t('analytics.subtitle', { defaultValue: 'Performance du scoring lead et insights pipeline.' })}</p>
+        </div>
+        <div className="rounded-xl border border-[#e6e4df] bg-white shadow-sm">
+          <EmptyState
+            icon={Upload}
+            title={t('analytics.empty.noLeads', { defaultValue: 'Aucun lead importé' })}
+            description={t('analytics.empty.noLeadsDescription', { defaultValue: 'Importez vos premiers leads pour voir les analytics de scoring, de pipeline et de performance ici.' })}
+            action={{
+              label: t('analytics.empty.importCta', { defaultValue: 'Importer des leads' }),
+              onClick: () => navigate(ROUTES.dashboard),
+            }}
+          />
+        </div>
       </div>
     );
   }

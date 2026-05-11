@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import * as THREE from 'three';
 
 function OrbScene() {
@@ -164,24 +165,25 @@ function OrbScene() {
 }
 
 export default function FinalCTA({ onOpenBooking }) {
+  const { t } = useTranslation();
+
   return (
-    <section className="lv2-final" aria-label="Appel à l'action final">
+    <section className="lv2-final" aria-label={t('landingV2.cta.ariaLabel')}>
       <OrbScene />
       <div className="lv2-final-inner">
         <span className="lv2-eyebrow">
           <span className="lv2-eyebrow-dot" />
-          <span>Prêt à accélérer ?</span>
+          <span>{t('landingV2.cta.eyebrow')}</span>
         </span>
         <h2 className="lv2-h2">
-          Votre IA commerciale <span className="lv2-h1-gradient">démarre lundi prochain</span>.
+          {t('landingV2.cta.title')} <span className="lv2-h1-gradient">{t('landingV2.cta.titleHighlight')}</span>.
         </h2>
         <p className="lv2-sub">
-          Audit offert de 30 minutes. On cartographie votre pipeline, on identifie les 3 leviers IA
-          à plus fort ROI, et on vous envoie un plan chiffré sous 48h.
+          {t('landingV2.cta.subtitle')}
         </p>
         <div className="lv2-hero-ctas">
           <button type="button" className="lv2-btn lv2-btn-primary lv2-btn-lg" onClick={onOpenBooking}>
-            <span>Réserver mon audit</span>
+            <span>{t('landingV2.cta.bookAudit')}</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="5" y1="12" x2="19" y2="12" />
               <polyline points="12 5 19 12 12 19" />

@@ -1,42 +1,44 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import ProductScene from './ProductScene';
 
-const PRODUCTS = [
-  {
-    id: 'lead',
-    tag: 'SaaS',
-    title: 'Lead-Scoreur',
-    description: "Scoring ICP + signaux d'achat en temps réel. Vos commerciaux n'appellent que ceux qui comptent.",
-    variant: 'grid',
-    color: '#3a8dff',
-    stepTitle: '01 — Lead-Scoreur',
-    stepBody: "Importez vos leads, définissez votre ICP, laissez l'IA prioriser. Les signaux d'achat internet font monter les bons comptes, pas les autres.",
-  },
-  {
-    id: 'bdr',
-    tag: 'IA Agent',
-    title: 'BDR Automatisé',
-    description: "Un agent qui qualifie, personnalise et relance 24/7 sur les canaux LinkedIn, email et WhatsApp.",
-    variant: 'orbit',
-    color: '#5ad38c',
-    stepTitle: '02 — BDR Automatisé',
-    stepBody: "Votre premier commercial IA. Il travaille pendant que vous dormez, apprend de vos retours et ne se fatigue jamais.",
-  },
-  {
-    id: 'conseil',
-    tag: 'Conseil',
-    title: 'Conseil & Formation Claude',
-    description: "Formation sur 3 piliers, audit IA et déploiement accompagné pour vos équipes PME & ETI.",
-    variant: 'icosa',
-    color: '#ff6f61',
-    stepTitle: '03 — Conseil & Formation',
-    stepBody: "On ne vend pas un outil, on installe une capacité. Vos équipes sortent autonomes sur Claude, avec des workflows qui rentabilisent dès la semaine 2.",
-  },
-];
-
 export default function ProductShowcase() {
+  const { t } = useTranslation();
   const [activeIdx, setActiveIdx] = useState(0);
   const cardRefs = useRef([]);
+
+  const PRODUCTS = [
+    {
+      id: 'lead',
+      tag: t('landingV2.products.lead.tag'),
+      title: t('landingV2.products.lead.title'),
+      description: t('landingV2.products.lead.description'),
+      variant: 'grid',
+      color: '#3a8dff',
+      stepTitle: t('landingV2.products.lead.stepTitle'),
+      stepBody: t('landingV2.products.lead.stepBody'),
+    },
+    {
+      id: 'bdr',
+      tag: t('landingV2.products.bdr.tag'),
+      title: t('landingV2.products.bdr.title'),
+      description: t('landingV2.products.bdr.description'),
+      variant: 'orbit',
+      color: '#5ad38c',
+      stepTitle: t('landingV2.products.bdr.stepTitle'),
+      stepBody: t('landingV2.products.bdr.stepBody'),
+    },
+    {
+      id: 'conseil',
+      tag: t('landingV2.products.conseil.tag'),
+      title: t('landingV2.products.conseil.title'),
+      description: t('landingV2.products.conseil.description'),
+      variant: 'icosa',
+      color: '#ff6f61',
+      stepTitle: t('landingV2.products.conseil.stepTitle'),
+      stepBody: t('landingV2.products.conseil.stepBody'),
+    },
+  ];
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -57,21 +59,20 @@ export default function ProductShowcase() {
   }, []);
 
   return (
-    <section id="products" className="lv2-showcase" aria-label="Nos produits">
+    <section id="products" className="lv2-showcase" aria-label={t('landingV2.products.ariaLabel')}>
       <div className="lv2-showcase-grid">
         <div className="lv2-showcase-left">
           <span className="lv2-eyebrow">
             <span className="lv2-eyebrow-dot" />
-            <span>Trois leviers, un écosystème</span>
+            <span>{t('landingV2.products.eyebrow')}</span>
           </span>
           <h2 className="lv2-h2">
-            Une stack IA qui <br />
-            <span className="lv2-h1-gradient">remplace les 80%</span> <br />
-            de votre prospection manuelle.
+            {t('landingV2.products.title')} <br />
+            <span className="lv2-h1-gradient">{t('landingV2.products.titleHighlight')}</span> <br />
+            {t('landingV2.products.titleSuffix')}
           </h2>
           <p className="lv2-sub">
-            Chaque brique fonctionne seule. Ensemble elles couvrent tout le cycle : identifier,
-            engager, convertir — pendant que vos équipes se concentrent sur le closing.
+            {t('landingV2.products.subtitle')}
           </p>
 
           <div className="lv2-showcase-steps">

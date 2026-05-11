@@ -1,13 +1,15 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, ExternalLink, Loader2, Mail, Phone } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, Loader2, Mail, Phone, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import EmptyState from '@/components/ui/EmptyState';
+import { ROUTES } from '@/constants/routes';
 import { dataClient } from '@/services/dataClient';
 import { cn } from '@/lib/utils';
 import { computeLeadPriority } from '@/lib/leadScoring';
@@ -248,9 +250,16 @@ export default function Pipeline() {
       </div>
 
       {leads.length === 0 ? (
-        <div className="text-center py-20 text-slate-500">
-          <p className="text-lg font-semibold">{t('pipeline.empty.title', { defaultValue: 'Aucun lead pour le moment' })}</p>
-          <p className="text-sm mt-1">{t('pipeline.empty.body', { defaultValue: 'Importez des leads depuis le dashboard pour alimenter votre pipeline.' })}</p>
+        <div className="rounded-xl border border-[#e6e4df] bg-white shadow-sm">
+          <EmptyState
+            icon={Upload}
+            title={t('pipeline.empty.title', { defaultValue: 'Aucun lead dans le pipeline' })}
+            description={t('pipeline.empty.body', { defaultValue: 'Importez des leads depuis le dashboard pour alimenter votre pipeline commercial.' })}
+            action={{
+              label: t('pipeline.empty.cta', { defaultValue: 'Aller au dashboard' }),
+              onClick: () => navigate(ROUTES.dashboard),
+            }}
+          />
         </div>
       ) : (
         <>

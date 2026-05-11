@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ROUTES } from '@/constants/routes';
 import BrandLogo from '@/components/brand/BrandLogo';
 
 export default function NavV2({ onOpenBooking }) {
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -23,24 +25,24 @@ export default function NavV2({ onOpenBooking }) {
   }, [menuOpen]);
 
   return (
-    <nav className="lv2-nav" aria-label="Navigation principale" ref={menuRef}>
-      <Link to="/" className="lv2-nav-brand" aria-label="AimLeads — accueil">
+    <nav className="lv2-nav" aria-label={t('landingV2.nav.ariaLabel')} ref={menuRef}>
+      <Link to="/" className="lv2-nav-brand" aria-label={t('landingV2.nav.brandAriaLabel')}>
         <BrandLogo variant="mark" tone="light" className="lv2-nav-brand-mark" alt="AimLeads" />
         <span>AimLeads</span>
       </Link>
 
       <div className="lv2-nav-links">
-        <button type="button" className="lv2-nav-link" onClick={scrollTo('products')}>Produits</button>
-        <button type="button" className="lv2-nav-link" onClick={scrollTo('workflow')}>Workflow</button>
-        <button type="button" className="lv2-nav-link" onClick={scrollTo('pricing')}>Tarifs</button>
-        <Link className="lv2-nav-link" to={ROUTES.login}>Se connecter</Link>
+        <button type="button" className="lv2-nav-link" onClick={scrollTo('products')}>{t('landingV2.nav.products')}</button>
+        <button type="button" className="lv2-nav-link" onClick={scrollTo('workflow')}>{t('landingV2.nav.workflow')}</button>
+        <button type="button" className="lv2-nav-link" onClick={scrollTo('pricing')}>{t('landingV2.nav.pricing')}</button>
+        <Link className="lv2-nav-link" to={ROUTES.login}>{t('landingV2.nav.login')}</Link>
       </div>
 
       {/* Mobile: hamburger */}
       <button
         type="button"
         className="lv2-nav-hamburger"
-        aria-label="Menu"
+        aria-label={t('landingV2.nav.menuAriaLabel')}
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((v) => !v)}
       >
@@ -53,15 +55,15 @@ export default function NavV2({ onOpenBooking }) {
       </button>
 
       <button type="button" className="lv2-nav-cta" onClick={onOpenBooking}>
-        Audit offert
+        {t('landingV2.nav.auditCta')}
       </button>
 
       {menuOpen && (
         <div className="lv2-nav-mobile-menu">
-          <button type="button" className="lv2-nav-link" onClick={scrollTo('products')}>Produits</button>
-          <button type="button" className="lv2-nav-link" onClick={scrollTo('workflow')}>Workflow</button>
-          <button type="button" className="lv2-nav-link" onClick={scrollTo('pricing')}>Tarifs</button>
-          <Link className="lv2-nav-link" to={ROUTES.login} onClick={() => setMenuOpen(false)}>Se connecter</Link>
+          <button type="button" className="lv2-nav-link" onClick={scrollTo('products')}>{t('landingV2.nav.products')}</button>
+          <button type="button" className="lv2-nav-link" onClick={scrollTo('workflow')}>{t('landingV2.nav.workflow')}</button>
+          <button type="button" className="lv2-nav-link" onClick={scrollTo('pricing')}>{t('landingV2.nav.pricing')}</button>
+          <Link className="lv2-nav-link" to={ROUTES.login} onClick={() => setMenuOpen(false)}>{t('landingV2.nav.login')}</Link>
         </div>
       )}
     </nav>

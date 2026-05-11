@@ -2255,5 +2255,117 @@
     "required": "Requis",
     "cta": "Voir les plans",
     "dismiss": "Pas maintenant"
+  },
+  "landingV2": {
+    "nav": {
+      "products": "Produits",
+      "workflow": "Workflow",
+      "pricing": "Tarifs",
+      "login": "Se connecter",
+      "auditCta": "Audit offert",
+      "ariaLabel": "Navigation principale",
+      "brandAriaLabel": "AimLeads — accueil",
+      "menuAriaLabel": "Menu"
+    },
+    "products": {
+      "eyebrow": "Trois leviers, un écosystème",
+      "title": "Une stack IA qui",
+      "titleHighlight": "remplace les 80%",
+      "titleSuffix": "de votre prospection manuelle.",
+      "subtitle": "Chaque brique fonctionne seule. Ensemble elles couvrent tout le cycle : identifier, engager, convertir — pendant que vos équipes se concentrent sur le closing.",
+      "ariaLabel": "Nos produits",
+      "lead": {
+        "tag": "SaaS",
+        "title": "Lead-Scoreur",
+        "description": "Scoring ICP + signaux d'achat en temps réel. Vos commerciaux n'appellent que ceux qui comptent.",
+        "stepTitle": "01 — Lead-Scoreur",
+        "stepBody": "Importez vos leads, définissez votre ICP, laissez l'IA prioriser. Les signaux d'achat internet font monter les bons comptes, pas les autres."
+      },
+      "bdr": {
+        "tag": "IA Agent",
+        "title": "BDR Automatisé",
+        "description": "Un agent qui qualifie, personnalise et relance 24/7 sur les canaux LinkedIn, email et WhatsApp.",
+        "stepTitle": "02 — BDR Automatisé",
+        "stepBody": "Votre premier commercial IA. Il travaille pendant que vous dormez, apprend de vos retours et ne se fatigue jamais."
+      },
+      "conseil": {
+        "tag": "Conseil",
+        "title": "Conseil & Formation Claude",
+        "description": "Formation sur 3 piliers, audit IA et déploiement accompagné pour vos équipes PME & ETI.",
+        "stepTitle": "03 — Conseil & Formation",
+        "stepBody": "On ne vend pas un outil, on installe une capacité. Vos équipes sortent autonomes sur Claude, avec des workflows qui rentabilisent dès la semaine 2."
+      }
+    },
+    "workflow": {
+      "eyebrow": "Workflow de bout en bout",
+      "title": "De la donnée brute au",
+      "titleHighlight": "rendez-vous signé",
+      "subtitle": "Pas d'usine à gaz : quatre étapes, automatisées sur la totalité du parcours.",
+      "ariaLabel": "Comment ça marche",
+      "steps": {
+        "import": { "title": "Import", "body": "CSV, CRM, LinkedIn export. On ingère et on nettoie en moins de 60 secondes." },
+        "score": { "title": "Score", "body": "Claude évalue chaque lead sur votre ICP et croise les signaux d'achat internet." },
+        "outreach": { "title": "Outreach", "body": "Séquences personnalisées multi-canal générées et envoyées automatiquement." },
+        "close": { "title": "Close", "body": "Vos commerciaux reprennent la main uniquement sur les leads chauds qualifiés." }
+      },
+      "stats": {
+        "meetings": { "value": "4×", "label": "Plus de RDV qualifiés" },
+        "setup": { "value": "72h", "label": "Pour activer votre workspace" },
+        "bdr": { "value": "24/7", "label": "Votre BDR ne dort jamais" },
+        "time": { "value": "80%", "label": "Temps récupéré par commercial" }
+      }
+    },
+    "pricing": {
+      "eyebrow": "Tarifs transparents",
+      "title": "Choisissez votre",
+      "titleHighlight": "vitesse d'exécution",
+      "subtitle": "Tous les plans incluent le scoring Claude, les signaux internet et l'accompagnement d'onboarding.",
+      "ariaLabel": "Tarifs",
+      "popular": "Le plus populaire",
+      "perMonth": "/ mois",
+      "viewFull": "Voir la grille complète",
+      "plans": {
+        "starter": {
+          "name": "Starter",
+          "target": "Solo founders & petites équipes",
+          "cta": "Démarrer le Starter",
+          "features": ["1 000 crédits de scoring", "3 sièges inclus", "1 intégration CRM", "Signaux internet de base", "Support email"]
+        },
+        "team": {
+          "name": "Team",
+          "target": "PME & équipes sales 5-20",
+          "cta": "Passer au Team",
+          "features": ["3 500 crédits de scoring", "10 sièges inclus", "2 intégrations CRM", "Signaux internet avancés", "API de facturation", "Support prioritaire"]
+        },
+        "scale": {
+          "name": "Scale",
+          "target": "ETI & organisations multi-workspace",
+          "cta": "Contacter Scale",
+          "features": ["10 000 crédits de scoring", "25 sièges inclus", "5 intégrations CRM", "API complète", "Audit log entreprise", "CSM dédié"]
+        }
+      }
+    },
+    "cta": {
+      "ariaLabel": "Appel à l'action final",
+      "eyebrow": "Prêt à accélérer ?",
+      "title": "Votre IA commerciale",
+      "titleHighlight": "démarre lundi prochain",
+      "subtitle": "Audit offert de 30 minutes. On cartographie votre pipeline, on identifie les 3 leviers IA à plus fort ROI, et on vous envoie un plan chiffré sous 48h.",
+      "bookAudit": "Réserver mon audit"
+    },
+    "footer": {
+      "description": "L'IA qui travaille pendant que vos équipes scalent. Lead-Scoreur, BDR automatisé et formation Claude — pensés pour les PME & ETI françaises.",
+      "products": "Produits",
+      "resources": "Ressources",
+      "legal": "Légal",
+      "helpCenter": "Centre d'aide",
+      "login": "Se connecter",
+      "requestAudit": "Demander un audit",
+      "legalNotices": "Mentions légales",
+      "privacy": "Confidentialité",
+      "terms": "CGU",
+      "copyright": "© {{year}} AimLeads. Tous droits réservés.",
+      "madeIn": "Fait en France — avec Claude."
+    }
   }
 }
