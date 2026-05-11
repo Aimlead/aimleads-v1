@@ -873,34 +873,39 @@ export default function ImportCSVDialog({
                 </div>
               )}
 
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <div className="relative">
+                  <Button
+                    onClick={() => handleHandoff(hasActiveIcp ? 'analyze' : 'icp', hasActiveIcp ? onAnalyzeImportedLeads : onReviewIcp)}
+                    disabled={handoffAction !== null}
+                    className="w-full gap-2 bg-gradient-to-r from-brand-sky to-brand-sky-2"
+                  >
+                    {handoffAction === 'analyze' || handoffAction === 'icp' ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : hasActiveIcp ? (
+                      <Sparkles className="w-4 h-4" />
+                    ) : (
+                      <Target className="w-4 h-4" />
+                    )}
+                    {hasActiveIcp
+                      ? t('import.dialog.actions.analyzeImported', {
+                          defaultValue: 'Analyser les {{count}} premiers',
+                          count: Math.min(importResult?.created ?? 0, ACTIVATION_ANALYZE_BATCH_SIZE),
+                        })
+                      : t('import.dialog.actions.configureIcp', { defaultValue: "Activer l'ICP avant l'analyse" })}
+                  </Button>
+                  <span className="absolute -top-2 -right-2 rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+                    {t('import.dialog.actions.recommended', { defaultValue: 'Recommandé' })}
+                  </span>
+                </div>
                 <Button
                   variant="outline"
                   onClick={() => handleHandoff('focus', onFocusImportedLeads)}
                   disabled={handoffAction !== null}
-                  className="gap-2"
+                  className="w-full gap-2"
                 >
                   {handoffAction === 'focus' ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
                   {t('import.dialog.actions.reviewImported', { defaultValue: 'Voir les leads importés' })}
-                </Button>
-                <Button
-                  onClick={() => handleHandoff(hasActiveIcp ? 'analyze' : 'icp', hasActiveIcp ? onAnalyzeImportedLeads : onReviewIcp)}
-                  disabled={handoffAction !== null}
-                  className="gap-2 bg-gradient-to-r from-brand-sky to-brand-sky-2"
-                >
-                  {handoffAction === 'analyze' || handoffAction === 'icp' ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : hasActiveIcp ? (
-                    <Sparkles className="w-4 h-4" />
-                  ) : (
-                    <Target className="w-4 h-4" />
-                  )}
-                  {hasActiveIcp
-                    ? t('import.dialog.actions.analyzeImported', {
-                        defaultValue: 'Analyser les {{count}} premiers',
-                        count: Math.min(importResult?.created ?? 0, ACTIVATION_ANALYZE_BATCH_SIZE),
-                      })
-                    : t('import.dialog.actions.configureIcp', { defaultValue: "Activer l'ICP avant l'analyse" })}
                 </Button>
               </div>
 

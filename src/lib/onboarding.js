@@ -27,6 +27,6 @@ export const resolvePostAuthRoute = async (preferredRoute) => {
     const snapshot = await getWorkspaceActivationSnapshot();
     return snapshot?.isComplete ? ROUTES.dashboard : ROUTES.onboarding;
   } catch {
-    return ROUTES.dashboard;
+    return ROUTES.onboarding;
   }
 };

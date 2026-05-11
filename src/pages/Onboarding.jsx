@@ -9,7 +9,7 @@ import ImportCSVDialog from '@/components/leads/ImportCSVDialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ACTIVATION_ANALYZE_BATCH_SIZE } from '@/constants/activation';
+import { ACTIVATION_ANALYZE_BATCH_SIZE, ACTIVATION_GRADUATED_KEY } from '@/constants/activation';
 import { ROUTES } from '@/constants/routes';
 import { getActivationSnapshot } from '@/lib/activation';
 import { waitForJobCompletion } from '@/lib/jobs';
@@ -21,15 +21,19 @@ export default function Onboarding() {
   const { t } = useTranslation();
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisSuccessLeadId, setAnalysisSuccessLeadId] = useState(null);
+  const [hasGraduated] = useState(() => typeof window !== 'undefined' && Boolean(window.localStorage.getItem(ACTIVATION_GRADUATED_KEY)));
 
   const { data: leads = [], isLoading: isLoadingLeads } = useQuery({
     queryKey: ['leads'],
     queryFn: () => dataClient.leads.list('-created_at'),
+    staleTime: 0,
   });
 
   const { data: icpProfiles = [], isLoading: isLoadingIcp } = useQuery({
     queryKey: ['icpProfilesQuickSwitch'],
     queryFn: () => dataClient.icp.list(),
+    staleTime: 0,
   });
 
   const { data: featureFlagsData = null } = useQuery({
@@ -130,11 +134,13 @@ export default function Onboarding() {
     if (!result.firstLeadId) return;
 
     const freshLead = await dataClient.leads.getById(result.firstLeadId);
-    toast.success(t('onboarding.toasts.analysisReady', { defaultValue: 'Premier résultat prêt. Ouvrez le lead pour continuer.' }));
-    navigate(`/leads/${result.firstLeadId}`, {
-      replace: true,
-      state: freshLead ? { lead: freshLead } : undefined,
-    });
+    setAnalysisSuccessLeadId(result.firstLeadId);
+    setTimeout(() => {
+      navigate(`/leads/${result.firstLeadId}`, {
+        replace: true,
+        state: freshLead ? { lead: freshLead, isFirstFollowUpContext: true } : { isFirstFollowUpContext: true },
+      });
+    }, 1500);
   };
 
   const handleImportSuccess = async () => {
@@ -169,10 +175,13 @@ export default function Onboarding() {
 
     const freshLead = await dataClient.leads.getById(result.firstLeadId);
     toast.success(t('onboarding.toasts.importAndAnalyzeDone', { defaultValue: 'Import terminé, premier lead analysé.' }));
-    navigate(`/leads/${result.firstLeadId}`, {
-      replace: true,
-      state: freshLead ? { lead: freshLead } : undefined,
-    });
+    setAnalysisSuccessLeadId(result.firstLeadId);
+    setTimeout(() => {
+      navigate(`/leads/${result.firstLeadId}`, {
+        replace: true,
+        state: freshLead ? { lead: freshLead, isFirstFollowUpContext: true } : { isFirstFollowUpContext: true },
+      });
+    }, 1500);
   };
 
   const progress = activationSnapshot.totalSteps === 0
@@ -229,7 +238,7 @@ export default function Onboarding() {
         onClick: () => {
           if (activationSnapshot.leadToReview?.id) {
             navigate(`/leads/${activationSnapshot.leadToReview.id}`, {
-              state: { lead: activationSnapshot.leadToReview },
+              state: { lead: activationSnapshot.leadToReview, isFirstFollowUpContext: true },
             });
             return;
           }
@@ -343,10 +352,49 @@ export default function Onboarding() {
     },
   ];
 
+  const handleGraduate = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(ACTIVATION_GRADUATED_KEY, '1');
+    }
+    navigate(ROUTES.dashboard);
+  };
+
   if (isLoadingLeads || isLoadingIcp) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-brand-sky" />
+      </div>
+    );
+  }
+
+  if (activationSnapshot.isComplete && !hasGraduated) {
+    return (
+      <div className="mx-auto max-w-2xl py-16 px-4 text-center space-y-6">
+        <div className="flex justify-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
+            <CheckCircle2 className="h-10 w-10 text-emerald-600" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-950">
+            {t('onboarding.graduation.title', { defaultValue: 'Votre workspace est opérationnel.' })}
+          </h1>
+          <p className="text-slate-500 text-sm leading-6">
+            {t('onboarding.graduation.subtitle', {
+              defaultValue: 'ICP actif · Leads importés · Premier résultat · Premier suivi lancé. Vous avez franchi les quatre étapes de première valeur.',
+            })}
+          </p>
+        </div>
+        <div className="flex flex-wrap justify-center gap-3 pt-2">
+          <div className="rounded-full bg-emerald-50 border border-emerald-200 px-4 py-1.5 text-xs font-semibold text-emerald-700">ICP actif</div>
+          <div className="rounded-full bg-emerald-50 border border-emerald-200 px-4 py-1.5 text-xs font-semibold text-emerald-700">Leads importés</div>
+          <div className="rounded-full bg-emerald-50 border border-emerald-200 px-4 py-1.5 text-xs font-semibold text-emerald-700">Premier résultat</div>
+          <div className="rounded-full bg-emerald-50 border border-emerald-200 px-4 py-1.5 text-xs font-semibold text-emerald-700">Premier suivi</div>
+        </div>
+        <Button onClick={handleGraduate} size="lg" className="gap-2 mt-4">
+          <ArrowRight className="h-4 w-4" />
+          {t('onboarding.graduation.cta', { defaultValue: 'Aller au dashboard' })}
+        </Button>
       </div>
     );
   }
@@ -408,6 +456,19 @@ export default function Onboarding() {
             </div>
           </div>
         </section>
+
+        {analysisSuccessLeadId && (
+          <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+            <span className="flex-1 text-sm font-medium text-emerald-800">
+              {t('onboarding.analysisBanner.text', { defaultValue: 'Première analyse terminée. Score, signaux et copy générés.' })}
+            </span>
+            <Button size="sm" variant="outline" onClick={() => navigate(`/leads/${analysisSuccessLeadId}`, { state: { isFirstFollowUpContext: true } })} className="gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-100">
+              {t('onboarding.analysisBanner.cta', { defaultValue: 'Ouvrir le lead' })}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
 
         <section className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
           <Card className="border-slate-200 shadow-sm">

@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import LeadSlideOver from '@/components/leads/LeadSlideOver';
 import ImportCSVDialog from '@/components/leads/ImportCSVDialog';
 import ResearchLeadDialog from '@/components/leads/ResearchLeadDialog';
+import ActivationChecklist from '@/components/ActivationChecklist';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ACTIVATION_ANALYZE_BATCH_SIZE } from '@/constants/activation';
@@ -14,6 +15,7 @@ import { ROUTES } from '@/constants/routes';
 import { exportLeadsToCsv } from '@/lib/exportCsv';
 import { waitForJobCompletion } from '@/lib/jobs';
 import { computeLeadPriority, deriveLeadNextAction, getBestOutreachHook } from '@/lib/leadScoring';
+import { getActivationSnapshot } from '@/lib/activation';
 import { dataClient } from '@/services/dataClient';
 
 const LIST_KEYS = {
@@ -92,6 +94,11 @@ export default function Dashboard() {
   const activeIcp = useMemo(
     () => icpProfiles.find((profile) => profile.is_active) || icpProfiles[0] || null,
     [icpProfiles]
+  );
+
+  const activationSnapshot = useMemo(
+    () => getActivationSnapshot({ activeIcp, leads }),
+    [activeIcp, leads]
   );
 
   const asyncJobsEnabled = Boolean(
@@ -491,9 +498,67 @@ export default function Dashboard() {
     day: 'numeric',
   });
 
+  const activationChecklistSteps = useMemo(() => [
+    {
+      id: 'icp',
+      title: t('dashboard.activation.icp.title', { defaultValue: 'Configurer votre ICP' }),
+      description: t('dashboard.activation.icp.description', { defaultValue: "Définissez qui AimLeads doit qualifier pour obtenir des scores utiles." }),
+      complete: activationSnapshot.hasActiveIcp,
+      icon: Target,
+      actionLabel: activeIcp
+        ? t('dashboard.activation.icp.actionDone', { defaultValue: "Voir l'ICP" })
+        : t('dashboard.activation.icp.action', { defaultValue: "Configurer l'ICP" }),
+      onAction: () => navigate(ROUTES.icp),
+    },
+    {
+      id: 'import',
+      title: t('dashboard.activation.import.title', { defaultValue: 'Importer vos premiers leads' }),
+      description: t('dashboard.activation.import.description', { defaultValue: "Importez un CSV ou chargez des données de démonstration pour commencer." }),
+      complete: activationSnapshot.hasImportedLeads,
+      icon: Upload,
+      actionLabel: t('dashboard.activation.import.action', { defaultValue: 'Importer un fichier' }),
+      onAction: () => setImportDialogOpen(true),
+    },
+    {
+      id: 'analyze',
+      title: t('dashboard.activation.analyze.title', { defaultValue: 'Analyser le premier lead' }),
+      description: t('dashboard.activation.analyze.description', { defaultValue: "Générez score, signaux et copy sur votre meilleur prospect." }),
+      complete: activationSnapshot.hasAnalyzedLead,
+      icon: Sparkles,
+      actionLabel: t('dashboard.activation.analyze.action', { defaultValue: 'Lancer l\'analyse' }),
+      onAction: () => navigate(ROUTES.onboarding),
+      disabled: !activationSnapshot.hasImportedLeads,
+    },
+    {
+      id: 'followup',
+      title: t('dashboard.activation.followup.title', { defaultValue: 'Démarrer le premier suivi' }),
+      description: t('dashboard.activation.followup.description', { defaultValue: "Ouvrez le meilleur lead analysé et ajoutez une note ou changez le statut." }),
+      complete: activationSnapshot.hasFollowUpStarted,
+      icon: ArrowRight,
+      actionLabel: t('dashboard.activation.followup.action', { defaultValue: 'Ouvrir le meilleur lead' }),
+      onAction: () => {
+        if (activationSnapshot.leadToReview?.id) {
+          navigate(`/leads/${activationSnapshot.leadToReview.id}`, {
+            state: { lead: activationSnapshot.leadToReview, isFirstFollowUpContext: true },
+          });
+        } else {
+          navigate(ROUTES.onboarding);
+        }
+      },
+      disabled: !activationSnapshot.hasAnalyzedLead,
+    },
+  ], [activationSnapshot, activeIcp, navigate, setImportDialogOpen, t]);
+
   return (
     <>
       <div className="mx-auto flex w-full max-w-[1160px] flex-col gap-4 pb-2">
+        {!activationSnapshot.isComplete && !isLoading && (
+          <ActivationChecklist
+            title={t('dashboard.activation.title', { defaultValue: 'Terminez la mise en route' })}
+            steps={activationChecklistSteps}
+          />
+        )}
+
         <section className="rounded-xl border border-[#e6e4df] bg-white px-5 py-4 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">

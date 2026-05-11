@@ -18,7 +18,7 @@ import {
   TrendingUp,
   Zap,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ROUTES } from '@/constants/routes';
 import {
@@ -199,8 +199,10 @@ const signalTypeClass = (type) => {
   return 'text-slate-700 bg-slate-50 border-slate-200';
 };
 
-export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated }) {
+export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated, isFirstFollowUpContext: isFirstFollowUpContextProp }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isFirstFollowUpContext = isFirstFollowUpContextProp ?? Boolean(location.state?.isFirstFollowUpContext);
   const queryClient = useQueryClient();
   const { t, i18n } = useTranslation();
   const [copied, setCopied] = useState(null);
@@ -695,6 +697,14 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
                     </a>
                   ) : null}
                 </div>
+
+                {isFirstFollowUpContext && (
+                  <div className="rounded-lg border border-sky-100 bg-sky-50 px-3 py-2">
+                    <p className="text-xs text-sky-700">
+                      {t('leads.firstFollowUpHint', { defaultValue: 'Ajoutez une note ou changez le statut ci-dessous pour valider l\'étape Suivi de votre onboarding.' })}
+                    </p>
+                  </div>
+                )}
 
                 <div className="rounded-xl border bg-white p-3" style={{ borderColor: '#e8e5df' }}>
                   <p className="text-xs font-semibold text-slate-700 mb-2">{t('leads.followUp')}</p>
