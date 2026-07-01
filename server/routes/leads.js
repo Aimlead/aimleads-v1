@@ -1,6 +1,6 @@
 import express from 'express';
 import { requireAuth, wrapAsyncRoutes } from '../lib/middleware.js';
-import { requireCredits, requirePlan, logTokenUsage } from '../lib/credits.js';
+import { requireCredits, requirePlan, logTokenUsage, refundCredits } from '../lib/credits.js';
 import { dataStore } from '../lib/dataStore.js';
 import { sanitizeWebsite } from '../lib/utils.js';
 import { schemas, validateBody } from '../lib/validation.js';
@@ -13,7 +13,7 @@ import { generateOutreachSequence, sequenceGeneratorAvailable, SEQUENCE_TONES } 
 import { findEmailForLead } from '../services/hunterService.js';
 import { fetchCompanyNewsFindings } from '../services/newsService.js';
 import { researchCompanyOnWeb } from '../services/claudeWebResearchService.js';
-import { runClaudeSignalAnalysis } from '../services/claudeSignalAnalysisService.js';
+import { runClaudeSignalAnalysis, signalAnalysisAvailable } from '../services/claudeSignalAnalysisService.js';
 import { toLeadAnalysisUpdatePayload } from '../services/leadAnalysisPersistence.js';
 import { getCrmIntegration, syncLeadToCrm } from '../services/crmService.js';
 import { normalizeLeadForResponse } from '../lib/leadNormalization.js';
@@ -812,17 +812,32 @@ router.post('/:leadId/score-icp', scoreIcpLimiter, requireCredits('score_icp'), 
 });
 
 router.post('/:leadId/analyze-signals', analyzeSignalsLimiter, requireCredits('analyze'), async (req, res) => {
+  if (!signalAnalysisAvailable) {
+    await refundCredits(req, 'signal_analysis_not_configured').catch(() => {});
+    return res.status(503).json({
+      message: 'AI signal analysis is not available: no LLM key is configured on this environment.',
+      code: 'AI_NOT_CONFIGURED',
+    });
+  }
+
   const lead = await dataStore.getLeadById(req.user, req.params.leadId);
-  if (!lead) return res.status(404).json({ message: 'Lead not found' });
+  if (!lead) {
+    await refundCredits(req, 'lead_not_found').catch(() => {});
+    return res.status(404).json({ message: 'Lead not found' });
+  }
 
   const activeIcp = await dataStore.getActiveIcpProfile(req.user);
-  if (!activeIcp) return res.status(400).json({ message: 'No active ICP profile found' });
+  if (!activeIcp) {
+    await refundCredits(req, 'no_active_icp').catch(() => {});
+    return res.status(400).json({ message: 'No active ICP profile found' });
+  }
 
   const deterministic = await analyzeLead({ lead, icpProfile: activeIcp, skipLlm: true });
   const icpBaseScore = Number(deterministic?.icp_score ?? lead?.icp_score ?? 0);
   const signalResult = await runClaudeSignalAnalysis({ lead, icpBaseScore });
 
   if (!signalResult) {
+    await refundCredits(req, 'signal_analysis_failed').catch(() => {});
     return res.status(502).json({ message: 'Signal analysis failed: invalid model response.' });
   }
 
@@ -1117,7 +1132,11 @@ router.post('/:leadId/sequence', sequenceLimiter, requirePlan('starter'), requir
     },
   });
   if (!sequenceGeneratorAvailable) {
-    return res.status(503).json({ message: 'Sequence generation is not available (no LLM key configured).' });
+    await refundCredits(req, 'sequence_generator_not_configured').catch(() => {});
+    return res.status(503).json({
+      message: 'Sequence generation is not available (no LLM key configured).',
+      code: 'AI_NOT_CONFIGURED',
+    });
   }
 
   const lead = await dataStore.getLeadById(req.user, req.params.leadId);

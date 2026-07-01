@@ -150,10 +150,10 @@ function App() {
           <Router>
             <NavigationTracker />
             <AppRoutes />
+            <UpgradeModal />
           </Router>
         </AuthProvider>
         <Toaster />
-        <UpgradeModal />
       </QueryClientProvider>
     </ErrorBoundary>
   );

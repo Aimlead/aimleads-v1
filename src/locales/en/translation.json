@@ -27,7 +27,56 @@
     "size": "Company size",
     "notes": "Notes",
     "quickSearch": "Quick search…",
-    "actions": "Actions"
+    "actions": "Actions",
+    "remaining": "remaining",
+    "open": "Open",
+    "all": "All",
+    "notAvailable": "N/A",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "error": "Error",
+    "success": "Success",
+    "import": "Import",
+    "search": "Search",
+    "filter": "Filter",
+    "apply": "Apply",
+    "reset": "Reset",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish",
+    "skip": "Skip",
+    "yes": "Yes",
+    "no": "No",
+    "optional": "Optional",
+    "required": "Required",
+    "noData": "No data",
+    "noResults": "No results",
+    "viewAll": "View all",
+    "seeDetails": "View details",
+    "refresh": "Refresh",
+    "create": "Create",
+    "add": "Add",
+    "remove": "Remove",
+    "send": "Send",
+    "invite": "Invite",
+    "analyze": "Analyze",
+    "generate": "Generate",
+    "unknown": "Unknown",
+    "active": "Active",
+    "inactive": "Inactive",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "date": "Date",
+    "name": "Name",
+    "email": "Email",
+    "role": "Role",
+    "description": "Description",
+    "type": "Type",
+    "score": "Score",
+    "website": "Website",
+    "source": "Source",
+    "cmdK": "⌘K"
   },
   "activationChecklist": {
     "title": "Activation Checklist",
@@ -115,7 +164,8 @@
       "planHealthyTitle": "{{plan}} is active with {{count}} credits remaining."
     },
     "lists": "Lists",
-    "priorityList": "Priority List"
+    "priorityList": "Priority List",
+    "backToHome": "Back to home"
   },
   "auth": {
     "signupTitle": "Create your account",
@@ -144,7 +194,28 @@
     "continueWithMicrosoft": "Continue with Microsoft",
     "backToHome": "Back to home",
     "authFailed": "Authentication failed",
-    "captchaHint": "Supabase Bot Protection (CAPTCHA) is enabled. In local development, disable it in Supabase Auth > Settings or add a real captcha flow."
+    "captchaHint": "Supabase Bot Protection (CAPTCHA) is enabled. In local development, disable it in Supabase Auth > Settings or add a real captcha flow.",
+    "login": "Log in",
+    "logout": "Log out",
+    "signup": "Create an account",
+    "resetPassword": "Reset password",
+    "changePassword": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "startPasswordReset": "Start password reset",
+    "sendResetLink": "Send reset link",
+    "backToLogin": "Back to login",
+    "invalidCredentials": "Invalid credentials",
+    "accountLocked": "Account temporarily locked. Try again in 15 minutes.",
+    "passwordMinLength": "Minimum 8 characters",
+    "passwordRequirements": "Minimum 8 characters with at least 1 uppercase letter and 1 digit.",
+    "managedAuthPassword": "This account uses managed authentication.",
+    "ssoCallbackLoading": "Signing you in…",
+    "ssoCallbackError": "Missing tokens in the OAuth callback. Please try again.",
+    "ssoFailed": "SSO sign-in failed. Please try again.",
+    "signupEyebrow": "Join AimLeads",
+    "tagline": "The AI that works while you scale."
   },
   "passwordRecovery": {
     "forgot": {
@@ -422,7 +493,10 @@
     },
     "actions": {
       "reanalyze": "Re-analyze",
-      "importCsv": "Import CSV"
+      "importCsv": "Import CSV",
+      "analyzeSignals": "Analyze signals",
+      "researchLead": "Research a lead",
+      "analyzeIcp": "Score ICP"
     },
     "selectors": {
       "icp": "ICP",
@@ -495,7 +569,12 @@
       "reanalyzeQueuedBatch": "{{count}} re-analysis job(s) were queued. You can keep working while AimLeads finishes them.",
       "failedReanalyze": "Failed to re-analyze leads.",
       "singleAnalyzed": "{{lead}} analyzed. Open it now and start the follow-up workflow.",
-      "singleQueuedAndReady": "{{lead}} was analyzed through the queue and the result is now ready."
+      "singleQueuedAndReady": "{{lead}} was analyzed through the queue and the result is now ready.",
+      "icpScoredBatch": "{{count}} lead(s) scored with ICP.",
+      "failedIcpScoreBatch": "ICP scoring failed for this batch.",
+      "signalsAnalyzeQueuedBatch": "{{count}} lead(s) queued for signal analysis.",
+      "signalsAnalyzedBatch": "Signal analysis finished for {{count}} lead(s).",
+      "failedSignalAnalyzeBatch": "Signal analysis failed for this batch."
     },
     "roi": {
       "eyebrow": "Useful steering",
@@ -624,6 +703,46 @@
         "description": "Import a first batch or run the first analysis to start tracking AI runs for this workspace.",
         "cta": "Import a CSV"
       }
+    },
+    "priority": {
+      "eyebrow": "Priority queue",
+      "title": "Who to contact now",
+      "subtitle": "Leads ranked by ICP fit, available signals and follow-up momentum.",
+      "finalScore": "Final score",
+      "today": "Today's priority",
+      "bestTime": "Best time slot",
+      "morning": "Morning",
+      "path": "Next",
+      "call": "Call",
+      "copyHook": "Copy the hook",
+      "generateSequence": "Prepare a sequence",
+      "openPriorityList": "Open priority list",
+      "openPanel": "Open panel",
+      "openLead": "View lead",
+      "focusList": "Active list",
+      "highPriority": "High priority",
+      "score80": "Score 80+",
+      "pipelineReady": "Pipeline-ready",
+      "qualifiedLeads": "Qualified leads",
+      "updatedAvg": "Average score",
+      "staleAndAnalyze": "{{stale}} stale · {{toAnalyze}} to analyze",
+      "topLeads": "Top 3 hot leads",
+      "nextInLine": "Next in line",
+      "openPipeline": "Open pipeline",
+      "score": "Score",
+      "lead": "Lead",
+      "company": "Company",
+      "status": "Status",
+      "nextAction": "Next action",
+      "actions": "Actions",
+      "toContact": "To contact"
+    },
+    "noIcpTooltip": "Set an active ICP profile to enable this action",
+    "noIcpWarning": {
+      "body": "AI scoring and lead qualification require an active ICP profile."
+    },
+    "empty": {
+      "noLeads": "No leads in this list yet."
     }
   },
   "leads": {
@@ -889,7 +1008,21 @@
       "liquidation_or_bankruptcy": "Liquidation / bankruptcy",
       "signed_competitor": "Signed with competitor",
       "closed_or_dead": "Company closed / inactive"
-    }
+    },
+    "followUp": "Follow-up",
+    "scoreIcpButton": "Score ICP",
+    "crmEmptyTitle": "Send to your CRM",
+    "crmEmptyBody": "Connect HubSpot or Salesforce.",
+    "analyzeNow": "Analyze",
+    "asyncJobTimeout": "Analysis job timed out. Please try again.",
+    "analyseSignalsSuccess": "Signal analysis completed.",
+    "analyseSignalsFailed": "Signal analysis failed.",
+    "scorecard": "Lead scorecard",
+    "icpAnalysis": "ICP fit",
+    "importantIcpCriteria": "Important ICP criteria",
+    "followUpStatus": "Status",
+    "internalNotesPlaceholder": "Add internal notes...",
+    "signalAnalysisTitle": "AI signal analysis"
   },
   "accountSettings": {
     "title": "Account settings",
@@ -938,7 +1071,8 @@
     "versionInfoTitle": "Application version",
     "versionInfoSubtitle": "Use this fingerprint to verify that a container or domain is serving the latest build.",
     "buildLabel": "Build",
-    "buildDateLabel": "Built"
+    "buildDateLabel": "Built",
+    "eyebrow": "Identity & security"
   },
   "billing": {
     "title": "Billing",
@@ -967,7 +1101,7 @@
     "noUsageYet": "No meaningful usage yet.",
     "noTransactions": "No transactions visible yet.",
     "availablePlans": "Available plans",
-    "availablePlansHint": "Plan changes remain sales-assisted for now. No fake Stripe checkout here.",
+    "availablePlansHint": "Plan changes are handled with our team: contact us and we will activate it for your workspace within 24 hours.",
     "popular": "Most chosen",
     "perMonth": "/mo",
     "switchPlan": "Switch to {{plan}}",
@@ -1005,7 +1139,9 @@
       "apiIncluded": "API access included",
       "apiNotIncluded": "API access not included",
       "prioritySupport": "Priority support included",
-      "standardSupport": "Standard support"
+      "standardSupport": "Standard support",
+      "title": "Entitlements & limits",
+      "description": "Team seats, CRM connections and plan capabilities"
     },
     "actions": {
       "analyze": "Lead analysis",
@@ -1015,19 +1151,44 @@
       "icpGenerate": "ICP generation",
       "analyticsInsights": "Analytics insights",
       "grant": "Credits granted",
-      "trial": "Trial credits"
+      "trial": "Trial credits",
+      "upgradePlan": "Change plan",
+      "buyCredits": "Buy credits",
+      "manageBilling": "Manage billing"
     },
     "noBilling": "No billing history yet.",
     "creditCosts": "Credit costs",
     "grantCredits": "Grant credits",
     "crmSlotsUsage": "{{used}} active connection(s) out of {{total}} included.",
     "crmSlotsRemaining": "{{count}} CRM slot(s) remaining.",
-    "crmSlotsReached": "All CRM slots are currently in use."
+    "crmSlotsReached": "All CRM slots are currently in use.",
+    "eyebrow": "Workspace capacity",
+    "usagePercent": "Credit usage: {{percent}}%",
+    "renewalOrTrial": "Renewal / trial end",
+    "lowCreditsTitle": "Credits running low",
+    "lowCreditsBody": "Your workspace is close to its credit limit. Contact the team or adjust your plan to avoid an interruption.",
+    "analysisCredits": "Analysis credits",
+    "apiAccess": "API access",
+    "included": "Included",
+    "notIncluded": "Not included",
+    "prioritySupport": "Priority support",
+    "standard": "Standard",
+    "topActions": {
+      "title": "Top actions",
+      "description": "AI actions consuming the most credits this cycle",
+      "empty": "No credited actions recorded yet."
+    },
+    "runsCount": "{{count}} runs",
+    "usageHistory": {
+      "title": "Usage history",
+      "description": "Credit transactions and usage events",
+      "empty": "No usage history available yet."
+    }
   },
   "pricing": {
     "eyebrow": "AimLeads plans",
     "title": "Simple plans designed for real growth in usage.",
-    "subtitle": "Each plan unlocks more capacity, collaboration, and integrations without pretending a Stripe self-serve billing flow already exists.",
+    "subtitle": "Each plan unlocks more capacity, collaboration, and integrations. Start for free, upgrade when your pipeline speeds up.",
     "popular": "Most chosen",
     "perMonth": "/month",
     "openWorkspace": "Open workspace",
@@ -1090,7 +1251,9 @@
           "api": "API access included"
         }
       }
-    }
+    },
+    "manageSubscription": "Manage my subscription",
+    "startTrial": "Start the {{plan}} trial"
   },
   "pipeline": {
     "title": "Pipeline",
@@ -1108,7 +1271,9 @@
       "moveTo": "Move to…",
       "previousStage": "Previous stage",
       "nextStage": "Next stage",
-      "openStage": "Open {{stage}}"
+      "openStage": "Open {{stage}}",
+      "callLead": "Call",
+      "openLead": "View lead"
     },
     "toasts": {
       "movedTo": "Moved to {{stage}}.",
@@ -1123,7 +1288,8 @@
       "proposal": "Proposal",
       "won": "Won",
       "lost": "Lost"
-    }
+    },
+    "eyebrow": "Sales kanban"
   },
   "icp": {
     "title": "ICP profile",
@@ -1155,7 +1321,8 @@
     "actions": {
       "generateWithAi": "Generate with AI",
       "generateShort": "AI",
-      "editProfile": "Edit profile"
+      "editProfile": "Edit profile",
+      "generateRequiresInternet": "AI generation is disabled locally: it requires Internet access and an API key."
     },
     "dialog": {
       "title": "Generate an ICP with AI",
@@ -1242,7 +1409,21 @@
       "generated": "ICP \"{{name}}\" generated. Review and save it.",
       "thresholdOrder": "Thresholds must stay in descending order: Excellent > Strong > Medium.",
       "savedDetailed": "ICP profile saved. Re-analyze leads to apply the new weights.",
-      "saveFailed": "Failed to save ICP profile."
+      "saveFailed": "Failed to save ICP profile.",
+      "nameRequired": "The ICP profile name cannot be empty."
+    },
+    "weightTooltip": {
+      "ignored": "This criterion is ignored in scoring",
+      "low": "Reduced weight — this criterion matters less",
+      "normal": "Normal weight (100% reference)",
+      "boosted": "Priority criterion — impact multiplied by {{value}}%"
+    },
+    "eyebrow": "Scoring profile",
+    "firstRun": {
+      "title": "Create your first ICP profile",
+      "body": "Describe your ideal customer and generate a profile, or fill in the criteria manually.",
+      "mockHint": "Locally, use the Edit button to create the profile manually.",
+      "hint": "Or fill in the form below manually."
     }
   },
   "outreach": {
@@ -1321,7 +1502,8 @@
       },
       "languageLabel": "Language",
       "languageAuto": "Auto ({{lang}})",
-      "fromLeadPage": "Generate a personalized 3-touch sequence for this lead. Claude writes the day-1 email, day-5 follow-up, and day-10 LinkedIn."
+      "fromLeadPage": "Generate a personalized 3-touch sequence for this lead. Claude writes the day-1 email, day-5 follow-up, and day-10 LinkedIn.",
+      "progressLabel": "Sequence generation progress"
     },
     "actions": {
       "newTemplate": "New template",
@@ -1341,6 +1523,12 @@
       "insufficientCredits": "Insufficient credits to generate a sequence. Top up your credits.",
       "noActiveIcp": "No active ICP — set up an ideal customer profile before generating a sequence.",
       "apiKeyMissing": "Anthropic API key missing — contact your administrator."
+    },
+    "icebreakers": "Outreach / icebreakers",
+    "eyebrow": "Sequences & templates",
+    "deleteConfirm": {
+      "title": "Delete template?",
+      "body": "This template will be permanently deleted. This action cannot be undone."
     }
   },
   "settings": {
@@ -1409,7 +1597,8 @@
       "crmSummary": "{{used}} live CRM connection(s) out of {{total}}, {{remaining}} remaining.",
       "billingBody": "Plan, credit balance, projected runway, and CRM capacity stay visible here without leaving Settings.",
       "manageBilling": "Open billing",
-      "comparePlans": "Compare plans"
+      "comparePlans": "Compare plans",
+      "grantCredits": "+ 150 credits"
     },
     "scoring": {
       "title": "Scoring settings",
@@ -1457,6 +1646,25 @@
       "toasts": {
         "saved": "Scoring settings saved. New analyses now use these weights and thresholds.",
         "failed": "Failed to save scoring settings."
+      }
+    },
+    "eyebrow": "Workspace control",
+    "dev": {
+      "workspaceMode": {
+        "title": "Workspace mode",
+        "description": "Current frontend mode and backend connection policy",
+        "mode": "Mode",
+        "apiPolicy": "In API mode, data is still served by the backend. Mock mode is for exploring the product locally.",
+        "fallback": "Frontend fallback"
+      },
+      "mockData": {
+        "title": "Dev tools - Mock data",
+        "description": "Load a demo dataset without Internet access.",
+        "backendUnavailableTitle": "Backend unavailable",
+        "backendUnavailableBody": "The local backend health check is not responding, but frontend mock data remains available.",
+        "buttonTitle": "Load demo leads",
+        "loading": "Loading...",
+        "import": "Import demo leads"
       }
     }
   },
@@ -1579,6 +1787,13 @@
       "finalScore": "Final score",
       "status": "Status",
       "notes": "Notes"
+    },
+    "empty": {
+      "title": "No CRM connected yet",
+      "body": "Connect HubSpot or Salesforce to push your scored leads straight into your sales pipeline and keep the whole team aligned.",
+      "benefit1": "One-click push from the side panel or the full lead page",
+      "benefit2": "Map AimLeads score, category and notes to your CRM fields",
+      "benefit3": "Track sync history per lead"
     }
   },
   "team": {
@@ -1668,7 +1883,10 @@
       "enterInviteEmail": "Enter an email address.",
       "loadInvites": "Failed to load invites.",
       "loadMembers": "Failed to load workspace members."
-    }
+    },
+    "eyebrow": "Workspace access",
+    "changeRoleFor": "Change role for {{name}}",
+    "revokeInviteConfirm": "Revoke the pending invite for {{email}}? They will no longer be able to join the workspace."
   },
   "help": {
     "title": "Help Center",
@@ -1690,7 +1908,8 @@
       "playbooksTitle": "Operational playbooks",
       "playbooksDescription": "Use these when setup stalls or a teammate needs a concrete next step.",
       "troubleshootingTitle": "Troubleshooting checklist",
-      "troubleshootingDescription": "High-signal reminders before opening a deeper support thread."
+      "troubleshootingDescription": "High-signal reminders before opening a deeper support thread.",
+      "eyebrow": "Support & playbooks"
     },
     "playbooks": {
       "firstValue": {
@@ -1762,7 +1981,8 @@
     "legend": {
       "avgScore": "Avg Score",
       "convRate": "Conv. Rate %"
-    }
+    },
+    "eyebrow": "Insights"
   },
   "auditLog": {
     "title": "Audit Log",
@@ -1815,7 +2035,10 @@
     "showingFirst": "Showing first {{shown}} of {{count}} entries",
     "common": {
       "empty": "—"
-    }
+    },
+    "eyebrow": "Workspace governance",
+    "refreshed": "Audit log refreshed.",
+    "refreshFailed": "Failed to refresh."
   },
   "import": {
     "dialog": {
@@ -1863,21 +2086,53 @@
         "reviewImported": "Review imported leads",
         "analyzeImported": "Analyze first {{count}}",
         "configureIcp": "Set ICP before analysis",
-        "doLater": "I'll do this later"
+        "doLater": "I'll do this later",
+        "importAnother": "Import another file"
       },
       "errors": {
         "legacyFormat": "Legacy .xls and .ods files are disabled for security. Re-export as .xlsx or .csv.",
         "noValidRows": "No usable rows found. Make sure a company_name column or equivalent is present.",
         "excelParse": "Unable to parse the Excel file: {{message}}",
         "csvInvalid": "The CSV must contain at least one valid row with company_name.",
-        "csvParse": "Unable to parse this CSV file."
+        "csvParse": "Unable to parse this CSV file.",
+        "fileTooLarge": "File too large. The maximum accepted size is 10 MB.",
+        "unsupportedFormat": "Unsupported format. Import a .csv or .xlsx file."
       },
       "toasts": {
         "importPartial": "{{created}} leads imported. {{skipped}} row(s) skipped.",
         "importSuccess": "{{created}} leads imported successfully.",
         "importFailed": "Import failed. Check the format and try again."
+      },
+      "listName": {
+        "label": "Name of the list created on import",
+        "placeholder": "e.g. Prospects April 2026",
+        "help": "This list will appear on the Lists page and in the dashboard list filter."
+      },
+      "mapping": {
+        "title": "Column mapping before import",
+        "detected": "{{count}} columns detected",
+        "body": "Assign each AimLeads field to a column from your file. You can import custom column names.",
+        "companyRequired": "Map the \"Company\" field before importing to avoid losing rows."
       }
-    }
+    },
+    "title": "Import leads",
+    "subtitle": "Import your leads from a CSV file.",
+    "dropzone": "Drop your CSV file here or",
+    "browse": "browse",
+    "fileSelected": "File selected",
+    "preview": "Preview",
+    "columnsDetected": "columns detected",
+    "rowsDetected": "rows detected",
+    "importButton": "Import {{count}} leads",
+    "importing": "Importing…",
+    "importSuccess": "{{count}} leads imported successfully.",
+    "importError": "Import failed.",
+    "duplicatesDetected": "Duplicates detected",
+    "skipDuplicates": "Skip duplicates",
+    "updateDuplicates": "Update duplicates",
+    "createAnyway": "Create anyway",
+    "requiredColumns": "Required columns",
+    "optionalColumns": "Optional columns"
   },
   "onboarding": {
     "badge": "First workspace setup",
@@ -2041,7 +2296,8 @@
       "analysisFailed": "Failed to analyze the first lead.",
       "analysisReady": "First result is ready. Open the lead to continue.",
       "importAndAnalyzeDone": "Import finished, first lead analyzed."
-    }
+    },
+    "trialBadge": "Free trial · 14 days · 50 credits included"
   },
   "mentions": {
     "blockLabel": "Legal information",
@@ -2112,6 +2368,38 @@
       "title": "No leads imported yet",
       "desc": "Import your first CSV file to start scoring and prioritizing your prospects.",
       "cta": "Import CSV"
+    },
+    "eyebrow": "Processing queue",
+    "heat": {
+      "hot": "Hot",
+      "warm": "Warm",
+      "cold": "Cold"
+    },
+    "filters": {
+      "contactStatus": "Contact status",
+      "allStatus": "All statuses",
+      "notContacted": "Not contacted",
+      "engaged": "Engaged",
+      "sourceList": "Source list",
+      "sortBy": "Sort by"
+    },
+    "sort": {
+      "priority": "Sort: priority",
+      "icp": "Sort: ICP score",
+      "ai": "Sort: AI score",
+      "company": "Sort: company"
+    },
+    "empty": "No leads match the current filters.",
+    "industryUnavailable": "Industry not provided",
+    "employeeCount": "{{count}} employees",
+    "nextBestAction": "Next best action",
+    "noFollowUp": "No follow-up status",
+    "actions": {
+      "openPanel": "Open panel",
+      "openLead": "View lead",
+      "emailLead": "Send an email",
+      "callLead": "Call",
+      "openLinkedin": "Open LinkedIn"
     }
   },
   "upgrade": {
@@ -2122,5 +2410,132 @@
     "required": "Required",
     "cta": "View plans",
     "dismiss": "Not now"
+  },
+  "audit": {
+    "title": "Audit log",
+    "subtitle": "All sensitive actions in your workspace.",
+    "action": "Action",
+    "resource": "Resource",
+    "user": "User",
+    "timestamp": "Date / time",
+    "details": "Details",
+    "noLogs": "No audit events.",
+    "noLogsSubtitle": "Sensitive actions (invites, deletions, exports) will appear here.",
+    "actions": {
+      "create": "Create",
+      "update": "Update",
+      "delete": "Delete",
+      "export": "Export",
+      "analyze": "Analyze",
+      "invite": "Invite"
+    }
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "networkError": "Network error. Check your connection.",
+    "unauthorized": "Unauthorized. Please log in again.",
+    "forbidden": "Access denied.",
+    "notFound": "Page not found.",
+    "serverError": "Server error. Please try again.",
+    "validationError": "Please fix the errors in the form.",
+    "creditsInsufficient": "Insufficient credits.",
+    "trialExpired": "Your trial has expired. Contact the sales team.",
+    "subscriptionInactive": "Your subscription is inactive."
+  },
+  "toasts": {
+    "leadAnalyzed": "Lead analyzed successfully.",
+    "leadDeleted": "Lead deleted.",
+    "leadUpdated": "Lead updated.",
+    "leadImported": "Leads imported.",
+    "inviteSent": "Invite sent.",
+    "inviteRevoked": "Invite revoked.",
+    "roleupdated": "Role updated.",
+    "settingsSaved": "Settings saved.",
+    "crmConnected": "CRM connected.",
+    "crmDisconnected": "CRM disconnected.",
+    "sequenceGenerated": "Sequence generated.",
+    "copied": "Copied to clipboard.",
+    "exportStarted": "Export started.",
+    "profileUpdated": "Profile updated.",
+    "passwordChanged": "Password changed.",
+    "accountDeleted": "Account deleted.",
+    "signalDiscovered": "Signals discovered.",
+    "mappingsSaved": "Mappings saved."
+  },
+  "lists": {
+    "unlisted": "Unlisted",
+    "toasts": {
+      "renameRequired": "The new list name is required.",
+      "renamed": "List renamed across {{count}} leads.",
+      "renameFailed": "Could not rename this list.",
+      "moved": "{{count}} leads moved to {{list}}.",
+      "moveFailed": "Could not move this list.",
+      "exportEmpty": "No leads to export in this list.",
+      "exportSuccess": "{{count}} leads exported to CSV.",
+      "filterSaved": "List filter saved for the dashboard."
+    },
+    "eyebrow": "Imported sources",
+    "title": "List management",
+    "subtitle": "Centralize your imported lists, merge duplicates and clean your sources before the next campaigns.",
+    "metrics": {
+      "totalLists": "Active lists",
+      "totalLeads": "Listed leads",
+      "unlisted": "Unlisted leads"
+    },
+    "table": {
+      "title": "List portfolio",
+      "searchPlaceholder": "Search lists…",
+      "sort": {
+        "total": "Sort: Lead count",
+        "qualified": "Sort: High fit",
+        "score": "Sort: Average score",
+        "date": "Sort: Last import",
+        "name": "Sort: Name",
+        "toggleDirection": "Reverse sort direction"
+      },
+      "selected": "{{count}} selected",
+      "selectVisible": "Select visible lists",
+      "visibleCount": "{{visible}} of {{total}} lists",
+      "selectList": "Select list",
+      "paginationDetailed": "{{start}}-{{end}} of {{total}} · Page {{page}} / {{pages}}"
+    },
+    "actions": {
+      "bulkMove": "Move selection",
+      "hide": "Hide",
+      "open": "Open",
+      "rename": "Rename",
+      "move": "Merge / move",
+      "export": "Export list to CSV",
+      "saveDashboardFilter": "Prepare this filter for the dashboard",
+      "openLead": "View lead"
+    },
+    "loading": "Loading lists…",
+    "empty": "No lists available. Import leads to get started.",
+    "row": {
+      "meta": "{{count}} leads · {{qualified}} high fit",
+      "toAnalyze": "{{count}} to analyze",
+      "noScore": "No score"
+    },
+    "details": {
+      "title": "Leads in list: {{list}}",
+      "subtitle": "{{count}} lead(s) in this list.",
+      "empty": "No leads found in this list.",
+      "columns": {
+        "company": "Company",
+        "contact": "Contact",
+        "country": "Country",
+        "actions": "Actions"
+      }
+    },
+    "rename": {
+      "title": "Rename a list",
+      "desc": "The name will be updated on all leads in this list."
+    },
+    "move": {
+      "title": "Move leads",
+      "desc": "Move all leads from this list to another target list.",
+      "placeholder": "Choose a target list",
+      "bulkDesc": "Move all leads from the selected lists to another target list."
+    }
   }
 }

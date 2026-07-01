@@ -216,6 +216,8 @@ const parseSignalJson = (rawText) => {
   return null;
 };
 
+export const signalAnalysisAvailable = Boolean(ANTHROPIC_API_KEY);
+
 export async function runClaudeSignalAnalysis({ lead, icpBaseScore }) {
   if (!client) {
     logger.warn('signal_analysis_skipped_missing_api_key');
