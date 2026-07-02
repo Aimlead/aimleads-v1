@@ -574,7 +574,8 @@
       "failedIcpScoreBatch": "Le scoring ICP a échoué pour ce lot.",
       "signalsAnalyzeQueuedBatch": "{{count}} lead(s) en file pour l'analyse des signaux.",
       "signalsAnalyzedBatch": "Analyse des signaux terminée pour {{count}} lead(s).",
-      "failedSignalAnalyzeBatch": "L'analyse des signaux a échoué pour ce lot."
+      "failedSignalAnalyzeBatch": "L'analyse des signaux a échoué pour ce lot.",
+      "aiKeyRequired": "L'analyse IA nécessite une connexion Anthropic active. Contactez votre administrateur."
     },
     "roi": {
       "eyebrow": "Pilotage utile",

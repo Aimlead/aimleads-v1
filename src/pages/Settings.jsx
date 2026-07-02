@@ -626,6 +626,9 @@ export default function Settings() {
               <Button asChild variant="ghost">
                 <Link to={ROUTES.crmIntegration}>{t('settings.livePlan.manageCrm')}</Link>
               </Button>
+              <Button asChild variant="ghost">
+                <Link to={ROUTES.auditLog}>{t('nav.auditLog', { defaultValue: "Journal d'audit" })}</Link>
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -771,7 +774,7 @@ export default function Settings() {
         </CardContent>
       </Card>}
 
-      <Card className="mt-6">
+      {import.meta.env.DEV && <Card className="mt-6">
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-sky-100 to-violet-100 flex items-center justify-center">
@@ -833,7 +836,7 @@ export default function Settings() {
             })}
           </div>
         </CardContent>
-      </Card>
+      </Card>}
 
       <Card className="mt-6 border-amber-200 bg-amber-50/40">
         <CardHeader>

@@ -574,7 +574,8 @@
       "failedIcpScoreBatch": "ICP scoring failed for this batch.",
       "signalsAnalyzeQueuedBatch": "{{count}} lead(s) queued for signal analysis.",
       "signalsAnalyzedBatch": "Signal analysis finished for {{count}} lead(s).",
-      "failedSignalAnalyzeBatch": "Signal analysis failed for this batch."
+      "failedSignalAnalyzeBatch": "Signal analysis failed for this batch.",
+      "aiKeyRequired": "AI analysis requires an active Anthropic connection. Contact your administrator."
     },
     "roi": {
       "eyebrow": "Useful steering",

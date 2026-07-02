@@ -15,7 +15,6 @@ import {
   LogOut,
   Mail,
   Rows3,
-  ScrollText,
   Settings,
   Sparkles,
   Target,
@@ -27,14 +26,13 @@ export const sidebarNavigation = [
   { name: 'Priority List', labelKey: 'nav.priorityList', href: ROUTES.priorities, icon: ListOrdered, group: 'main', shortcut: '2' },
   { name: 'Pipeline', labelKey: 'nav.pipeline', href: ROUTES.pipeline, icon: Kanban, group: 'main', shortcut: '3' },
   { name: 'Lists', labelKey: 'nav.lists', href: ROUTES.lists, icon: Rows3, group: 'main', shortcut: '4' },
-  { name: 'Analytics', labelKey: 'nav.analytics', href: ROUTES.analytics, icon: BarChart3, group: 'main', shortcut: '6' },
   { name: 'Outreach', labelKey: 'nav.outreach', href: ROUTES.outreach, icon: Mail, group: 'main', shortcut: '5' },
+  { name: 'Analytics', labelKey: 'nav.analytics', href: ROUTES.analytics, icon: BarChart3, group: 'main', shortcut: '6' },
   { name: 'ICP Profile', labelKey: 'nav.icp', href: ROUTES.icp, icon: Target, group: 'config' },
   { name: 'Team', labelKey: 'nav.team', href: ROUTES.team, icon: Users, group: 'config' },
   { name: 'Billing', labelKey: 'nav.billing', href: ROUTES.billing, icon: CreditCard, group: 'config' },
   { name: 'Settings', labelKey: 'nav.settings', href: ROUTES.settings, icon: Settings, group: 'config' },
   { name: 'CRM Integration', labelKey: 'nav.crmIntegration', href: ROUTES.crmIntegration, icon: Database, group: 'config' },
-  { name: 'Audit Log', labelKey: 'nav.auditLog', href: ROUTES.auditLog, icon: ScrollText, group: 'config' },
   { name: 'Help', labelKey: 'nav.help', href: ROUTES.help, icon: LifeBuoy, group: 'config' },
 ];
 

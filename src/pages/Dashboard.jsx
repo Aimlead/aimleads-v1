@@ -564,7 +564,7 @@ export default function Dashboard() {
                 size="sm"
                 onClick={() => {
                   if (isMockMode) {
-                    toast.info('Requires ANTHROPIC_API_KEY — add it to your .env and restart the server.');
+                    toast.info(t('dashboard.toasts.aiKeyRequired', { defaultValue: "L'analyse IA nécessite une connexion Anthropic active. Contactez votre administrateur." }));
                     return;
                   }
                   handleAnalyzeSignalsVisible();
@@ -586,7 +586,7 @@ export default function Dashboard() {
                 variant="outline"
                 onClick={() => {
                   if (isMockMode) {
-                    toast.info('Requires ANTHROPIC_API_KEY — add it to your .env and restart the server.');
+                    toast.info(t('dashboard.toasts.aiKeyRequired', { defaultValue: "L'analyse IA nécessite une connexion Anthropic active. Contactez votre administrateur." }));
                     return;
                   }
                   setResearchDialogOpen(true);
@@ -651,7 +651,6 @@ export default function Dashboard() {
                 <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-slate-600">
                   <span><strong className="text-slate-900">ICP:</strong> {priorityLead.priorityMeta?.icpScore ?? clampScore(priorityLead.icp_score) ?? '—'}</span>
                   <span><strong className="text-slate-900">AI:</strong> {priorityLead.priorityMeta?.aiScore ?? clampScore(priorityLead.ai_score ?? priorityLead?.score_details?.signal_analysis?.ai_score) ?? '—'}</span>
-                  <span><strong className="text-slate-900">{t('dashboard.priority.bestTime', { defaultValue: 'Meilleur créneau' })}:</strong> {t('dashboard.priority.morning', { defaultValue: 'Matin' })}</span>
                   <span><strong className="text-slate-900">{t('dashboard.priority.path', { defaultValue: 'Suite' })}:</strong> {getNextActionLabel(t, deriveNextAction(priorityLead))}</span>
                 </div>
 
