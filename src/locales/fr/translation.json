@@ -1060,7 +1060,12 @@
       "send_intro_email": "Envoyer un email d’intro",
       "call_lead": "Appeler le lead",
       "enrich_contact": "Compléter les coordonnées"
-    }
+    },
+    "icpScoreLabel": "Score ICP",
+    "aiScoreLabel": "Score IA",
+    "aiBoostLabel": "Boost IA",
+    "noAiSignalsYet": "Aucun signal d’achat détecté pour l’instant.",
+    "callAction": "Appeler"
   },
   "pipeline": {
     "title": "Pipeline",

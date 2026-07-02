@@ -32,7 +32,7 @@ import { ROUTES } from '@/constants/routes';
 import ScoreBreakdown from '@/components/leads/ScoreBreakdown';
 import { dataClient } from '@/services/dataClient';
 import SignalBadge from '@/components/leads/SignalBadge';
-import { getDeterministicIcpSummary, getFollowUpStatusLabel, getLeadScores } from '@/lib/leadPresentation';
+import { getDeterministicIcpSummary, getFollowUpStatusLabel, getLeadScores, getRecommendedActionLabel } from '@/lib/leadPresentation';
 
 const toMetric = (value) => (Number.isFinite(Number(value)) ? Number(value) : null);
 
@@ -109,41 +109,7 @@ const formatDate = (value, locale) => {
   return parsed.toLocaleString(locale);
 };
 
-const ACTION_FR_LABELS = {
-  contact_now: 'Contacter maintenant',
-  contact_soon: 'Contacter rapidement',
-  nurture: 'Nurturer',
-  deprioritize: 'Déprioriser',
-};
-
-const SIGNAL_PHRASE_FR_MAP = new Map([
-  ['leadership change', 'changement de direction'],
-  ['market entry', 'entrée sur un nouveau marché'],
-  ['restructuring', 'restructuration'],
-  ['budget cuts', 'réductions budgétaires'],
-  ['layoffs', 'licenciements'],
-  ['hiring', 'recrutement'],
-  ['partnership', 'partenariat'],
-  ['product launch', 'lancement produit'],
-  ['gtm shift', 'changement go-to-market'],
-  ['contact now', 'contacter maintenant'],
-  ['contact soon', 'contacter rapidement'],
-  ['nurture', 'nurturer'],
-  ['deprioritize', 'déprioriser'],
-]);
-
-const translateForPresentation = (value, language) => {
-  const source = String(value || '');
-  if (language !== 'fr' || !source) return source;
-
-  let translated = source;
-  for (const [needle, replacement] of SIGNAL_PHRASE_FR_MAP.entries()) {
-    translated = translated.replaceAll(needle, replacement);
-  }
-  return translated;
-};
-
-const ScoreRing = ({ value = 0, label = 'Score' }) => {
+const ScoreRing = ({ value = 0, label = 'Score', empty = false }) => {
   const normalized = Math.max(0, Math.min(100, Number(value) || 0));
   const radius = 52;
   const circumference = 2 * Math.PI * radius;
@@ -172,7 +138,7 @@ const ScoreRing = ({ value = 0, label = 'Score' }) => {
         </defs>
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-        <p className="text-4xl font-bold tracking-tight">{Math.round(normalized)}</p>
+        <p className="text-4xl font-bold tracking-tight">{empty ? '—' : Math.round(normalized)}</p>
         <p className="text-[10px] uppercase tracking-[0.14em] text-white/70">{label}</p>
       </div>
     </div>
@@ -212,7 +178,6 @@ export default function LeadDetail() {
   const [handledJobId, setHandledJobId] = useState(null);
   const [sequenceTone, setSequenceTone] = useState('consultative');
   const [sequence, setSequence] = useState(null);
-  const [signalLanguage, setSignalLanguage] = useState('en');
   const [sequenceActiveJobId, setSequenceActiveJobId] = useState('');
   const [sequenceHandledJobId, setSequenceHandledJobId] = useState('');
   const [signalAnalysisError, setSignalAnalysisError] = useState('');
@@ -531,7 +496,11 @@ export default function LeadDetail() {
 
   const linkedinUrl = lead?.linkedin_url || lead?.linkedin || '';
   const phone = lead?.phone || lead?.contact_phone || '';
-  const nextAction = signalAnalysis?.action || lead?.follow_up_status || '—';
+  const nextActionLabel = signalAnalysis?.action
+    ? getRecommendedActionLabel(t, signalAnalysis.action)
+    : lead?.follow_up_status
+      ? getFollowUpStatusLabel(t, lead.follow_up_status)
+      : '—';
 
   return (
     <div className="space-y-6">
@@ -554,7 +523,7 @@ export default function LeadDetail() {
       <section className="rounded-3xl border border-slate-900/10 bg-gradient-to-br from-slate-900 via-slate-900/95 to-slate-800 p-8 shadow-lg">
         <div className="grid gap-8 lg:grid-cols-[120px,1fr]">
           <div className="flex justify-center lg:justify-start">
-            <ScoreRing value={finalScore || 0} label={t('common.score', { defaultValue: 'Score' })} />
+            <ScoreRing value={finalScore || 0} label={t('common.score', { defaultValue: 'Score' })} empty={finalScore === null || finalScore === undefined} />
           </div>
           <div className="min-w-0">
             <div className="flex items-start justify-between gap-4 mb-4">
@@ -596,17 +565,17 @@ export default function LeadDetail() {
 
             <div className="grid gap-3 sm:grid-cols-3 lg:gap-4">
               <div className="rounded-xl border border-white/15 bg-white/8 backdrop-blur-sm p-4">
-                <p className="text-xs uppercase tracking-[0.12em] text-slate-300/70 font-semibold mb-2">ICP Score</p>
+                <p className="text-xs uppercase tracking-[0.12em] text-slate-300/70 font-semibold mb-2">{t('leads.icpScoreLabel', { defaultValue: 'Score ICP' })}</p>
                 <p className="text-3xl font-bold text-white">{icpScore ?? '—'}</p>
               </div>
               <div className="rounded-xl border border-white/15 bg-white/8 backdrop-blur-sm p-4">
-                <p className="text-xs uppercase tracking-[0.12em] text-slate-300/70 font-semibold mb-2">AI Score</p>
+                <p className="text-xs uppercase tracking-[0.12em] text-slate-300/70 font-semibold mb-2">{t('leads.aiScoreLabel', { defaultValue: 'Score IA' })}</p>
                 <p className="text-3xl font-bold text-white">{aiScore ?? '—'}</p>
               </div>
               <div className="rounded-xl border border-white/15 bg-white/8 backdrop-blur-sm p-4">
                 <p className="text-xs uppercase tracking-[0.12em] text-slate-300/70 font-semibold mb-2">{t('leads.suggestedAction', { defaultValue: 'Action' })}</p>
                 <p className="text-sm font-bold text-emerald-300">
-                  {signalLanguage === 'fr' ? ACTION_FR_LABELS[nextAction] || nextAction : nextAction}
+                  {nextActionLabel}
                 </p>
               </div>
             </div>
@@ -683,7 +652,7 @@ export default function LeadDetail() {
             }}
           >
             <Phone className="h-4 w-4 text-amber-600" />
-            Call
+            {t('leads.callAction', { defaultValue: 'Appeler' })}
           </Button>
           <Button
             size="sm"
@@ -850,32 +819,20 @@ export default function LeadDetail() {
                   <Brain className="h-4 w-4 text-brand-sky" />
                   {t('leads.signalAnalysisTitle', { defaultValue: 'AI signal analysis' })}
                 </CardTitle>
-                <div className="inline-flex overflow-hidden rounded-lg border border-slate-200">
-                  {['en', 'fr'].map((lang) => (
-                    <button
-                      key={lang}
-                      type="button"
-                      onClick={() => setSignalLanguage(lang)}
-                      className={`px-2.5 py-1 text-xs font-bold transition-colors ${signalLanguage === lang ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
-                    >
-                      {lang.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-2 sm:grid-cols-3">
                 <div className="rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3">
-                  <p className="text-[11px] text-slate-500 uppercase font-semibold tracking-wide">AI Score</p>
+                  <p className="text-[11px] text-slate-500 uppercase font-semibold tracking-wide">{t('leads.aiScoreLabel', { defaultValue: 'Score IA' })}</p>
                   <p className="text-lg font-bold text-slate-800 mt-1">{signalAnalysis?.ai_score ?? lead.ai_score ?? '—'}</p>
                 </div>
                 <div className="rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3">
-                  <p className="text-[11px] text-slate-500 uppercase font-semibold tracking-wide">AI Boost</p>
+                  <p className="text-[11px] text-slate-500 uppercase font-semibold tracking-wide">{t('leads.aiBoostLabel', { defaultValue: 'Boost IA' })}</p>
                   <p className="text-lg font-bold text-slate-800 mt-1">{signalAnalysis?.ai_boost ?? aiBoost ?? '—'}</p>
                 </div>
                 <div className="rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3">
-                  <p className="text-[11px] text-slate-500 uppercase font-semibold tracking-wide">Confidence</p>
+                  <p className="text-[11px] text-slate-500 uppercase font-semibold tracking-wide">{t('leads.confidenceLabel', { defaultValue: 'Confiance' })}</p>
                   <p className="text-lg font-bold text-slate-800 mt-1">{signalAnalysis?.confidence ?? lead.ai_confidence ?? '—'}</p>
                 </div>
               </div>
@@ -883,9 +840,7 @@ export default function LeadDetail() {
               <div className="rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3">
                 <p className="text-xs text-slate-500 uppercase font-semibold tracking-wide mb-1">{t('leads.suggestedAction', { defaultValue: 'Suggested action' })}</p>
                 <p className="text-sm font-bold text-slate-800">
-                  {signalLanguage === 'fr'
-                    ? ACTION_FR_LABELS[signalAnalysis?.action] || signalAnalysis?.action || '—'
-                    : signalAnalysis?.action || '—'}
+                  {signalAnalysis?.action ? getRecommendedActionLabel(t, signalAnalysis.action) : '—'}
                 </p>
               </div>
 
@@ -898,7 +853,7 @@ export default function LeadDetail() {
                       {copied === 'signal-icebreaker' ? t('common.copied') : t('common.copy')}
                     </Button>
                   </div>
-                  <p className="text-sm text-slate-700">{translateForPresentation(signalAnalysis.icebreaker, signalLanguage)}</p>
+                  <p className="text-sm text-slate-700">{signalAnalysis.icebreaker}</p>
                 </div>
               ) : null}
 
@@ -952,12 +907,12 @@ export default function LeadDetail() {
                   {signalAnalysis?.sources?.length > 0 || signalAnalysis?.website ? (
                     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 space-y-1">
                       {signalAnalysis?.sources?.length > 0 ? <p><span className="font-bold">Sources:</span> {signalAnalysis.sources.join(', ')}</p> : null}
-                      {signalAnalysis?.website ? <p><span className="font-bold">Website:</span> {signalAnalysis.website}</p> : null}
+                      {signalAnalysis?.website ? <p><span className="font-bold">{t('common.website', { defaultValue: 'Site web' })}:</span> {signalAnalysis.website}</p> : null}
                     </div>
                   ) : null}
                 </div>
               ) : (
-                <p className="text-sm text-slate-500 italic text-center py-4">No AI buying signals detected yet</p>
+                <p className="text-sm text-slate-500 italic text-center py-4">{t('leads.noAiSignalsYet', { defaultValue: "Aucun signal d\u2019achat détecté pour l\u2019instant." })}</p>
               )}
             </CardContent>
           </Card>
@@ -1019,7 +974,7 @@ export default function LeadDetail() {
                     disabled={sequenceMutation.isPending || Boolean(sequenceActiveJobId)}
                   >
                     {sequenceMutation.isPending || sequenceActiveJobId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                    Generate
+                    {t('common.generate', { defaultValue: 'Générer' })}
                   </Button>
                 </div>
               </div>
@@ -1088,7 +1043,7 @@ export default function LeadDetail() {
                   className="h-8 gap-1.5 flex-shrink-0"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
-                  Open
+                  {t('common.open', { defaultValue: 'Ouvrir' })}
                 </Button>
               </CardContent>
             </Card>

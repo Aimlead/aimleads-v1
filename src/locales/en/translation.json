@@ -1060,7 +1060,12 @@
       "send_intro_email": "Send intro email",
       "call_lead": "Call lead",
       "enrich_contact": "Enrich contact data"
-    }
+    },
+    "icpScoreLabel": "ICP score",
+    "aiScoreLabel": "AI score",
+    "aiBoostLabel": "AI boost",
+    "noAiSignalsYet": "No AI buying signals detected yet.",
+    "callAction": "Call"
   },
   "accountSettings": {
     "title": "Account settings",
