@@ -146,6 +146,7 @@ OUTPUT RULES
 - sales-oriented
 - no extra commentary
 - no markdown
+- write the text of "signals", "positives", "negatives" and "icebreaker" in French (the sales team is French-speaking); keep "action" as the English enum code
 
 Return ONLY valid JSON with this schema:
 

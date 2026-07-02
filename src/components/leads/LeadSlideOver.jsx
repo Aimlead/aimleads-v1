@@ -37,7 +37,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { FOLLOW_UP_STATUS_LIST } from '@/constants/leads';
-import { getDeterministicIcpSummary, getLeadScores } from '@/lib/leadPresentation';
+import { getDeterministicIcpSummary, getFollowUpStatusLabel, getLeadScores, getRecommendedActionLabel } from '@/lib/leadPresentation';
 import { dataClient } from '@/services/dataClient';
 import SignalBadge from './SignalBadge';
 import StatusBadge from './StatusBadge';
@@ -107,11 +107,9 @@ const PROVIDER_STATUS_FR = {
 
 const buildDiscoverToast = (response, t) => {
   const discovered = Number(response?.discovered_signals || 0);
-  const news = Number(response?.news_signals || 0);
   const webResearch = Number(response?.web_research_signals || 0);
-  const hunterEmail = response?.hunter_email;
   const providerStatus = response?.provider_status || {};
-  const total = discovered + news + webResearch + (hunterEmail ? 1 : 0);
+  const total = discovered + webResearch;
   if (total === 0) {
     const skipped = Object.entries(providerStatus)
       .filter(([, s]) => s !== 'ok')
@@ -123,9 +121,7 @@ const buildDiscoverToast = (response, t) => {
   }
   const parts = [];
   if (discovered > 0) parts.push(`Web: ${discovered}`);
-  if (news > 0) parts.push(`News: ${news}`);
   if (webResearch > 0) parts.push(`Claude: ${webResearch}`);
-  if (hunterEmail) parts.push(`Email: ${hunterEmail}`);
   return t('leads.signalsDetectedSummary', { count: total, details: parts.join(', ') });
 };
 
@@ -704,7 +700,7 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
                     </SelectTrigger>
                     <SelectContent>
                       {FOLLOW_UP_STATUS_LIST.map((status) => (
-                        <SelectItem key={status} value={status} className="text-xs">{status}</SelectItem>
+                        <SelectItem key={status} value={status} className="text-xs">{getFollowUpStatusLabel(t, status)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -813,7 +809,7 @@ export default function LeadSlideOver({ lead, open, onOpenChange, onLeadUpdated 
                       {signalAnalysis?.suggested_action || signalAnalysis?.action ? (
                         <div className="flex items-start gap-1.5 rounded-lg border px-2.5 py-2" style={{ borderColor: '#e8e5df', background: '#faf9f7' }}>
                           <TrendingUp className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                          <p><span className="font-semibold">Action :</span> {signalAnalysis.suggested_action || signalAnalysis.action}</p>
+                          <p><span className="font-semibold">Action :</span> {getRecommendedActionLabel(t, signalAnalysis.suggested_action || signalAnalysis.action)}</p>
                         </div>
                       ) : null}
                       {Array.isArray(signalAnalysis?.positives) && signalAnalysis.positives.length > 0 ? (

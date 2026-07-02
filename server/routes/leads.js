@@ -10,8 +10,6 @@ import { discoverInternetSignals } from '../services/internetSignalDiscoveryServ
 import { writeAuditLog } from '../lib/auditLog.js';
 import { createUserRateLimit } from '../lib/rateLimit.js';
 import { generateOutreachSequence, sequenceGeneratorAvailable, SEQUENCE_TONES } from '../services/sequenceService.js';
-import { findEmailForLead } from '../services/hunterService.js';
-import { fetchCompanyNewsFindings } from '../services/newsService.js';
 import { researchCompanyOnWeb } from '../services/claudeWebResearchService.js';
 import { runClaudeSignalAnalysis, signalAnalysisAvailable } from '../services/claudeSignalAnalysisService.js';
 import { toLeadAnalysisUpdatePayload } from '../services/leadAnalysisPersistence.js';
@@ -322,11 +320,11 @@ const runDiscoverSignalsOperation = async ({
   shouldReanalyze,
   requestedMaxPages,
 }) => {
-  const [discovered, hunterResult, newsFindings, webResearch] = await runAiOperation({
+  const [discovered, webResearch] = await runAiOperation({
     user: req.user,
     leadId: lead.id,
     action: 'discover_signals',
-    provider: 'mixed',
+    provider: 'anthropic',
     promptVersion: 'discover-signals-v1',
     requestPayload: {
       lead_id: lead.id,
@@ -336,48 +334,26 @@ const runDiscoverSignalsOperation = async ({
       reanalyze: shouldReanalyze,
     },
     execute: async () => {
-      const [nextDiscovered, nextHunterResult, nextNewsFindings, nextWebResearch] = await Promise.all([
+      const [nextDiscovered, nextWebResearch] = await Promise.all([
         discoverInternetSignals({
           lead,
           maxPages: Number.isFinite(requestedMaxPages) ? requestedMaxPages : undefined,
         }),
-        findEmailForLead(lead),
-        fetchCompanyNewsFindings(lead),
         researchCompanyOnWeb(lead),
       ]);
 
       return {
         discovered: nextDiscovered,
-        hunterResult: nextHunterResult,
-        newsFindings: nextNewsFindings,
         webResearch: nextWebResearch,
         mode: shouldReanalyze ? 'discover_and_reanalyze' : 'discover_only',
       };
     },
-  }).then((result) => [result.discovered, result.hunterResult, result.newsFindings, result.webResearch]);
-
-  const newsSignals = extractSignalsFromFindings({ findings: newsFindings, lead });
-
-  const leadEmailPatch = hunterResult?.email && !lead.contact_email
-    ? { contact_email: hunterResult.email }
-    : {};
-
-  const hunterSignals = hunterResult?.email && !lead.contact_email
-    ? [{
-        key: 'email_found',
-        evidence: `Email professionnel trouvé via Hunter.io : ${hunterResult.email}`,
-        confidence: Math.min(0.97, (hunterResult.score ?? 70) / 100),
-        source_type: 'hunter_io',
-        found_at: new Date().toISOString(),
-      }]
-    : [];
+  }).then((result) => [result.discovered, result.webResearch]);
 
   const incomingSignals = [
     ...normalizedSignals,
     ...extractedSignals,
     ...(discovered.signals || []),
-    ...newsSignals,
-    ...hunterSignals,
     ...(webResearch.signals || []),
   ];
 
@@ -387,25 +363,20 @@ const runDiscoverSignalsOperation = async ({
 
   const providerStatus = {
     website: (discovered.signals || []).length > 0 ? 'ok' : 'no_results',
-    hunter: !process.env.HUNTER_API_KEY ? 'skipped' : (hunterResult?.email ? 'ok' : 'no_results'),
-    news: !process.env.NEWS_API_KEY ? 'skipped' : (newsFindings.length > 0 ? 'ok' : 'no_results'),
     web_research: !process.env.ANTHROPIC_API_KEY
       ? 'skipped'
       : ((webResearch.signals || []).length > 0 || (webResearch.findings || []).length > 0 ? 'ok' : 'no_results'),
   };
 
   let updatedLead = await dataStore.updateLead(req.user, lead.id, {
-    ...leadEmailPatch,
     ...(nextIntentSignals ? { intent_signals: nextIntentSignals } : {}),
     internet_signals: nextSignals,
     auto_signal_metadata: {
       last_discovery_at: new Date().toISOString(),
       pages_scanned: discovered.pages_scanned || 0,
-      findings_count: (discovered.findings || []).length + incomingFindingsInput.length + newsFindings.length + (webResearch.findings || []).length,
+      findings_count: (discovered.findings || []).length + incomingFindingsInput.length + (webResearch.findings || []).length,
       discovered_signals: (discovered.signals || []).length,
-      news_signals: newsSignals.length,
       web_research_signals: (webResearch.signals || []).length,
-      hunter_email: hunterResult?.email || null,
       warnings: discovered.warnings || [],
       provider_status: providerStatus,
     },
@@ -427,12 +398,10 @@ const runDiscoverSignalsOperation = async ({
     analysis,
     signals_count: nextSignals.length,
     discovered_signals: (discovered.signals || []).length,
-    findings_count: (discovered.findings || []).length + incomingFindingsInput.length + newsFindings.length,
+    findings_count: (discovered.findings || []).length + incomingFindingsInput.length,
     ingested_signals: normalizedSignals.length,
     extracted_from_findings: extractedSignals.length,
-    news_signals: newsSignals.length,
     web_research_signals: (webResearch.signals || []).length,
-    hunter_email: hunterResult?.email || null,
     pages_scanned: discovered.pages_scanned || 0,
     warnings: discovered.warnings || [],
     reanalyzed,
@@ -1193,22 +1162,12 @@ router.post('/research', researchLimiter, requirePlan('starter'), requireCredits
   const stub = { company_name, website_url: website_url || '', industry: industry || '', country: country || '' };
   const { findings, signals } = await researchCompanyOnWeb(stub);
 
-  // 2. Extract a contact email hint from Hunter if website available
-  let contact_email = '';
-  try {
-    if (website_url) {
-      const hunterResult = await findEmailForLead({ ...stub, website_url });
-      contact_email = hunterResult?.email || '';
-    }
-  } catch { /* non-blocking */ }
-
-  // 3. Create the lead with enriched internet signals
+  // 2. Create the lead with enriched internet signals
   const lead = await dataStore.createLead(req.user, {
     company_name,
     website_url: website_url || '',
     industry: industry || '',
     country: country || '',
-    contact_email,
     status: 'To Analyze',
     follow_up_status: 'To Contact',
     internet_signals: signals,

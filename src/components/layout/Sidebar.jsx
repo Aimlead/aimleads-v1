@@ -97,7 +97,7 @@ export default function Sidebar({ mobile = false, onNavigate, onOpenPalette, onS
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-5">
+      <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-4">
         {groups.map((group) => {
           const items = sidebarNavigation.filter((item) => item.group === group);
           return (
@@ -114,7 +114,7 @@ export default function Sidebar({ mobile = false, onNavigate, onOpenPalette, onS
                       to={item.href}
                       onClick={onNavigate}
                       className={cn(
-                        'group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                        'group relative flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200',
                         active
                           ? 'text-white'
                           : 'text-white/55 hover:bg-white/[0.05] hover:text-white/90'
@@ -159,7 +159,7 @@ export default function Sidebar({ mobile = false, onNavigate, onOpenPalette, onS
       </nav>
 
       {/* AI Badge */}
-      <div className="px-3 py-4 border-t border-white/[0.06]">
+      <div className="px-3 py-3 border-t border-white/[0.06]">
         <div
           className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 cursor-help"
           title={t('nav.aiScoringTooltip', { defaultValue: "Le scoring IA est actif — AimLeads analyse vos leads via Claude (ICP, signaux internet, intention d'achat) pour les prioriser automatiquement." })}

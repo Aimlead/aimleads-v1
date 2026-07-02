@@ -32,7 +32,7 @@ import { ROUTES } from '@/constants/routes';
 import ScoreBreakdown from '@/components/leads/ScoreBreakdown';
 import { dataClient } from '@/services/dataClient';
 import SignalBadge from '@/components/leads/SignalBadge';
-import { getDeterministicIcpSummary, getLeadScores } from '@/lib/leadPresentation';
+import { getDeterministicIcpSummary, getFollowUpStatusLabel, getLeadScores } from '@/lib/leadPresentation';
 
 const toMetric = (value) => (Number.isFinite(Number(value)) ? Number(value) : null);
 
@@ -803,7 +803,7 @@ export default function LeadDetail() {
                   <SelectContent>
                     {FOLLOW_UP_STATUS_LIST.map((status) => (
                       <SelectItem key={status} value={status}>
-                        {status}
+                        {getFollowUpStatusLabel(t, status)}
                       </SelectItem>
                     ))}
                   </SelectContent>

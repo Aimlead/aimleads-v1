@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
+import { getRecommendedActionLabel } from '@/lib/leadPresentation';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowDownUp, ChevronLeft, ChevronRight, Database, Loader2, Mail, Phone, Search, Sparkles, Trash2, Upload, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -586,7 +587,7 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
                         ICP {icpScore ?? '-'} · AI {aiScore ?? '-'}
                       </div>
                       <div className="mt-3 flex items-center justify-between text-xs">
-                        <span className="text-slate-500 truncate">{lead.final_recommended_action || tt('leads.primaryActionFallback', 'Review this lead')}</span>
+                        <span className="text-slate-500 truncate">{lead.final_recommended_action ? getRecommendedActionLabel(t, lead.final_recommended_action) : tt('leads.primaryActionFallback', 'Review this lead')}</span>
                         <Button size="sm" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); onOpenLeadPage?.(lead); }}>
                           {tt('leads.detailAction', 'Detail')}
                         </Button>
@@ -632,7 +633,7 @@ export default function LeadsTable({ leads, isLoading = false, onSelectLead, onO
                       </div>
                       <div className="text-sm text-slate-600 lg:flex-1">
                         <span className="text-[11px] font-semibold tracking-wide uppercase text-slate-400 mr-2">{lead.status || LEAD_STATUS.TO_ANALYZE}</span>
-                        <span className="line-clamp-2">{lead.final_recommended_action || lead.analysis_summary || tt('leads.primaryActionFallback', 'Review this lead')}</span>
+                        <span className="line-clamp-2">{(lead.final_recommended_action ? getRecommendedActionLabel(t, lead.final_recommended_action) : '') || lead.analysis_summary || tt('leads.primaryActionFallback', 'Review this lead')}</span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 lg:ml-auto" onClick={(event) => event.stopPropagation()}>
                         <Checkbox checked={selectedIds.has(lead.id)} onCheckedChange={() => toggleSelectOne(lead.id)} />

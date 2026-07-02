@@ -1022,7 +1022,44 @@
     "importantIcpCriteria": "Important ICP criteria",
     "followUpStatus": "Status",
     "internalNotesPlaceholder": "Add internal notes...",
-    "signalAnalysisTitle": "AI signal analysis"
+    "signalAnalysisTitle": "AI signal analysis",
+    "leadStatusLabels": {
+      "to_analyze": "To analyze",
+      "processing": "Processing",
+      "qualified": "Qualified",
+      "rejected": "Rejected",
+      "error": "Error"
+    },
+    "followUpStatusLabels": {
+      "to_contact": "To contact",
+      "contacted": "Contacted",
+      "reply_pending": "Reply pending",
+      "closed_won": "Closed won",
+      "closed_lost": "Closed lost"
+    },
+    "recommendedActions": {
+      "reach_out_now": "Reach out now",
+      "contact_within_48h": "Contact within 48h",
+      "nurture_sequence": "Nurture sequence",
+      "reject_lead": "Reject lead",
+      "block_lead": "Block lead",
+      "contact_now": "Contact now",
+      "contact_soon": "Contact soon",
+      "nurture": "Nurture",
+      "deprioritize": "Deprioritize"
+    },
+    "nextActions": {
+      "expand_account": "Expand account",
+      "do_not_prioritize": "Do not prioritize",
+      "prepare_follow_up": "Prepare follow-up",
+      "send_proposal_follow_up": "Send proposal follow-up",
+      "call_now": "Call now",
+      "send_tailored_email": "Send tailored email",
+      "open_linkedin": "Open LinkedIn",
+      "send_intro_email": "Send intro email",
+      "call_lead": "Call lead",
+      "enrich_contact": "Enrich contact data"
+    }
   },
   "accountSettings": {
     "title": "Account settings",
@@ -1548,20 +1585,12 @@
           "claude": {
             "label": "Claude (Anthropic)",
             "description": "AI scoring, web research, and signal enrichment"
-          },
-          "hunter": {
-            "label": "Hunter.io",
-            "description": "Email lookup and verification"
-          },
-          "newsApi": {
-            "label": "NewsAPI",
-            "description": "Intent signals and company news"
           }
         },
         "connected": "Connected",
         "notConfigured": "Not configured",
         "configureHint": "To configure:",
-        "footer": "Hunter and NewsAPI stay optional. Anthropic is the critical connector for AI scoring."
+        "footer": "Anthropic is the critical connector: AI scoring, signals and sequences depend on it."
       },
       "team": {
         "title": "Team & permissions",
@@ -1897,8 +1926,8 @@
     "troubleshooting": {
       "csv": "CSV import: start with company_name and website_url, then add contact fields if available.",
       "invites": "Invites: the teammate must sign up with the exact invited email for automatic workspace join.",
-      "integrations": "Integrations: scoring and sequence quality improve when Anthropic, Hunter, and NewsAPI are configured.",
-      "offboarding": "Offboarding: safe member removal is intentionally disabled until the tenancy model is hardened."
+      "integrations": "AI engine: scoring, signal discovery and sequences run on Claude (Anthropic). If analyses fail, ask your admin to check the AI connection in Settings.",
+      "offboarding": "Offboarding: transfer workspace ownership from the Team page before removing an owner account."
     },
     "contactSupport": "Contact support",
     "page": {
@@ -1939,7 +1968,7 @@
       },
       "lifecycle": {
         "title": "Team lifecycle",
-        "body": "Invites and role changes are live. Owner transfer and safe offboarding are still restricted until the platform tenancy model is hardened."
+        "body": "Invites, role changes and ownership transfer are all available from the Team page. Transfer ownership before offboarding an owner so the workspace always keeps one."
       }
     }
   },

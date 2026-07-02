@@ -1251,8 +1251,6 @@ export const dataClient = {
           apiCall: () => apiClient.workspace.getIntegrationStatus(),
           fallbackCall: async () => ({
             claude: false,
-            hunter: false,
-            newsApi: false,
             supabase: {
               configured: false,
               url: false,

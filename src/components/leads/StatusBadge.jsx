@@ -1,7 +1,9 @@
 import React from 'react';
 import { CheckCircle2, Clock, Loader2, XCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { LEAD_STATUS } from '@/constants/leads';
+import { getLeadStatusLabel } from '@/lib/leadPresentation';
 
 const STATUS_CONFIG = {
   [LEAD_STATUS.TO_ANALYZE]: {
@@ -38,6 +40,7 @@ const STATUS_CONFIG = {
 };
 
 export default function StatusBadge({ status }) {
+  const { t } = useTranslation();
   const config = STATUS_CONFIG[status] || STATUS_CONFIG[LEAD_STATUS.TO_ANALYZE];
   const Icon = config.icon;
 
@@ -51,7 +54,7 @@ export default function StatusBadge({ status }) {
       )}
     >
       <Icon className={cn('w-3.5 h-3.5', config.animate && 'animate-spin')} />
-      {status}
+      {getLeadStatusLabel(t, status)}
     </span>
   );
 }

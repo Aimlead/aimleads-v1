@@ -1022,7 +1022,44 @@
     "importantIcpCriteria": "Critères ICP importants",
     "followUpStatus": "Statut",
     "internalNotesPlaceholder": "Ajouter des notes internes…",
-    "signalAnalysisTitle": "Analyse IA des signaux"
+    "signalAnalysisTitle": "Analyse IA des signaux",
+    "leadStatusLabels": {
+      "to_analyze": "À analyser",
+      "processing": "En cours d’analyse",
+      "qualified": "Qualifié",
+      "rejected": "Écarté",
+      "error": "Erreur"
+    },
+    "followUpStatusLabels": {
+      "to_contact": "À contacter",
+      "contacted": "Contacté",
+      "reply_pending": "Réponse en attente",
+      "closed_won": "Gagné",
+      "closed_lost": "Perdu"
+    },
+    "recommendedActions": {
+      "reach_out_now": "Contacter immédiatement",
+      "contact_within_48h": "Contacter sous 48 h",
+      "nurture_sequence": "Séquence de nurturing",
+      "reject_lead": "Écarter le lead",
+      "block_lead": "Exclure le lead",
+      "contact_now": "Contacter maintenant",
+      "contact_soon": "Contacter bientôt",
+      "nurture": "Nurturer",
+      "deprioritize": "Déprioriser"
+    },
+    "nextActions": {
+      "expand_account": "Développer le compte",
+      "do_not_prioritize": "Ne pas prioriser",
+      "prepare_follow_up": "Préparer la relance",
+      "send_proposal_follow_up": "Relancer sur la proposition",
+      "call_now": "Appeler maintenant",
+      "send_tailored_email": "Envoyer un email personnalisé",
+      "open_linkedin": "Ouvrir LinkedIn",
+      "send_intro_email": "Envoyer un email d’intro",
+      "call_lead": "Appeler le lead",
+      "enrich_contact": "Compléter les coordonnées"
+    }
   },
   "pipeline": {
     "title": "Pipeline",
@@ -1345,20 +1382,12 @@
           "claude": {
             "label": "Claude (Anthropic)",
             "description": "Scoring IA, web research, enrichissement des signaux"
-          },
-          "hunter": {
-            "label": "Hunter.io",
-            "description": "Recherche et vérification d'emails"
-          },
-          "newsApi": {
-            "label": "NewsAPI",
-            "description": "Signaux d'intention et actualités entreprise"
           }
         },
         "connected": "Connecté",
         "notConfigured": "Non configuré",
         "configureHint": "Pour configurer :",
-        "footer": "Hunter et NewsAPI restent optionnels. Anthropic est le connecteur critique pour le scoring IA."
+        "footer": "Anthropic est le connecteur critique : scoring IA, signaux et séquences en dépendent."
       },
       "team": {
         "title": "Équipe & permissions",
@@ -1957,8 +1986,8 @@
     "troubleshooting": {
       "csv": "Import CSV : commencez avec company_name et website_url, puis ajoutez les champs contact si disponibles.",
       "invites": "Invitations : le collègue doit s’inscrire avec exactement l’email invité pour rejoindre automatiquement le bon workspace.",
-      "integrations": "Intégrations : la qualité du scoring et des séquences monte quand Anthropic, Hunter et NewsAPI sont configurés.",
-      "offboarding": "Offboarding : la suppression sûre de membre reste volontairement encadrée tant que le modèle de tenancy n’est pas finalisé."
+      "integrations": "Moteur IA : le scoring, la découverte de signaux et les séquences reposent sur Claude (Anthropic). Si les analyses échouent, demandez à votre admin de vérifier la connexion IA dans Paramètres.",
+      "offboarding": "Offboarding : transférez la propriété du workspace depuis la page Équipe avant de supprimer un compte propriétaire."
     },
     "contactSupport": "Contacter le support",
     "page": {
@@ -1999,7 +2028,7 @@
       },
       "lifecycle": {
         "title": "Cycle de vie équipe",
-        "body": "Les invitations et changements de rôle sont actifs. Le transfert d’owner et l’offboarding sûr restent volontairement encadrés tant que le modèle de tenancy n’est pas totalement durci."
+        "body": "Invitations, changements de rôle et transfert de propriété sont disponibles depuis la page Équipe. Transférez la propriété avant l’offboarding d’un propriétaire pour que le workspace en garde toujours un."
       }
     }
   },

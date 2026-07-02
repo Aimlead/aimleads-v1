@@ -18,7 +18,6 @@ import Login from '@/pages/Login';
 // Lazily loaded (code-split bundles)
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const LeadDetail = lazy(() => import('@/pages/LeadDetail'));
-const LandingLegacy = lazy(() => import('@/pages/Landing'));
 const AccountSettings = lazy(() => import('@/pages/AccountSettings'));
 const Analytics = lazy(() => import('@/pages/Analytics'));
 const Onboarding = lazy(() => import('@/pages/Onboarding'));
@@ -101,7 +100,6 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path={ROUTES.home} element={<LandingV2 />} />
-      <Route path="/v1" element={<LandingLegacy />} />
       <Route path={ROUTES.pricing} element={<Pricing />} />
       <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
       <Route path={ROUTES.resetPassword} element={<ResetPassword />} />
