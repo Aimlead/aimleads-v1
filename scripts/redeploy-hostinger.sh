@@ -14,13 +14,18 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
+if [[ ! -f .env ]]; then
+  echo ".env file is missing in $ROOT_DIR — copy .env.example and fill in real values first." >&2
+  exit 1
+fi
+
 APP_VERSION="${APP_VERSION:-$(date -u +'%Y.%m.%d-%H%M')}"
 APP_BUILD_TIME="${APP_BUILD_TIME:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}"
 APP_COMMIT_SHA="${APP_COMMIT_SHA:-$(git rev-parse --short HEAD 2>/dev/null || echo local)}"
 
 export APP_VERSION APP_BUILD_TIME APP_COMMIT_SHA
 
-echo "Deploying AimLeads"
+echo "Deploying AimLeads (app + caddy)"
 echo "  APP_VERSION=$APP_VERSION"
 echo "  APP_BUILD_TIME=$APP_BUILD_TIME"
 echo "  APP_COMMIT_SHA=$APP_COMMIT_SHA"
@@ -31,30 +36,37 @@ if [[ "$NO_CACHE" -eq 1 ]]; then
 fi
 
 docker "${BUILD_ARGS[@]}"
-docker compose up -d --force-recreate --remove-orphans app
+docker compose up -d --force-recreate --remove-orphans
 
 echo "Waiting for app health endpoint..."
-sleep 5
-LOCAL_HEALTH_URL="http://127.0.0.1:3010/api/health?ts=$(date -u +'%s')"
-PUBLIC_HEALTH_URL="${APP_PUBLIC_URL:-https://aimlead.io}/api/health?ts=$(date -u +'%s')"
-
-curl -fsS "$LOCAL_HEALTH_URL" || {
-  echo
-  echo "Health check failed after deploy." >&2
-  exit 1
-}
+for i in $(seq 1 12); do
+  sleep 5
+  if curl -fsS "http://127.0.0.1:3010/api/health?ts=$(date -u +'%s')" >/dev/null 2>&1; then
+    break
+  fi
+  if [[ "$i" -eq 12 ]]; then
+    echo "Health check failed after deploy. Inspect: docker logs aimleads --tail=100" >&2
+    exit 1
+  fi
+done
+curl -fsS "http://127.0.0.1:3010/api/health?ts=$(date -u +'%s')"
 echo
 
+PUBLIC_HEALTH_URL="${APP_PUBLIC_URL:-https://aimlead.io}/api/health?ts=$(date -u +'%s')"
 echo "Public health check (best effort)..."
 if ! curl -fsS "$PUBLIC_HEALTH_URL"; then
   echo
-  echo "Public health check failed. Verify Traefik routing, DNS, and HTTPS reachability." >&2
+  echo "Public health check failed. Verify DNS points to this VPS, ports 80/443 are open, and caddy is running (docker logs aimleads-caddy)." >&2
 fi
 echo
 echo "Verifying public build markers..."
-if ! APP_PUBLIC_URL="${APP_PUBLIC_URL:-https://aimlead.io}" APP_VERSION="$APP_VERSION" APP_COMMIT_SHA="$APP_COMMIT_SHA" node scripts/verify-live-deploy.mjs; then
-  echo
-  echo "Public build verification failed. The VPS may still be serving an old build or missing headers/meta tags." >&2
+if command -v node >/dev/null 2>&1; then
+  if ! APP_PUBLIC_URL="${APP_PUBLIC_URL:-https://aimlead.io}" APP_VERSION="$APP_VERSION" APP_COMMIT_SHA="$APP_COMMIT_SHA" node scripts/verify-live-deploy.mjs; then
+    echo
+    echo "Public build verification failed. The VPS may still be serving an old build or missing headers/meta tags." >&2
+  fi
+else
+  echo "node not installed on host — skipping verify-live-deploy.mjs (optional)."
 fi
 echo
 echo "Redeploy complete."
