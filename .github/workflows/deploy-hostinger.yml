@@ -1,0 +1,48 @@
+name: Deploy to Hostinger VPS
+
+# Manual trigger only (Actions tab → "Run workflow", or via API).
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   VPS_HOST     — VPS IP or hostname
+#   VPS_USER     — SSH user (e.g. root)
+#   VPS_SSH_KEY  — private SSH key authorized on the VPS
+#   VPS_PORT     — optional, defaults to 22
+# The VPS must have the repo cloned at /docker/aimlead with a valid .env
+# (see docs/vps-deploy-checklist.md).
+
+on:
+  workflow_dispatch:
+    inputs:
+      no_cache:
+        description: "Rebuild image without Docker cache"
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-hostinger
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 30m
+          script: |
+            set -euo pipefail
+            cd /docker/aimlead
+            git fetch origin main
+            git reset --hard origin/main
+            chmod +x scripts/redeploy-hostinger.sh
+            if [ "${{ inputs.no_cache }}" = "true" ]; then
+              ./scripts/redeploy-hostinger.sh --no-cache
+            else
+              ./scripts/redeploy-hostinger.sh
+            fi

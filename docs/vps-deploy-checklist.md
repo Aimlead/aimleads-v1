@@ -1,84 +1,80 @@
-# Hostinger Docker Deploy Checklist
+# Hostinger Docker Deploy — From Scratch
 
-This is the source-of-truth deployment flow for AimLeads production as of April 15, 2026.
+This is the source-of-truth deployment flow for AimLeads production. It covers a **full clean redeploy** on a Hostinger VPS, including recovering from a broken ("something went wrong") state.
 
-Production path:
+Production stack (fully self-contained, defined in `docker-compose.yml`):
 
-- app runtime: `Dockerfile`
-- orchestration: `docker-compose.yml`
-- reverse proxy / TLS: Traefik
-- public domains: `aimlead.io`, `www.aimlead.io`
-- app container: `aimleads`
+- `app` — Express serving API + built frontend on port 3010 (built from `Dockerfile`)
+- `caddy` — reverse proxy with **automatic HTTPS** (Let's Encrypt), owns ports 80/443
+- public domains: `aimlead.io`, `www.aimlead.io` (www redirects to apex)
 - health endpoint: `GET /api/health`
 
-Legacy Vercel files still exist in the repo for historical reference only. They are not the production path.
+There is **no external Traefik or nginx dependency anymore** — everything the deployment needs is in this repo: `Dockerfile`, `docker-compose.yml`, `Caddyfile`, plus a `.env` you create on the server.
 
-## 1. Before you deploy
+## 0. Recovering from a broken deployment (start here if the panel says "something went wrong")
 
-Run these locally and make sure they all pass:
+The most common failure: the Hostinger Docker panel runs `docker compose pull` before deploying, and the old compose file declared `image: aimleads:latest`, which does not exist on Docker Hub. The pull fails/retries for ~15 minutes and the panel reports an error. This is fixed in the current `docker-compose.yml` (`pull_policy: build`), but you must remove the old broken project first.
 
-1. `npm install`
-2. `npm run lint`
-3. `npm run test:api`
-4. `npm run test:ui`
-5. `npm run build`
-
-Also verify the frontend build stamp and the API health payload expose the same build metadata locally.
-
-## 2. Server prerequisites
-
-On the Hostinger VPS, make sure these are already installed and working:
-
-- Docker Engine
-- Docker Compose plugin
-- Traefik container on the same Docker network
-- valid `.env` file in the project root
-- Supabase Auth redirect URLs allow `https://aimlead.io/auth/callback` and `https://aimlead.io/reset-password`
-
-Check the current runtime:
+SSH into the VPS and wipe the old stack:
 
 ```bash
-docker ps
-docker compose config
-curl -fsS http://127.0.0.1:3010/api/health
+# See what's running
+docker ps -a
+
+# Stop and remove the old project (adjust path if different)
+cd /docker/aimlead 2>/dev/null && docker compose down --remove-orphans || true
+
+# Remove any leftover containers from previous attempts
+docker rm -f aimleads aimleads-caddy 2>/dev/null || true
+
+# If an old Traefik/nginx container is holding ports 80/443, remove it too —
+# the new stack's caddy service needs those ports
+docker ps --format '{{.Names}}\t{{.Ports}}' | grep -E '80|443'
+# docker rm -f <name-of-old-proxy>
+
+# Optional: reclaim disk from old images/build cache
+docker image prune -af
+docker builder prune -af
 ```
 
-## 3. Required production files
+Also delete the old project in the Hostinger Docker panel UI if it still shows there.
 
-The production deployment must use these files together:
+## 1. Server prerequisites
 
-- `Dockerfile`
-- `docker-compose.yml`
-- `.env`
+- Docker Engine + Docker Compose plugin (`docker compose version`)
+- DNS: `aimlead.io` and `www.aimlead.io` A records pointing at the VPS IP (required for automatic HTTPS)
+- Firewall / Hostinger panel: ports **80** and **443** (TCP; 443 UDP too for HTTP/3) open
+- Supabase Auth redirect URLs allow `https://aimlead.io/auth/callback` and `https://aimlead.io/reset-password`
 
-Ignore these old or suspicious files during production operations:
+## 2. Get the code onto the VPS
 
-- `docker-compose.yml.bak`
-- `docker-compose.ymlm`
-- `.github/workflows/deploy.yml`
+```bash
+mkdir -p /docker && cd /docker
+git clone https://github.com/Aimlead/aimleads-v1.git aimlead
+cd aimlead
+```
 
-## 4. Build metadata
+(Or `git fetch && git reset --hard origin/main` inside an existing clone.)
 
-AimLeads now exposes build metadata both:
+## 3. Create the production .env
 
-- in the frontend build stamp
-- in HTML meta tags (`aimleads-build-version`, `aimleads-build-time`, `aimleads-build-commit`)
-- in `GET /api/health`
-- in response headers (`X-AimLeads-Version`, `X-AimLeads-Commit`, `X-AimLeads-Built-At`)
+```bash
+cp .env.example .env
+nano .env
+```
 
-The relevant variables are:
+Required values (the server refuses to boot in production without most of these):
 
-- `APP_VERSION`
-- `APP_BUILD_TIME`
-- `APP_COMMIT_SHA`
-- `APP_ORIGIN=https://aimlead.io`
-- `CORS_ORIGIN=https://aimlead.io,https://www.aimlead.io`
+- `SESSION_SECRET` — generate: `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` (or `openssl rand -hex 48`)
+- `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- `ANTHROPIC_API_KEY` — required for lead analysis + outreach generation
+- Optional: `HUNTER_API_KEY`, `NEWS_API_KEY`, `SENTRY_DSN`
 
-If they are missing, the app will still build, but you lose the ability to confirm whether `aimlead.io` is serving the correct revision.
+`NODE_ENV`, `CORS_ORIGIN`, `APP_ORIGIN`, `DATA_PROVIDER`, `AUTH_PROVIDER`, etc. are already pinned in `docker-compose.yml` — you don't need them in `.env`.
 
-## 5. Recommended redeploy flow
+Never commit `.env`.
 
-From the project root on the VPS:
+## 4. Deploy
 
 ```bash
 chmod +x scripts/redeploy-hostinger.sh
@@ -87,68 +83,64 @@ chmod +x scripts/redeploy-hostinger.sh
 
 This script:
 
-1. generates build metadata if not already provided
-2. rebuilds the `aimleads` image
-3. force-recreates the `aimleads` container
-4. prints the local API health payload so you can confirm the served build
-5. attempts a public `https://aimlead.io/api/health` check with cache busting
-6. runs `scripts/verify-live-deploy.mjs` to compare public HTML + health metadata with the expected build
+1. checks `.env` exists
+2. generates build metadata (`APP_VERSION`, `APP_BUILD_TIME`, `APP_COMMIT_SHA`)
+3. builds the app image locally (never pulls it)
+4. starts/recreates the full stack (`app` + `caddy`)
+5. waits for and prints the local API health payload
+6. checks `https://aimlead.io/api/health` and verifies public build markers
 
-If you want to pin a specific version:
-
-```bash
-APP_VERSION=2026.04.15-1 APP_COMMIT_SHA=$(git rev-parse --short HEAD) ./scripts/redeploy-hostinger.sh --no-cache
-```
-
-## 6. Manual fallback deploy
-
-If you need to run the commands manually:
+Manual equivalent:
 
 ```bash
-export APP_VERSION="${APP_VERSION:-$(date -u +'%Y.%m.%d-%H%M')}"
-export APP_BUILD_TIME="${APP_BUILD_TIME:-$(date -u +'%Y-%m-%dT%H:%M:%SZ')}"
-export APP_COMMIT_SHA="${APP_COMMIT_SHA:-$(git rev-parse --short HEAD)}"
+export APP_VERSION="$(date -u +'%Y.%m.%d-%H%M')"
+export APP_BUILD_TIME="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+export APP_COMMIT_SHA="$(git rev-parse --short HEAD)"
 
 docker compose build --pull --no-cache app
-docker compose up -d --force-recreate --remove-orphans app
+docker compose up -d --force-recreate --remove-orphans
 curl -fsS "http://127.0.0.1:3010/api/health?ts=$(date +%s)"
 curl -fsS "https://aimlead.io/api/health?ts=$(date +%s)"
 ```
 
-## 7. Post-deploy validation
+First HTTPS request can take ~30s while Caddy obtains certificates. Certificates persist in the `caddy_data` volume across redeploys.
 
-After the redeploy:
+### Deploying via the Hostinger Docker panel instead of SSH
 
-1. `docker ps` shows the `aimleads` container as healthy
-2. `curl -fsS "http://127.0.0.1:3010/api/health?ts=$(date +%s)"` returns the expected build metadata
-3. `curl -I https://aimlead.io` exposes the same `X-AimLeads-*` headers
-4. `npm run verify:live-deploy` passes on the VPS after the deploy
+The compose file works in the panel too (`pull_policy: build` makes the panel build instead of pulling). Point the panel at the repo's `docker-compose.yml` and make sure the `.env` file exists in the project directory on the VPS. SSH + script is still the recommended path because it also verifies the deploy.
+
+## 5. Post-deploy validation
+
+1. `docker compose ps` — `aimleads` is `healthy`, `aimleads-caddy` is `running`
+2. `curl -fsS "http://127.0.0.1:3010/api/health?ts=$(date +%s)"` returns `"status":"ok"` with the expected build metadata (`"status":"degraded"` means Supabase is unreachable — check Supabase keys in `.env`)
+3. `curl -I https://aimlead.io` returns 200 with `X-AimLeads-*` headers
+4. `curl -I https://www.aimlead.io` returns a 308 redirect to `https://aimlead.io`
 5. opening `https://aimlead.io` shows the same build stamp as the API
 6. landing page loads on desktop and mobile
 7. login works
-8. one authenticated page loads without 401 loop
+8. one authenticated page loads without a 401 loop
 
-## 8. If `aimlead.io` still serves an old version
+## 6. Troubleshooting
 
-Check these in order:
-
-1. the image was actually rebuilt, not reused from cache
-2. the `aimleads` container was restarted after the build
-3. Traefik is routing to the current `aimleads` container
-4. no old `dist` content is mounted from a stale volume
-5. browser cache / CDN cache is not holding an older asset manifest
-6. the domain is not pointing to a different deployment path
+| Symptom | Check |
+| --- | --- |
+| Panel: "pull access denied for aimleads" | You're deploying an old compose file — pull the latest repo state (`pull_policy: build` must be present) |
+| Caddy won't start / port conflict | `docker ps` — an old Traefik/nginx still holds 80/443; remove it (section 0) |
+| HTTPS certificate errors | DNS not pointing at this VPS yet, or port 80 blocked (Let's Encrypt needs it); `docker logs aimleads-caddy` |
+| App container restarts in a loop | `docker logs aimleads --tail=100` — usually a missing required `.env` value (SESSION_SECRET, SUPABASE_*) |
+| health returns `"status":"degraded"` | Supabase unreachable or wrong keys in `.env` |
+| Site serves an old build | Rebuild with `--no-cache`, then hard-refresh; verify `X-AimLeads-Commit` header matches `git rev-parse --short HEAD` |
 
 Useful commands:
 
 ```bash
-docker compose images
 docker compose ps
 docker logs aimleads --tail=200
+docker logs aimleads-caddy --tail=100
 curl -fsS http://127.0.0.1:3010/api/health
 ```
 
-## 9. Smoke test checklist
+## 7. Smoke test checklist
 
 Run these after every production cutover:
 

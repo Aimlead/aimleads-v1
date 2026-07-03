@@ -1,0 +1,11 @@
+# Caddy handles HTTPS automatically (Let's Encrypt) — no manual cert setup.
+# DNS for aimlead.io and www.aimlead.io must point to this VPS before first start.
+
+www.aimlead.io {
+	redir https://aimlead.io{uri} permanent
+}
+
+aimlead.io {
+	encode zstd gzip
+	reverse_proxy app:3010
+}
