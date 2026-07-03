@@ -191,6 +191,41 @@ export const getLeadTopSignals = (lead, limit = 3) => {
     .slice(0, limit);
 };
 
+const toLabelSlug = (value) =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+/** Translate a stored lead status ("To Analyze", "Qualified"…) for display. */
+export const getLeadStatusLabel = (t, status) => {
+  const slugValue = toLabelSlug(status);
+  if (!slugValue) return String(status || '');
+  return t(`leads.leadStatusLabels.${slugValue}`, { defaultValue: String(status) });
+};
+
+/** Translate a stored follow-up status ("To Contact", "Closed Won"…) for display. */
+export const getFollowUpStatusLabel = (t, status) => {
+  const slugValue = toLabelSlug(status);
+  if (!slugValue) return String(status || '');
+  return t(`leads.followUpStatusLabels.${slugValue}`, { defaultValue: String(status) });
+};
+
+/** Translate a recommended action ("Contact within 48h"…) or AI action code ("contact_now"…). */
+export const getRecommendedActionLabel = (t, action) => {
+  const slugValue = toLabelSlug(action);
+  if (!slugValue) return String(action || '');
+  return t(`leads.recommendedActions.${slugValue}`, { defaultValue: String(action) });
+};
+
+/** Translate a next-action code from deriveLeadNextAction. */
+export const getNextActionLabel = (t, code) => {
+  const slugValue = toLabelSlug(code);
+  if (!slugValue) return String(code || '');
+  return t(`leads.nextActions.${slugValue}`, { defaultValue: String(code) });
+};
+
 export const getLeadPrimaryActionText = (lead, t) => {
   const action = String(
     lead?.final_recommended_action

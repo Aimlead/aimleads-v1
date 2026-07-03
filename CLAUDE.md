@@ -1,77 +1,95 @@
 # CLAUDE.md — AimLeads SaaS
 
-Dernière mise à jour : 2026-07-01. Ce fichier décrit l'état réel du repo ; l'ancien handoff (qui parlait de changements non commités et d'un chemin Windows) est obsolète — tout ce travail a été mergé sur `main` via les PRs #74 et #75.
+Dernière mise à jour : 2026-07-02 (branche `claude/aimlead-sales-readiness-9u55z6`).
 
-## Vue d'ensemble
+## Ce qu'est le produit
 
-AimLeads est un SaaS de scoring et priorisation de leads B2B :
-- Import de leads (CSV/xlsx), scoring ICP par règles, scoring IA (Claude/Anthropic) et signaux d'intention internet.
-- Espace multi-tenant (workspaces, invitations, rôles, transfert de propriété, audit log).
-- Funnel public (landing, pricing, demandes de démo, analytics d'événements).
-- Plans/crédits/entitlements soft (upgrade modal, enforcement de plan).
+AimLeads est un SaaS B2B français-first de qualification de leads pour SDR :
+scoring ICP déterministe + enrichissement IA (Claude/Anthropic uniquement),
+signaux internet, priorisation, séquences d'outreach, intégrations CRM
+(HubSpot, Salesforce), gestion d'équipe/workspace, crédits et plans.
 
-## Stack
+**Claude (Anthropic) est le seul fournisseur IA.** Hunter.io et NewsAPI ont
+été retirés — ne pas les réintroduire. La découverte de signaux repose sur le
+scan du site web du lead + la recherche web de Claude (`web_search`).
 
-- Frontend : React 18 + Vite, React Router 6, TanStack Query, Tailwind + Radix (shadcn), i18next (fr/en).
-- Backend : Express (`server/`), Zod pour la validation, stockage `local` (JSON) ou `supabase` (prod exige Supabase pour data + auth).
-- IA : `@anthropic-ai/sdk` (fallback heuristique si pas de clé), Hunter et NewsAPI pour l'enrichissement.
-- Déploiement : Docker (`Dockerfile`, `docker-compose.yml` avec labels Traefik pour aimlead.io), entrée serverless dans `api/index.js`.
+## Stack et commandes
 
-## Commandes
+- Frontend : React 18 + Vite + Tailwind + TanStack Query + i18next (fr/en, fallback fr)
+- Backend : Express (`server/`), data provider `local` (JSON, dev) ou `supabase`
+- `npm run dev:full` — front (5173) + API (3001) ; en dev les requêtes CSRF exigent
+  cookie `aimleads_csrf` + header `x-csrf-token` (double-submit) + Origin
+- `npm run lint` / `npm run test:api` (node --test, ~110 tests) /
+  `npm run test:ui` (vitest, ~75 tests) / `npm run build`
+- Avant tout push : les quatre doivent être verts
 
-```bash
-npm run dev:full     # front (vite) + API en watch
-npm run lint         # eslint --quiet (doit être vide)
-npm run test:api     # node --test tests/*.test.mjs
-npm run test:ui      # vitest (src/tests)
-npm run build        # vite build (logLevel error => silencieux si OK)
-npm run start:api    # serveur API seul (sert dist/ en production)
-```
+## Conventions importantes
 
-L'API démarre en dev sans variable d'env obligatoire (provider `local`, base JSON). En production, `server/lib/config.js` échoue explicitement si `SESSION_SECRET`, `CORS_ORIGIN`, `DATA_PROVIDER=supabase`, `AUTH_PROVIDER=supabase` ne sont pas fournis.
+- **i18n** : toute chaîne visible passe par `t()`. Les deux locales
+  (`src/locales/{fr,en}/translation.json`) doivent rester à parité (script de
+  vérif simple : flatten des clés et diff). Les valeurs d'enum stockées en
+  anglais (`To Contact`, `Qualified`, `Contact within 48h`, codes d'action)
+  sont traduites **à l'affichage** via les helpers de
+  `src/lib/leadPresentation.js` (`getFollowUpStatusLabel`,
+  `getLeadStatusLabel`, `getRecommendedActionLabel`, `getNextActionLabel`).
+  `deriveLeadNextAction` retourne des codes (`call_now`, `enrich_contact`…),
+  jamais du texte.
+- **Prompts IA** : les sorties destinées aux utilisateurs (icebreakers,
+  signaux, insights) sont demandées en français dans les prompts système
+  (`llmService.js`, `claudeSignalAnalysisService.js`,
+  `claudeWebResearchService.js`). Les codes d'enum restent en anglais.
+- **Crédits** : `requireCredits(action)` débite avant le handler. Tout chemin
+  d'échec d'une action IA doit rembourser via `refundCredits(req, reason)`
+  (`server/lib/credits.js`) et renvoyer `code: 'AI_NOT_CONFIGURED'` (503) si
+  la clé LLM manque. Verrouillé par `tests/ai-failure-refund.test.mjs`.
+- **`POST /workspace/credits/grant` est un outil de dev** : 403
+  `SALES_ASSISTED_ONLY` en production (chaque inscrit self-serve est owner de
+  son workspace — l'exposer permettrait des crédits gratuits illimités).
+- Les cartes dev de `Settings.jsx` (Runtime & Backend, Mode workspace,
+  Données mock, bouton +150 crédits) sont gatées par `import.meta.env.DEV`.
+- **Une seule landing** : `LandingV2` (`/`). La legacy a été supprimée ; seul
+  `src/components/landing/BookingModal.jsx` subsiste (utilisé par la V2) et
+  ses styles vivent dans `src/styles/landing.css` (importé par `main.jsx`).
+- Ne jamais committer de fichiers `.bak`.
 
-## Structure
+## État opérationnel (vérifié en navigateur + API)
 
-- `server/routes/` : auth, leads, analyze, icp, workspace, public, jobs, crm, dev, metrics, audit…
-- `server/lib/` : config, validation (Zod), dataStore, credits/plans, rateLimit, ssrf, queue, auditLog, supabaseAuth…
-- `server/services/` : analyzeService (pipeline de scoring), llmService, aiRunService, découverte de signaux.
-- `src/pages/` : toutes les pages (Landing V2 par défaut, `/v1` = legacy).
-- `src/App.jsx` : routing + gardes `PrivateGuard` / `PublicOnlyGuard` (exportées pour les tests).
-- `tests/` : tests API (node:test) ; `src/tests/` : tests UI (vitest + testing-library).
-- `supabase/` : schema.sql, migrations, seed.
-- `docs/` : PRD, architecture, protocole de test leads réels, checklist déploiement VPS.
+- Parcours complet fonctionnel en mode local : inscription → onboarding
+  (ICP rapide + pipeline de démo) → dashboard/priorités/pipeline/analytics/
+  facturation/équipe — zéro erreur console.
+- Scoring ICP déterministe fonctionne sans clé IA (ex. 77/100 « Strong Fit »).
+- Sans `ANTHROPIC_API_KEY` : les actions IA renvoient 503 `AI_NOT_CONFIGURED`
+  proprement, crédits remboursés ; le CRM et la découverte dégradent sans 500.
+- Sécurité en place : CSP + headers complets (`observability.js`), SSRF
+  (`lib/ssrf.js` utilisé par la découverte), rate limiting par user/IP,
+  fail-closed sur la résolution de membership, audit log des actions sensibles.
+- Entitlements par plan appliqués : places équipe (invites bloquées à la
+  limite), slots CRM, `requirePlan` sur séquences/recherche.
 
-## Points d'attention (appris sur le terrain)
+## Ce qui reste à valider / faire
 
-- CSRF : toute mutation exige soit `X-Requested-With: XMLHttpRequest`, soit cookie `csrf` + header `X-CSRF-Token` + Origin de confiance. Pour tester à la main via curl, récupérer d'abord le cookie CSRF via un GET.
-- L'inscription est `POST /api/auth/register` (pas `/signup`).
-- Les réponses API sont enveloppées dans `{ data: ... }`.
-- `POST /api/analyze` attend `{ lead: {...} }` complet (pas seulement `lead_id`) et exige un profil ICP actif ; `POST /api/icp` exige `name` + `weights`.
-- `company_size` est numérique ; les chaînes de plage (« 51-200 », « 200+ », « 1 000 employés ») sont acceptées côté serveur et ramenées à leur borne basse (aligné sur l'import CSV).
-- Mot de passe : min 8 caractères, une majuscule, un chiffre.
-- Rate limit analyze : 20/h par utilisateur.
+1. **Validation live du scoring avec une vraie `ANTHROPIC_API_KEY`**
+   (qualité des signaux, icebreakers en français, latences, coûts).
+   C'est LE prochain jalon — non testable sans clé.
+2. Billing réel (Stripe ou processus sales-assisted outillé) — aujourd'hui le
+   plan/les crédits sont persistés mais l'upgrade est manuel.
+3. Réécriture tenancy (`workspace_members` comme unique vérité) — amélioration
+   structurelle, pas un bloqueur.
+4. Emails transactionnels : no-op sans clé (`email_skipped_no_key`) ; l'invite
+   propose un lien à copier en fallback. Brancher un fournisseur SMTP/API.
 
-## État de validation (2026-07-01)
+## Déploiement (Hostinger VPS, Docker)
 
-- lint OK ; 106 tests API ; 77 tests UI ; build OK.
-- Parcours vérifié en local de bout en bout : register → création lead → création ICP → analyze → score final cohérent (fallback heuristique sans clé Anthropic, `ai_score` bas sans signaux vérifiés).
-- `/api/health` expose l'état des providers (`claude`, `hunter`, `newsApi`).
-
-## Ce qui reste théorique (non prouvé en prod)
-
-1. Qualité du scoring avec vraie clé Anthropic + vrais sites de leads (utiliser `npm run validate:real-leads` et `scripts/verify-live-deploy.mjs`).
-2. Comportement des providers externes (Hunter, NewsAPI) sous charge : retries, timeouts, coûts.
-3. Facturation réelle : les plans/crédits sont soft, pas de Stripe.
-
-## Priorités recommandées pour la suite
-
-1. Passe de vérité produit avec vraies clés (scoring, signaux internet, persistance).
-2. Facturation réelle (Stripe ou funnel assisté) sur la base des plans/crédits existants.
-3. Unification tenancy : faire de `workspace_members` la seule source de vérité d'appartenance (il reste des correspondances par email/`users.workspace_id` par endroits).
-4. Jobs asynchrones : la queue existe (`server/lib/queue.js`, flag `async_jobs`) mais l'analyse reste majoritairement synchrone.
-
-## Conventions
-
-- Ne pas committer de fichiers `.bak` (ignorés via `.gitignore`).
-- Garder lint/tests/build verts avant tout push.
-- i18n : toute chaîne UI passe par i18next (fr = langue par défaut).
+- Stack autonome dans `docker-compose.yml` : `app` (Express + frontend buildé,
+  port 3010) + `caddy` (HTTPS automatique Let's Encrypt pour `aimlead.io`,
+  redirection www → apex). Plus de Traefik/nginx externe.
+- `pull_policy: build` est indispensable : le panneau Docker Hostinger fait un
+  `compose pull` avant de déployer et l'image n'existe pas sur Docker Hub.
+- Guide complet (recovery inclus) : `docs/vps-deploy-checklist.md`.
+  Redéploiement : `./scripts/redeploy-hostinger.sh` sur le VPS, ou le workflow
+  manuel `.github/workflows/deploy-hostinger.yml` (secrets `VPS_HOST`,
+  `VPS_USER`, `VPS_SSH_KEY`).
+- En production le serveur refuse de démarrer sans `SESSION_SECRET`, les clés
+  Supabase, `ANTHROPIC_API_KEY` et `RESEND_API_KEY` (voir `.env.example`).
+- CI : le job api-tests exporte `SUPABASE_FALLBACK_TO_LOCAL=1` — tout test qui
+  simule la production doit épingler cette variable à `false` dans son env.

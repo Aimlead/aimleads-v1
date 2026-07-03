@@ -101,6 +101,9 @@ test('production accepts strict supabase runtime when required keys are present'
       SUPABASE_SERVICE_ROLE_KEY: 'service-role',
       ANTHROPIC_API_KEY: 'anthropic-test',
       RESEND_API_KEY: 'resend-test',
+      // CI exports SUPABASE_FALLBACK_TO_LOCAL=1 for the local-provider suite;
+      // neutralize it so this production-mode check doesn't inherit it
+      SUPABASE_FALLBACK_TO_LOCAL: 'false',
     },
     async () => {
       const { validateRuntimeConfig } = await loadConfigModule();

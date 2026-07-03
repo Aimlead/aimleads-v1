@@ -130,8 +130,6 @@ app.get('/api/health', async (_req, res) => {
   if (!config.isProduction) {
     response.providers = {
       claude: Boolean(process.env.ANTHROPIC_API_KEY),
-      hunter: Boolean(process.env.HUNTER_API_KEY),
-      newsApi: Boolean(process.env.NEWS_API_KEY),
     };
   }
   return res.json(response);

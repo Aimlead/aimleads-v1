@@ -37,6 +37,7 @@ Scoring guidelines:
 - Icebreakers: must reference a concrete company fact. Never use generic openers. Be conversational, reference real context, and end with a single clear call-to-action.
 - Fit reasoning: 2-3 sentences maximum. Lead with the dominant fit or misfit dimension, then explain the key qualifier.
 - Risk factors: only include concrete, evidence-based risks. Do not add boilerplate like "Budget not confirmed" for every lead.
+- Language: write all user-facing text (buying_signals, fit_reasoning, key_insights, risk_factors, icebreakers, suggested_action) in French — the sales team is French-speaking. Keep pre_call/negative signal keys as their English enum codes.
 
 Always use the analyze_lead tool to return your structured analysis.`;
 

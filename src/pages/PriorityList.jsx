@@ -8,6 +8,7 @@ import LeadSlideOver from '@/components/leads/LeadSlideOver';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { computeLeadPriority } from '@/lib/leadScoring';
+import { getFollowUpStatusLabel, getNextActionLabel } from '@/lib/leadPresentation';
 import { dataClient } from '@/services/dataClient';
 
 const CONTACT_STATUS_FILTER = {
@@ -292,8 +293,8 @@ export default function PriorityList() {
 
                       <div className="space-y-1">
                         <p className="text-[11px] uppercase tracking-wide text-slate-400">{t('priorityList.nextBestAction', { defaultValue: 'Prochaine action' })}</p>
-                        <p className="text-sm font-medium text-slate-700">{nextAction}</p>
-                        <p className="text-[11px] text-slate-500 truncate">{lead.follow_up_status || t('priorityList.noFollowUp', { defaultValue: 'Aucun statut de suivi' })}</p>
+                        <p className="text-sm font-medium text-slate-700">{getNextActionLabel(t, nextAction)}</p>
+                        <p className="text-[11px] text-slate-500 truncate">{lead.follow_up_status ? getFollowUpStatusLabel(t, lead.follow_up_status) : t('priorityList.noFollowUp', { defaultValue: 'Aucun statut de suivi' })}</p>
                       </div>
                     </div>
 

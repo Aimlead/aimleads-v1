@@ -224,16 +224,16 @@ export const deriveLeadNextAction = (lead, score = null) => {
   const phone = hasContact(lead, 'contact_phone') || hasContact(lead, 'phone') || hasContact(lead, 'phone_number');
   const linkedin = hasContact(lead, 'linkedin_url') || hasContact(lead, 'linkedin') || hasContact(lead, 'contact_linkedin');
 
-  if (status.includes('won')) return 'Expand account';
-  if (status.includes('lost') || status.includes('reject')) return 'Do not prioritize';
-  if (status.includes('meeting') || status.includes('reply')) return 'Prepare follow-up';
-  if (status.includes('proposal')) return 'Send proposal follow-up';
-  if (finalScore >= 80 && phone) return 'Call now';
-  if (finalScore >= 70 && email) return 'Send tailored email';
-  if (linkedin) return 'Open LinkedIn';
-  if (email) return 'Send intro email';
-  if (phone) return 'Call lead';
-  return 'Enrich contact data';
+  if (status.includes('won')) return 'expand_account';
+  if (status.includes('lost') || status.includes('reject')) return 'do_not_prioritize';
+  if (status.includes('meeting') || status.includes('reply')) return 'prepare_follow_up';
+  if (status.includes('proposal')) return 'send_proposal_follow_up';
+  if (finalScore >= 80 && phone) return 'call_now';
+  if (finalScore >= 70 && email) return 'send_tailored_email';
+  if (linkedin) return 'open_linkedin';
+  if (email) return 'send_intro_email';
+  if (phone) return 'call_lead';
+  return 'enrich_contact';
 };
 
 export const computeLeadPriority = (lead, icpProfile = null) => {

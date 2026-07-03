@@ -1,18 +1,31 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { PrivateGuard, PublicOnlyGuard } from '@/App';
+import App, { PrivateGuard, PublicOnlyGuard } from '@/App';
 
 const authState = {
   isAuthenticated: false,
   isLoadingAuth: false,
   authError: null,
+  user: null,
+  login: vi.fn(),
+  register: vi.fn(),
+  logout: vi.fn(),
+};
+
+const resetAuthState = () => {
+  authState.isAuthenticated = false;
+  authState.isLoadingAuth = false;
+  authState.authError = null;
+  authState.user = null;
 };
 
 vi.mock('@/lib/AuthContext', () => ({
   AuthProvider: ({ children }) => children,
   useAuth: () => authState,
 }));
+
+vi.mock('@/lib/NavigationTracker', () => ({ default: () => null }));
 
 vi.mock('@/components/layout/AppShell', () => ({
   default: ({ children }) => <div data-testid="app-shell">{children}</div>,
@@ -39,11 +52,7 @@ function renderPrivate(initialEntry) {
 }
 
 describe('PrivateGuard', () => {
-  beforeEach(() => {
-    authState.isAuthenticated = false;
-    authState.isLoadingAuth = false;
-    authState.authError = null;
-  });
+  beforeEach(resetAuthState);
 
   it('redirects unauthenticated users to login with a redirect param', () => {
     renderPrivate('/dashboard?tab=leads');
@@ -81,11 +90,7 @@ describe('PrivateGuard', () => {
 });
 
 describe('PublicOnlyGuard', () => {
-  beforeEach(() => {
-    authState.isAuthenticated = false;
-    authState.isLoadingAuth = false;
-    authState.authError = null;
-  });
+  beforeEach(resetAuthState);
 
   function renderPublic() {
     return render(
@@ -116,5 +121,43 @@ describe('PublicOnlyGuard', () => {
 
     expect(screen.getByTestId('dashboard-page')).toBeInTheDocument();
     expect(screen.queryByTestId('login-form')).not.toBeInTheDocument();
+  });
+});
+
+describe('route guards (App integration)', () => {
+  beforeEach(() => {
+    resetAuthState();
+    window.localStorage.clear();
+  });
+
+  it('redirects unauthenticated users from a private route to login with redirect param', async () => {
+    window.history.pushState({}, '', '/dashboard');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/login');
+    });
+    expect(window.location.search).toContain('redirect=%2Fdashboard');
+  });
+
+  it('redirects unauthenticated users from lead detail to login', async () => {
+    window.history.pushState({}, '', '/leads/lead_123');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/login');
+    });
+    expect(window.location.search).toContain('redirect=%2Fleads%2Flead_123');
+  });
+
+  it('renders a not-found page for unknown public routes', async () => {
+    window.history.pushState({}, '', '/cette-page-nexiste-pas');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/cette-page-nexiste-pas');
+    });
+    const matches = await screen.findAllByText(/404|introuvable|not found/i);
+    expect(matches.length).toBeGreaterThan(0);
   });
 });

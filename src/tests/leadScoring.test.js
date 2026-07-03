@@ -62,7 +62,7 @@ describe('leadScoring', () => {
     const priority = computeLeadPriority(lead, icp);
 
     expect(priority.priorityScore).toBeGreaterThanOrEqual(80);
-    expect(priority.nextAction).toBe('Call now');
+    expect(priority.nextAction).toBe('call_now');
     expect(priority.tier.key).toBe('hot');
   });
 });

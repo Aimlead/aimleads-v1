@@ -14,6 +14,7 @@ import { ROUTES } from '@/constants/routes';
 import { exportLeadsToCsv } from '@/lib/exportCsv';
 import { waitForJobCompletion } from '@/lib/jobs';
 import { computeLeadPriority, deriveLeadNextAction, getBestOutreachHook } from '@/lib/leadScoring';
+import { getFollowUpStatusLabel, getNextActionLabel } from '@/lib/leadPresentation';
 import { dataClient } from '@/services/dataClient';
 
 const LIST_KEYS = {
@@ -400,7 +401,10 @@ export default function Dashboard() {
     const highPriorityCount = [];
 
     for (const lead of visibleLeads) {
-      const score = getLeadScore(lead);
+      const storedScore = getLeadScore(lead);
+      const score = storedScore !== null
+        ? storedScore
+        : toNumericScore(computeLeadPriority(lead, activeIcp)?.finalScore);
       if (score !== null) {
         scored.push(score);
         if (score >= 80) highPriorityCount.push(score);
@@ -424,7 +428,7 @@ export default function Dashboard() {
       avgScore,
       highPriority: highPriorityCount.length,
     };
-  }, [visibleLeads, getLeadScore]);
+  }, [visibleLeads, getLeadScore, activeIcp]);
 
   const {
     totalLeads,
@@ -470,7 +474,7 @@ export default function Dashboard() {
   };
 
   const copyLeadHook = async (lead) => {
-    const hook = getBestOutreachHook(lead) || `${lead.company_name}: ${deriveNextAction(lead)}`;
+    const hook = getBestOutreachHook(lead) || `${lead.company_name}: ${getNextActionLabel(t, deriveNextAction(lead))}`;
     try {
       await navigator.clipboard.writeText(hook);
       toast.success(t('toasts.copied', { defaultValue: 'Copied.' }));
@@ -560,7 +564,7 @@ export default function Dashboard() {
                 size="sm"
                 onClick={() => {
                   if (isMockMode) {
-                    toast.info('Requires ANTHROPIC_API_KEY — add it to your .env and restart the server.');
+                    toast.info(t('dashboard.toasts.aiKeyRequired', { defaultValue: "L'analyse IA nécessite une connexion Anthropic active. Contactez votre administrateur." }));
                     return;
                   }
                   handleAnalyzeSignalsVisible();
@@ -582,7 +586,7 @@ export default function Dashboard() {
                 variant="outline"
                 onClick={() => {
                   if (isMockMode) {
-                    toast.info('Requires ANTHROPIC_API_KEY — add it to your .env and restart the server.');
+                    toast.info(t('dashboard.toasts.aiKeyRequired', { defaultValue: "L'analyse IA nécessite une connexion Anthropic active. Contactez votre administrateur." }));
                     return;
                   }
                   setResearchDialogOpen(true);
@@ -647,8 +651,7 @@ export default function Dashboard() {
                 <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-slate-600">
                   <span><strong className="text-slate-900">ICP:</strong> {priorityLead.priorityMeta?.icpScore ?? clampScore(priorityLead.icp_score) ?? '—'}</span>
                   <span><strong className="text-slate-900">AI:</strong> {priorityLead.priorityMeta?.aiScore ?? clampScore(priorityLead.ai_score ?? priorityLead?.score_details?.signal_analysis?.ai_score) ?? '—'}</span>
-                  <span><strong className="text-slate-900">{t('dashboard.priority.bestTime', { defaultValue: 'Meilleur créneau' })}:</strong> {t('dashboard.priority.morning', { defaultValue: 'Matin' })}</span>
-                  <span><strong className="text-slate-900">{t('dashboard.priority.path', { defaultValue: 'Suite' })}:</strong> {deriveNextAction(priorityLead)}</span>
+                  <span><strong className="text-slate-900">{t('dashboard.priority.path', { defaultValue: 'Suite' })}:</strong> {getNextActionLabel(t, deriveNextAction(priorityLead))}</span>
                 </div>
 
                 <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -804,10 +807,10 @@ export default function Dashboard() {
                     <div className="truncate text-[12.75px] font-medium text-slate-700">{lead.company_name}</div>
                     <div>
                       <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${getStatusTone(score)}`}>
-                        {lead.follow_up_status || t('dashboard.priority.toContact', { defaultValue: 'À contacter' })}
+                        {lead.follow_up_status ? getFollowUpStatusLabel(t, lead.follow_up_status) : t('dashboard.priority.toContact', { defaultValue: 'À contacter' })}
                       </span>
                     </div>
-                    <div className="truncate text-[13px] text-slate-600">{nextAction}</div>
+                    <div className="truncate text-[13px] text-slate-600">{getNextActionLabel(t, nextAction)}</div>
                     <div className="flex items-center justify-end gap-1.5">
                       <Button
                         variant="ghost"

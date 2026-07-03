@@ -12,27 +12,6 @@ export const FEATURE_FLAG_DEFINITIONS = [
     category: 'platform',
     default_enabled: false,
   },
-  {
-    flag_name: 'notifications_center',
-    label: 'Notification center',
-    description: 'Enable the future in-app notification center once it is ready for this workspace.',
-    category: 'product',
-    default_enabled: false,
-  },
-  {
-    flag_name: 'dark_mode',
-    label: 'Dark mode',
-    description: 'Unlock the upcoming workspace theme toggle for internal or pilot workspaces first.',
-    category: 'experience',
-    default_enabled: false,
-  },
-  {
-    flag_name: 'send_to_aimlead',
-    label: 'Send to real AimLead',
-    description: 'Enable syncing workspace modifications directly to the live AimLead production environment.',
-    category: 'platform',
-    default_enabled: false,
-  },
 ];
 
 const FEATURE_FLAGS_BY_NAME = new Map(FEATURE_FLAG_DEFINITIONS.map((flag) => [flag.flag_name, flag]));
