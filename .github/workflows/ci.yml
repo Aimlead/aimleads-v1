@@ -123,7 +123,9 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        # NODE_ENV=production makes npm ci skip devDependencies (vite is one);
+        # force a full install — production only applies to the build itself
+        run: npm ci --include=dev
 
       - name: Build application
         run: npm run build
