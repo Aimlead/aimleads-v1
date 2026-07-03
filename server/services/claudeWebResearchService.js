@@ -120,6 +120,7 @@ Important output rules:
 - If evidence is weak or stale, skip the signal.
 - Prefer 3-6 strong signals over many weak ones.
 - Add optional signal_providers only when truly relevant.
+- Write titles, snippets and signal evidence in French (the sales team is French-speaking).
 
 Then call extract_company_intelligence with the structured result.`;
 

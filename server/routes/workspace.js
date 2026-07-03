@@ -665,9 +665,18 @@ router.get('/credits', requireAuth, async (req, res) => {
   });
 });
 
-// Admin-only endpoint: grant credits to a workspace (sales-assisted, future Stripe webhook)
-// Requires service role or owner role — currently owner-only for simplicity.
+// Dev/test-only endpoint: grant credits to a workspace.
+// Every self-serve signup owns its workspace, so exposing this in production
+// would let any customer top up for free — real grants go through the
+// sales-assisted flow (or a future Stripe webhook) with the service role.
 router.post('/credits/grant', requireAuth, async (req, res) => {
+  if (getRuntimeConfig().isProduction) {
+    return res.status(403).json({
+      message: 'Credit grants are handled by the AimLeads team. Contact support to top up your workspace.',
+      code: 'SALES_ASSISTED_ONLY',
+    });
+  }
+
   const { members, currentMember } = await resolveCurrentWorkspaceAccess(req.user);
   if (!members || !currentMember || currentMember.role !== 'owner') {
     return deny(res, 'Only the workspace owner can grant credits.');
@@ -726,8 +735,6 @@ router.get('/integration-status', requireAuth, async (req, res) => {
 
   res.json({
     claude: Boolean(process.env.ANTHROPIC_API_KEY),
-    hunter: Boolean(process.env.HUNTER_API_KEY),
-    newsApi: Boolean(process.env.NEWS_API_KEY),
     crm: crmStatus,
     supabase: {
       configured: supabaseConfigured,

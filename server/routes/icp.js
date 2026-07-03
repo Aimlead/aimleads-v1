@@ -1,6 +1,6 @@
 ﻿import express from 'express';
 import { requireAuth, wrapAsyncRoutes } from '../lib/middleware.js';
-import { requireCredits, logTokenUsage } from '../lib/credits.js';
+import { requireCredits, logTokenUsage, refundCredits } from '../lib/credits.js';
 import { dataStore } from '../lib/dataStore.js';
 import { schemas, validateBody } from '../lib/validation.js';
 import { writeAuditLog } from '../lib/auditLog.js';
@@ -147,7 +147,11 @@ router.delete('/:profileId', async (req, res) => {
 
 router.post('/generate', icpGenerateLimiter, requireCredits('icp_generate'), validateBody(schemas.icpGenerateSchema), async (req, res) => {
   if (!icpGeneratorAvailable) {
-    return res.status(503).json({ message: 'AI ICP generation is not available (no LLM key configured).' });
+    await refundCredits(req, 'icp_generator_not_configured').catch(() => {});
+    return res.status(503).json({
+      message: 'AI ICP generation is not available (no LLM key configured).',
+      code: 'AI_NOT_CONFIGURED',
+    });
   }
 
   const { description } = req.validatedBody;
@@ -165,6 +169,7 @@ router.post('/generate', icpGenerateLimiter, requireCredits('icp_generate'), val
   });
   if (!result) {
     logger.warn('icp_generate_null', { reason: 'llm_returned_null', description_length: description.length });
+    await refundCredits(req, 'icp_generate_failed').catch(() => {});
     return res.status(502).json({ message: 'AI generation failed. Please try again.' });
   }
   if (result._usage) logTokenUsage(req, 'icp_generate', result._usage);

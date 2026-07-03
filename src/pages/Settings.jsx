@@ -483,16 +483,6 @@ export default function Settings() {
                 label: t('settings.cards.api.providers.claude.label'),
                 description: t('settings.cards.api.providers.claude.description'),
               },
-              {
-                key: 'hunter',
-                label: t('settings.cards.api.providers.hunter.label'),
-                description: t('settings.cards.api.providers.hunter.description'),
-              },
-              {
-                key: 'newsApi',
-                label: t('settings.cards.api.providers.newsApi.label'),
-                description: t('settings.cards.api.providers.newsApi.description'),
-              },
             ].map(({ key, label, description }, i, arr) => (
               <div
                 key={key}
@@ -508,9 +498,7 @@ export default function Settings() {
               </div>
             ))}
             <p className="text-[11px] text-slate-400 pt-1">
-              {t('settings.cards.api.configureHint')} <code className="bg-slate-100 px-1 rounded text-[10px]">ANTHROPIC_API_KEY</code>,{' '}
-              <code className="bg-slate-100 px-1 rounded text-[10px]">HUNTER_API_KEY</code>,{' '}
-              <code className="bg-slate-100 px-1 rounded text-[10px]">NEWS_API_KEY</code>
+              {t('settings.cards.api.configureHint')} <code className="bg-slate-100 px-1 rounded text-[10px]">ANTHROPIC_API_KEY</code>
             </p>
             <p className="text-[11px] text-slate-400">
               {t('settings.cards.api.footer')}
@@ -638,6 +626,9 @@ export default function Settings() {
               <Button asChild variant="ghost">
                 <Link to={ROUTES.crmIntegration}>{t('settings.livePlan.manageCrm')}</Link>
               </Button>
+              <Button asChild variant="ghost">
+                <Link to={ROUTES.auditLog}>{t('nav.auditLog', { defaultValue: "Journal d'audit" })}</Link>
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -717,15 +708,17 @@ export default function Settings() {
               <Button asChild variant="ghost">
                 <Link to={ROUTES.pricing}>{t('settings.livePlan.comparePlans')}</Link>
               </Button>
-              <Button
-                variant="outline"
-                onClick={handleGrantCredits}
-                disabled={isGrantingCredits}
-                className="gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-              >
-                {isGrantingCredits ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-                {t('settings.livePlan.grantCredits', { defaultValue: '+ 150 crédits' })}
-              </Button>
+              {import.meta.env.DEV && (
+                <Button
+                  variant="outline"
+                  onClick={handleGrantCredits}
+                  disabled={isGrantingCredits}
+                  className="gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                >
+                  {isGrantingCredits ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                  {t('settings.livePlan.grantCredits', { defaultValue: '+ 150 crédits' })}
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -781,7 +774,7 @@ export default function Settings() {
         </CardContent>
       </Card>}
 
-      <Card className="mt-6">
+      {import.meta.env.DEV && <Card className="mt-6">
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-sky-100 to-violet-100 flex items-center justify-center">
@@ -843,7 +836,7 @@ export default function Settings() {
             })}
           </div>
         </CardContent>
-      </Card>
+      </Card>}
 
       <Card className="mt-6 border-amber-200 bg-amber-50/40">
         <CardHeader>

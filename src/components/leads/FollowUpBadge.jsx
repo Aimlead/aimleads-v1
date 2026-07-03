@@ -1,7 +1,9 @@
 import React from 'react';
 import { CheckCircle2, Clock, MessageCircle, Phone, XCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { FOLLOW_UP_STATUS } from '@/constants/leads';
+import { getFollowUpStatusLabel } from '@/lib/leadPresentation';
 
 const STATUS_CONFIG = {
   [FOLLOW_UP_STATUS.TO_CONTACT]: {
@@ -37,6 +39,7 @@ const STATUS_CONFIG = {
 };
 
 export default function FollowUpBadge({ status }) {
+  const { t } = useTranslation();
   const config = STATUS_CONFIG[status] || STATUS_CONFIG[FOLLOW_UP_STATUS.TO_CONTACT];
   const Icon = config.icon;
 
@@ -50,7 +53,7 @@ export default function FollowUpBadge({ status }) {
       )}
     >
       <Icon className="w-3 h-3" />
-      {status}
+      {getFollowUpStatusLabel(t, status)}
     </span>
   );
 }
