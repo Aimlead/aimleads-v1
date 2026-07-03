@@ -26,6 +26,12 @@ import { upsertLeadAsSfLead, testSalesforceConnection } from './salesforceServic
  */
 async function supabaseRequest(table, { method = 'GET', query = {}, body } = {}) {
   const config = getRuntimeConfig();
+  if (!config.supabase?.url) {
+    // Local/dev mode without Supabase: CRM persistence is unavailable.
+    // Return an empty result set instead of crashing route handlers with
+    // an unparsable URL — the UI shows its "connect a CRM" empty state.
+    return [];
+  }
   const baseUrl = `${config.supabase.url.replace(/\/$/, '')}/rest/v1`;
   const apiKey = config.supabase.serviceRoleKey;
 

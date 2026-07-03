@@ -30,12 +30,25 @@ const numericOrNull = z.union([z.number(), z.string(), z.null()]).transform((val
   return Number.isFinite(parsed) ? parsed : null;
 });
 
+// Company size often arrives as a range ("51-200", "200+") or annotated text
+// ("1 000 employés") from CSV exports; keep the lower bound like the CSV importer does.
+const companySizeOrNull = z.union([z.number(), z.string(), z.null()]).transform((value) => {
+  if (value === null || value === '') return null;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  const compact = String(value).trim().replace(/[\s,]/g, '');
+  if (!compact) return null;
+  const parsed = Number(compact);
+  if (Number.isFinite(parsed)) return parsed;
+  const match = compact.match(/\d+/);
+  return match ? Number(match[0]) : null;
+});
+
 const leadBaseSchema = z
   .object({
     company_name: nonEmptyString,
     website_url: urlString,
     industry: optionalString,
-    company_size: numericOrNull.optional(),
+    company_size: companySizeOrNull.optional(),
     country: optionalString,
     contact_name: optionalString,
     contact_role: optionalString,
@@ -60,7 +73,7 @@ const leadPatchSchema = z.object({
   company_name: z.string().trim().min(1).max(500).optional(),
   website_url: z.string().trim().max(2000).optional(),
   industry: z.string().trim().max(200).optional(),
-  company_size: numericOrNull.optional(),
+  company_size: companySizeOrNull.optional(),
   country: z.string().trim().max(100).optional(),
   contact_name: z.string().trim().max(300).optional(),
   contact_role: z.string().trim().max(300).optional(),

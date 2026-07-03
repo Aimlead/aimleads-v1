@@ -44,10 +44,10 @@ export default function Help() {
       defaultValue: 'Invites: the teammate must sign up with the exact invited email for automatic workspace join.',
     }),
     t('help.troubleshooting.integrations', {
-      defaultValue: 'Integrations: scoring and sequence quality improve when Anthropic, Hunter, and NewsAPI are configured.',
+      defaultValue: 'AI engine: scoring, signal discovery and sequences run on Claude (Anthropic). If analyses fail, ask your admin to check the AI connection in Settings.',
     }),
     t('help.troubleshooting.offboarding', {
-      defaultValue: 'Offboarding: safe member removal is intentionally disabled until the tenancy model is hardened.',
+      defaultValue: 'Offboarding: transfer workspace ownership from the Team page before removing an owner account.',
     }),
   ];
 
@@ -126,7 +126,7 @@ export default function Help() {
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="font-medium text-slate-900">{t('help.cards.lifecycle.title', { defaultValue: 'Team lifecycle' })}</p>
               <p className="mt-1">{t('help.cards.lifecycle.body', {
-                defaultValue: 'Invites and role changes are live. Owner transfer and safe offboarding are still restricted until the platform tenancy model is hardened.',
+                defaultValue: 'Invites, role changes and ownership transfer are all available from the Team page. Transfer ownership before offboarding an owner so the workspace always keeps one.',
               })}</p>
             </div>
           </CardContent>

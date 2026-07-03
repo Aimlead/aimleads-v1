@@ -210,6 +210,29 @@ export const grantCredits = async (workspaceId, amount, action = 'grant', descri
 };
 
 /**
+ * Refund the credits deducted by requireCredits for the current request.
+ * Call this on failure paths so users are not charged for actions that
+ * produced nothing (e.g. AI provider unavailable or invalid model output).
+ */
+export const refundCredits = async (req, reason = 'action_failed') => {
+  const amount = Number(req?.creditsDeducted || 0);
+  if (!amount || amount <= 0) return { success: false, error: 'nothing_to_refund' };
+  const workspaceId = getUserWorkspaceId(req?.user);
+  if (!workspaceId) return { success: false, error: 'no_workspace' };
+
+  req.creditsDeducted = 0;
+  const result = await grantCredits(workspaceId, amount, 'refund', `Refund: ${reason}`, {
+    path: req.path,
+    method: req.method,
+    reason,
+  });
+  if (result?.success) {
+    logger.info('credits_refunded', { workspaceId, amount, reason, path: req.path });
+  }
+  return result;
+};
+
+/**
  * Get paginated transaction history for a workspace.
  * Returns [] in local mode (no persistence).
  */

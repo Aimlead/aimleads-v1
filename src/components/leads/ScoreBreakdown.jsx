@@ -160,7 +160,6 @@ const buildWhyExplanation = ({
 
 const ScoreBreakdown = ({ lead, finalScore, icpScore, aiScore, aiBoost, scoreDetails }) => {
   const { t } = useTranslation();
-  const [bilingualMode, setBilingualMode] = useState(false);
 
   const safeDetails = scoreDetails && typeof scoreDetails === 'object' ? scoreDetails : {};
   const finalCategory = lead?.final_category || lead?.category || null;
@@ -244,15 +243,6 @@ const ScoreBreakdown = ({ lead, finalScore, icpScore, aiScore, aiBoost, scoreDet
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
               {t('leads.icpBreakdownTitle', { defaultValue: 'ICP breakdown by criterion' })}
             </p>
-            <button
-              type="button"
-              onClick={() => setBilingualMode((prev) => !prev)}
-              className="rounded-md border border-slate-200 px-2 py-1 text-[10px] font-medium text-slate-600 hover:bg-slate-50"
-            >
-              {bilingualMode
-                ? t('leads.singleLanguage', { defaultValue: 'Single language' })
-                : t('leads.bilingualView', { defaultValue: 'FR + EN' })}
-            </button>
           </div>
           <div className="space-y-1.5">
             {ICP_DIMENSIONS.map(({ key, labelKey, fallback }) => {
@@ -264,18 +254,7 @@ const ScoreBreakdown = ({ lead, finalScore, icpScore, aiScore, aiBoost, scoreDet
               const evaluatedValue = entry?.evaluated_value ?? '—';
               const scoreWeights = entry?.weights || null;
               const localizedLabel = t(labelKey, { defaultValue: fallback });
-              const bilingualLabel = `${fallback} / ${ICP_DIMENSIONS.find((item) => item.key === key)?.fr || fallback}`;
               const matchLabel = meta ? t(meta.labelKey, { defaultValue: meta.fallback }) : t('leads.match.notEvaluated', { defaultValue: 'Not evaluated' });
-              const bilingualMatch = meta
-                ? `${meta.fallback} / ${
-                  ({
-                    parfait: 'Correspondance parfaite',
-                    partiel: 'Correspondance partielle',
-                    aucun: 'Pas de correspondance',
-                    exclu: 'Exclu par ICP',
-                  })[match] || meta.fallback
-                }`
-                : 'Not evaluated / Non évalué';
 
               return (
                 <div
@@ -291,10 +270,10 @@ const ScoreBreakdown = ({ lead, finalScore, icpScore, aiScore, aiBoost, scoreDet
                       <span className="w-3.5 h-3.5 inline-block" aria-hidden="true" />
                     )}
                     <span className="font-medium text-slate-800 truncate">
-                      {bilingualMode ? bilingualLabel : localizedLabel}
+                      {localizedLabel}
                     </span>
                     <span className={`text-[10px] font-medium ${meta?.color || 'text-slate-400'}`}>
-                      · {bilingualMode ? bilingualMatch : matchLabel}
+                      · {matchLabel}
                     </span>
                   </div>
                   <span

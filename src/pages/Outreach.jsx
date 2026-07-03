@@ -559,7 +559,7 @@ export default function Outreach() {
                   className={cn(
                     'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all',
                     channelFilter === ch
-                      ? 'bg-white text-white border-slate-900'
+                      ? 'bg-slate-900 text-white border-slate-900'
                       : 'text-slate-600 border-slate-200 hover:border-slate-300 bg-white'
                   )}
                 >
