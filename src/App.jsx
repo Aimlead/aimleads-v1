@@ -54,7 +54,7 @@ function FullscreenLoader() {
 }
 
 
-function PrivateGuard() {
+export function PrivateGuard() {
   const location = useLocation();
   const { isAuthenticated, isLoadingAuth, authError } = useAuth();
 
@@ -76,7 +76,7 @@ function PrivateGuard() {
   );
 }
 
-function PublicOnlyGuard({ children }) {
+export function PublicOnlyGuard({ children }) {
   const { isAuthenticated, isLoadingAuth } = useAuth();
 
   if (isLoadingAuth) {

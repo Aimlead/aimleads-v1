@@ -132,6 +132,21 @@ test('POST /leads — creates a lead', async () => {
   assert.equal(payload?.data?.company_name, 'Test Corp');
 });
 
+test('POST /leads — accepts company_size ranges and keeps the lower bound', async () => {
+  const user = await registerAndGetCookie('range-size');
+  const { response, payload } = await createLead(user.cookie, { company_size: '51-200' });
+  assert.equal(response.status, 201);
+  assert.equal(payload?.data?.company_size, 51, 'range string should keep its lower bound');
+
+  const annotated = await createLead(user.cookie, { company_size: '1 000 employés' });
+  assert.equal(annotated.response.status, 201);
+  assert.equal(annotated.payload?.data?.company_size, 1000, 'annotated size should parse the number');
+
+  const plus = await createLead(user.cookie, { company_size: '200+' });
+  assert.equal(plus.response.status, 201);
+  assert.equal(plus.payload?.data?.company_size, 200);
+});
+
 test('GET /leads/:id — retrieves a specific lead', async () => {
   const user = await registerAndGetCookie('getter');
   const created = await createLead(user.cookie);

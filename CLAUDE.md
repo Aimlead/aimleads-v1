@@ -77,3 +77,19 @@ scan du site web du lead + la recherche web de Claude (`web_search`).
    structurelle, pas un bloqueur.
 4. Emails transactionnels : no-op sans clé (`email_skipped_no_key`) ; l'invite
    propose un lien à copier en fallback. Brancher un fournisseur SMTP/API.
+
+## Déploiement (Hostinger VPS, Docker)
+
+- Stack autonome dans `docker-compose.yml` : `app` (Express + frontend buildé,
+  port 3010) + `caddy` (HTTPS automatique Let's Encrypt pour `aimlead.io`,
+  redirection www → apex). Plus de Traefik/nginx externe.
+- `pull_policy: build` est indispensable : le panneau Docker Hostinger fait un
+  `compose pull` avant de déployer et l'image n'existe pas sur Docker Hub.
+- Guide complet (recovery inclus) : `docs/vps-deploy-checklist.md`.
+  Redéploiement : `./scripts/redeploy-hostinger.sh` sur le VPS, ou le workflow
+  manuel `.github/workflows/deploy-hostinger.yml` (secrets `VPS_HOST`,
+  `VPS_USER`, `VPS_SSH_KEY`).
+- En production le serveur refuse de démarrer sans `SESSION_SECRET`, les clés
+  Supabase, `ANTHROPIC_API_KEY` et `RESEND_API_KEY` (voir `.env.example`).
+- CI : le job api-tests exporte `SUPABASE_FALLBACK_TO_LOCAL=1` — tout test qui
+  simule la production doit épingler cette variable à `false` dans son env.
