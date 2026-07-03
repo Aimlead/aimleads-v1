@@ -56,13 +56,13 @@ function FullscreenLoader() {
 
 export function PrivateGuard() {
   const location = useLocation();
-  const { isAuthenticated, isLoadingAuth, authError } = useAuth();
+  const { isAuthenticated, isLoadingAuth, authError, user } = useAuth();
 
   if (isLoadingAuth) {
     return <FullscreenLoader />;
   }
 
-  if (!isAuthenticated || authError?.type === 'auth_required') {
+  if (!isAuthenticated || !user || authError) {
     const redirect = encodeURIComponent(`${location.pathname}${location.search}`);
     return <Navigate to={`${ROUTES.login}?redirect=${redirect}`} replace />;
   }

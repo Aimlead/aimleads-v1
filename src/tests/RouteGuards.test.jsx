@@ -81,6 +81,8 @@ describe('PrivateGuard', () => {
 
   it('renders the protected page inside the app shell when authenticated', async () => {
     authState.isAuthenticated = true;
+    // PrivateGuard also requires a resolved user (fails closed when user is null)
+    authState.user = { id: 'user_test', email: 'user@example.com' };
     renderPrivate('/dashboard');
 
     expect(await screen.findByTestId('private-content')).toBeInTheDocument();
