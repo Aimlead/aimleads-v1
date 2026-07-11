@@ -4,6 +4,7 @@ import { requireCredits, logTokenUsage } from '../lib/credits.js';
 import { analyzeLead } from '../services/analyzeService.js';
 import { dataStore } from '../lib/dataStore.js';
 import { schemas, validateBody } from '../lib/validation.js';
+import { getRuntimeConfig } from '../lib/config.js';
 import { createUserRateLimit } from '../lib/rateLimit.js';
 import { runAiOperation } from '../services/aiRunService.js';
 import { ANALYSIS_PROMPT_VERSION } from '../services/llmService.js';
@@ -17,11 +18,11 @@ wrapAsyncRoutes(router);
 
 router.use(requireAuth);
 
-// Strict per-user rate limit for LLM analyze calls (20/hour)
+// Strict per-user rate limit for LLM analyze calls (ANALYZE_RATE_LIMIT_PER_HOUR, default 20/hour)
 const analyzeLimiter = createUserRateLimit({
   namespace: 'analyze_user',
   windowMs: 60 * 60 * 1000,
-  max: 20,
+  max: getRuntimeConfig().rateLimit.analyzePerHour,
   message: 'Too many AI analysis requests, please wait before trying again.',
 });
 

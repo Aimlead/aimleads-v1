@@ -95,6 +95,7 @@ export const getRuntimeConfig = () => {
       apiMax: Number(process.env.API_RATE_LIMIT_MAX || 600),
       authWindowMs: Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS || 10 * 60 * 1000),
       authMax: Number(process.env.AUTH_RATE_LIMIT_MAX || 30),
+      analyzePerHour: parseBoundedInt(process.env.ANALYZE_RATE_LIMIT_PER_HOUR, 20, { min: 1, max: 10000 }),
       upstashRestUrl: String(process.env.UPSTASH_REDIS_REST_URL || '').trim(),
       upstashRestToken: String(process.env.UPSTASH_REDIS_REST_TOKEN || '').trim(),
     },

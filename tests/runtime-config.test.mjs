@@ -115,3 +115,35 @@ test('production accepts strict supabase runtime when required keys are present'
     }
   );
 });
+
+test('analyze rate limit defaults to 20 per hour', async () => {
+  await withEnv(
+    { ANALYZE_RATE_LIMIT_PER_HOUR: undefined },
+    async () => {
+      const { getRuntimeConfig } = await loadConfigModule();
+      assert.equal(getRuntimeConfig().rateLimit.analyzePerHour, 20);
+    }
+  );
+});
+
+test('analyze rate limit is configurable via ANALYZE_RATE_LIMIT_PER_HOUR', async () => {
+  await withEnv(
+    { ANALYZE_RATE_LIMIT_PER_HOUR: '75' },
+    async () => {
+      const { getRuntimeConfig } = await loadConfigModule();
+      assert.equal(getRuntimeConfig().rateLimit.analyzePerHour, 75);
+    }
+  );
+});
+
+test('analyze rate limit falls back to default on invalid values', async () => {
+  for (const invalid of ['0', '-5', 'abc', '999999']) {
+    await withEnv(
+      { ANALYZE_RATE_LIMIT_PER_HOUR: invalid },
+      async () => {
+        const { getRuntimeConfig } = await loadConfigModule();
+        assert.equal(getRuntimeConfig().rateLimit.analyzePerHour, 20, `value: ${invalid}`);
+      }
+    );
+  }
+});

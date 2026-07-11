@@ -321,6 +321,39 @@ const waitForApi = async (timeoutMs = 30_000) => {
   throw new Error(`API did not become healthy within ${timeoutMs}ms (${API_BASE})`);
 };
 
+// ─── Token usage & cost estimation ────────────────────────────────────────────
+// USD per million tokens. Cache reads bill at ~0.1x input, 5-minute cache
+// writes at 1.25x input (llmService uses the default ephemeral TTL).
+const MODEL_PRICING_PER_MTOK = [
+  { match: 'haiku-4-5', input: 1, output: 5 },
+  { match: 'sonnet-4-6', input: 3, output: 15 },
+  { match: 'sonnet-5', input: 3, output: 15 },
+  { match: 'opus-4-8', input: 5, output: 25 },
+];
+
+const resolveModelPricing = (model) => {
+  const id = String(model || '').toLowerCase();
+  return MODEL_PRICING_PER_MTOK.find((entry) => id.includes(entry.match)) || null;
+};
+
+const estimateUsageCostUsd = (usage) => {
+  const pricing = resolveModelPricing(usage?.model);
+  if (!pricing) return null;
+  const input = Number(usage.input_tokens) || 0;
+  const output = Number(usage.output_tokens) || 0;
+  const cacheRead = Number(usage.cache_read_input_tokens) || 0;
+  const cacheCreation = Number(usage.cache_creation_input_tokens) || 0;
+  const cost =
+    (input * pricing.input +
+      output * pricing.output +
+      cacheRead * pricing.input * 0.1 +
+      cacheCreation * pricing.input * 1.25) /
+    1_000_000;
+  return Math.round(cost * 1_000_000) / 1_000_000;
+};
+
+const formatUsd = (value) => (value === null || value === undefined ? 'n/a' : `$${value.toFixed(4)}`);
+
 const startApiIfNeeded = async () => {
   if (process.env.API_BASE_URL) {
     if (await isApiHealthy()) return { child: null, managed: false };
@@ -683,6 +716,7 @@ const run = async () => {
     }
 
     const errors = [];
+    const usagePerLead = [];
     for (const lead of leadsToAnalyze) {
       try {
         const result = await requestJson('/analyze', {
@@ -691,6 +725,18 @@ const run = async () => {
             lead,
             icp_profile_id: activeIcp.id,
           },
+        });
+
+        const usage = result?._token_usage || null;
+        usagePerLead.push({
+          lead_id: lead.id,
+          company_name: lead.company_name,
+          model: usage?.model || null,
+          input_tokens: usage ? Number(usage.input_tokens) || 0 : null,
+          output_tokens: usage ? Number(usage.output_tokens) || 0 : null,
+          cache_read_input_tokens: usage ? Number(usage.cache_read_input_tokens) || 0 : null,
+          cache_creation_input_tokens: usage ? Number(usage.cache_creation_input_tokens) || 0 : null,
+          estimated_cost_usd: usage ? estimateUsageCostUsd(usage) : null,
         });
 
         await requestJson(`/leads/${lead.id}`, {
@@ -717,6 +763,29 @@ const run = async () => {
 
     const scorecardRows = finalLeads.map((lead) => makeScorecardRow(lead, metadataByKey.get(leadKey(lead)) || {}));
     const proxyReadiness = summarizeProxyReadiness(finalLeads);
+
+    const leadsWithUsage = usagePerLead.filter((entry) => entry.model !== null);
+    const sumUsage = (key) => leadsWithUsage.reduce((total, entry) => total + (entry[key] || 0), 0);
+    const knownCosts = leadsWithUsage.map((entry) => entry.estimated_cost_usd).filter((cost) => cost !== null);
+    const totalCostUsd = knownCosts.length > 0
+      ? Math.round(knownCosts.reduce((total, cost) => total + cost, 0) * 1_000_000) / 1_000_000
+      : null;
+    const tokenUsageSummary = {
+      leads_with_llm_usage: leadsWithUsage.length,
+      leads_without_llm_usage: usagePerLead.length - leadsWithUsage.length,
+      totals: {
+        input_tokens: sumUsage('input_tokens'),
+        output_tokens: sumUsage('output_tokens'),
+        cache_read_input_tokens: sumUsage('cache_read_input_tokens'),
+        cache_creation_input_tokens: sumUsage('cache_creation_input_tokens'),
+        estimated_cost_usd: totalCostUsd,
+      },
+      avg_estimated_cost_per_lead_usd:
+        totalCostUsd !== null && leadsWithUsage.length > 0
+          ? Math.round((totalCostUsd / leadsWithUsage.length) * 1_000_000) / 1_000_000
+          : null,
+      per_lead: usagePerLead,
+    };
 
     const reportPayload = {
       generated_at: new Date().toISOString(),
@@ -751,6 +820,7 @@ const run = async () => {
         final_recommended_action: countBy(finalLeads, (lead) => lead.final_recommended_action),
       },
       proxy_readiness: proxyReadiness,
+      token_usage: tokenUsageSummary,
       errors,
       top_leads: finalLeads.slice(0, 10).map((lead) => ({
         bucket: metadataByKey.get(leadKey(lead))?.bucket || '',
@@ -779,6 +849,27 @@ const run = async () => {
     console.log(`- Proxy scored coverage: ${proxyReadiness.scored_pct}%`);
     console.log(`- Proxy signal coverage: ${proxyReadiness.signals_pct}%`);
     console.log(`- Proxy icebreaker coverage: ${proxyReadiness.icebreaker_pct}%`);
+    if (leadsWithUsage.length > 0) {
+      const { totals } = tokenUsageSummary;
+      console.log(
+        `- Tokens consumed: ${totals.input_tokens} in / ${totals.output_tokens} out` +
+          ` (cache read ${totals.cache_read_input_tokens}, cache write ${totals.cache_creation_input_tokens})` +
+          ` across ${leadsWithUsage.length} LLM-enriched lead(s)`
+      );
+      console.log(
+        `- Estimated LLM cost: ${formatUsd(totals.estimated_cost_usd)} total, ` +
+          `${formatUsd(tokenUsageSummary.avg_estimated_cost_per_lead_usd)} per lead`
+      );
+      for (const entry of usagePerLead) {
+        if (entry.model === null) continue;
+        console.log(
+          `  · ${entry.company_name}: ${entry.input_tokens} in / ${entry.output_tokens} out` +
+            ` (${entry.model}) → ${formatUsd(entry.estimated_cost_usd)}`
+        );
+      }
+    } else {
+      console.log('- Tokens consumed: n/a (no LLM usage reported — deterministic scoring only or AI not configured)');
+    }
     console.log(`- JSON report: ${jsonPath}`);
     console.log(`- Scorecard CSV: ${csvPath}`);
   } finally {
