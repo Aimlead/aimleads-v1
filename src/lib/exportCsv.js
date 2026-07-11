@@ -17,12 +17,13 @@ export const escapeCsvValue = (value) => {
   return str;
 };
 
-export function exportLeadsToCsv(leads, filename = 'leads-export.csv') {
-  if (!leads || leads.length === 0) return;
-
+export function buildLeadsCsv(leads) {
   const resolveCellValue = (lead, key) => {
     if (key === 'created_at') return lead.created_at || lead.created_date;
     if (key === 'final_recommended_action') return lead.final_recommended_action || lead.recommended_action;
+    if (key === 'icebreaker_email') return lead.generated_icebreakers?.email || lead.generated_icebreaker;
+    if (key === 'icebreaker_linkedin') return lead.generated_icebreakers?.linkedin;
+    if (key === 'icebreaker_call') return lead.generated_icebreakers?.call;
     return lead[key];
   };
 
@@ -41,6 +42,9 @@ export function exportLeadsToCsv(leads, filename = 'leads-export.csv') {
     { key: 'icp_score', label: 'ICP Score' },
     { key: 'icp_category', label: 'ICP Category' },
     { key: 'final_recommended_action', label: 'Recommended Action' },
+    { key: 'icebreaker_email', label: 'Icebreaker Email' },
+    { key: 'icebreaker_linkedin', label: 'Icebreaker LinkedIn' },
+    { key: 'icebreaker_call', label: 'Icebreaker Call' },
     { key: 'source_list', label: 'Source List' },
     { key: 'notes', label: 'Notes' },
     { key: 'created_at', label: 'Created Date' },
@@ -50,7 +54,13 @@ export function exportLeadsToCsv(leads, filename = 'leads-export.csv') {
   const header = COLUMNS.map((col) => escapeCsvValue(col.label)).join(',');
   const rows = leads.map((lead) => COLUMNS.map((col) => escapeCsvValue(resolveCellValue(lead, col.key))).join(','));
 
-  const csv = [header, ...rows].join('\n');
+  return [header, ...rows].join('\n');
+}
+
+export function exportLeadsToCsv(leads, filename = 'leads-export.csv') {
+  if (!leads || leads.length === 0) return;
+
+  const csv = buildLeadsCsv(leads);
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
 
